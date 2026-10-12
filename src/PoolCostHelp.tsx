@@ -9,6 +9,7 @@ export function PoolCostHelp({ rows, lang, t }: { rows: PoolOverview[]; lang: La
   const trigger = useRef<HTMLButtonElement>(null), tooltip = useRef<HTMLDivElement>(null);
   const pinned = useRef(false), timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const periods = realCostPeriods(rows);
+  // Without a timeZone override, Intl uses the visitor's device zone; lang controls formatting only.
   const formatter = new Intl.DateTimeFormat(lang, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" });
   const show = () => { clearTimeout(timer.current); setOpen(true); };
   const close = () => { clearTimeout(timer.current); pinned.current = false; setOpen(false); };

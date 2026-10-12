@@ -4,6 +4,12 @@ The open-source Web frontend for [Pearl Hub](https://prl.tools.video): PRL marke
 pool comparison, worker monitoring, GPU economics, alerts and optional account settings.
 It supports 16 interface languages, light/dark appearance and mobile layouts.
 
+Dates and times follow each visitor's browser/device time zone. Interface language
+controls the display format independently. This applies to market/pool updates,
+charts, Real Cost measurement periods, worker/block/transaction timestamps and
+account dates. UTC timestamps in API data and HTML metadata identify the original
+instant; visible times are converted locally.
+
 ## Run locally
 
 Use Node.js 22.6 or newer.
