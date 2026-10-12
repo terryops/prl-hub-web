@@ -124,6 +124,7 @@ export type PoolPayout = {
   fee: number | null;
   grossPerPH: number | null;
   realFeePercent: number | null;
+  realFeePeriod?: { start: number; end: number } | null;
   realFeeEstimated?: boolean | null;
   estimated: boolean;
   solo: boolean;

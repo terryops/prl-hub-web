@@ -5,6 +5,7 @@ import { difficulty, hashrate, unitYield, prlNumber } from "./format.ts";
 import { poolPayouts, poolSparkline, sortPools, relativePoolBlock, type PoolSortKey } from "./pool-comparison.ts";
 import { Icon } from "./Icons.tsx";
 import { Skeleton } from "./Skeleton.tsx";
+import { PoolCostHelp } from "./PoolCostHelp.tsx";
 export type Translate = (key: TextKey) => string;
 export const numeric = (v: number | null | undefined, digits = 2, lang: Lang = "en") => v != null && Number.isFinite(v) ? v.toLocaleString(lang, { maximumFractionDigits: digits }).replace(/-/g, "−") : "—";
 export function NetworkSummary({ data, t, lang, failed }: { data?: Overview; lang: Lang; t: Translate; failed?: boolean }) {
@@ -57,7 +58,6 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
       </div>;
     })}
     {kind === "earnings" && <small>{t("poolPerPHDay")}</small>}
-    {kind === "realFee" && r.realFeeMeasurement && <small>{new Intl.DateTimeFormat(lang, { dateStyle: "short", timeStyle: "short" }).formatRange(new Date(r.realFeeMeasurement.start * 1000), new Date(r.realFeeMeasurement.end * 1000))}</small>}
   </div>;
   const hash = (r: PoolRow) => <div className="pool-metric"><strong className={r.hashrate == null ? "missing-value" : undefined}>{hashrate(r.hashrate ?? undefined)}</strong>
     {r.averageHashrate7d != null ? <small>{t("poolAverage7d").replace("%@", hashrate(r.averageHashrate7d))}</small> : r.miners != null && <small>{numeric(r.miners, 0, lang)} {t("participants")}</small>}
@@ -82,7 +82,7 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
     {!data && !failed ? <Skeleton label={t("loading")} kind="table" /> : !rows.length ? <p className="empty-comparison">{t(failed ? "error" : "missing")}</p> : <>
       <div className="pool-table-scroll" tabIndex={0} role="region" aria-label={t("poolComparison")}>
         <table className="pool-table"><thead><tr>{columns.map((c) => <th key={c.key} scope="col" aria-sort={c.key === "trend" ? undefined : c.key === sort.key ? sort.ascending ? "ascending" : "descending" : "none"}>
-          {c.key === "trend" ? t(c.label) : <button className="pool-sort-heading" onClick={() => choose(c.key as PoolSortKey)}><span>{t(c.label)}</span>{sort.key === c.key && <Icon name={sort.ascending ? "up" : "down"} />}</button>}
+          <span className="pool-column-heading">{c.key === "trend" ? t(c.label) : <button className="pool-sort-heading" onClick={() => choose(c.key as PoolSortKey)}><span>{t(c.label)}</span>{sort.key === c.key && <Icon name={sort.ascending ? "up" : "down"} />}</button>}{c.key === "realFee" && <PoolCostHelp rows={rows} lang={lang} t={t} />}</span>
         </th>)}</tr></thead><tbody>{rows.map((r) => <tr key={r.id}>
           <td className="pool-cell"><PoolShareBackground row={r} />{name(r)}</td><td>{hash(r)}</td><td className="pool-trend-cell"><PoolSparkline row={r} t={t} /></td>
           <td>{payouts(r, "earnings")}</td><td>{blocks(r)}</td><td>{payouts(r, "fee")}</td><td>{payouts(r, "realFee")}</td><td>{lastBlock(r)}</td>
@@ -91,7 +91,7 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
       <div className="pool-mobile-list">{rows.map((r) => <article className="pool-mobile" key={r.id}>
         <PoolShareBackground row={r} /><div className="pool-mobile-heading">{name(r)}<PoolSparkline row={r} t={t} /></div>
         <div className="pool-mobile-primary"><div><small>{t("hashrate")}</small>{hash(r)}</div><div><small>{t("poolEstYield")}</small>{payouts(r, "earnings")}</div></div>
-        <div className="pool-mobile-secondary"><div><small>{t(columns[4].label)}</small>{blocks(r)}</div><div><small>{t("poolFee")}</small>{payouts(r, "fee")}</div><div><small>{t("poolRealCost")}</small>{payouts(r, "realFee")}</div></div>
+        <div className="pool-mobile-secondary"><div><small>{t(columns[4].label)}</small>{blocks(r)}</div><div><small>{t("poolFee")}</small>{payouts(r, "fee")}</div><div><small className="pool-column-heading">{t("poolRealCost")}<PoolCostHelp rows={[r]} lang={lang} t={t} /></small>{payouts(r, "realFee")}</div></div>
         <div className="pool-mobile-last"><small>{t("poolLastBlock")}</small>{lastBlock(r)}</div>
       </article>)}</div>
     </>}

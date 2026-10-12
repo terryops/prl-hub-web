@@ -1,6 +1,21 @@
 import type { PoolOverview, PoolPayout } from "./types.ts";
 
 export type PoolSortKey = "name" | "hashrate" | "earnings" | "blocks" | "fee" | "realFee" | "lastBlock";
+export function realCostPeriods(rows: PoolOverview[]) {
+  const periods = new Map<string, { start: number; end: number; names: string[] }>();
+  for (const row of rows) {
+    for (const payout of poolPayouts(row)) {
+      if (payout.realFeePercent == null || !Number.isFinite(payout.realFeePercent)) continue;
+      const sample = payout.realFeePeriod ?? (payout.scheme == null || payout.scheme === row.realFeeMeasurement?.scheme ? row.realFeeMeasurement : null);
+      if (!sample || !Number.isFinite(sample.start) || !Number.isFinite(sample.end) || sample.start <= 0 || sample.end <= sample.start || sample.end * 1000 > 8.64e15) continue;
+      const name = payout.scheme ? `${row.name} (${payout.scheme})` : row.name;
+      const key = `${sample.start}:${sample.end}`, period = periods.get(key);
+      if (period) { if (!period.names.includes(name)) period.names.push(name); }
+      else periods.set(key, { start: sample.start, end: sample.end, names: [name] });
+    }
+  }
+  return [...periods.values()].sort((a, b) => a.start - b.start || a.end - b.end);
+}
 export function relativePoolBlock(ts: number, lang: string, now = Date.now() / 1000): string {
   const seconds = ts - now, magnitude = Math.abs(seconds);
   const unit = magnitude >= 86400 ? "day" : magnitude >= 3600 ? "hour" : magnitude >= 60 ? "minute" : "second";

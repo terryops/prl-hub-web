@@ -2315,3 +2315,20 @@ main.pool-page .page-heading p { margin-top: 4px; font-size: 12px; }
   .pool-comparison .pool-mobile-primary .pool-metric strong { font-size: 16px; }
   .pool-comparison .pool-mobile-secondary .pool-metric strong { font-size: 15px; }
 }
+
+/* Real Cost measurement help. */
+.pool-column-heading { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; max-width: 100%; overflow-wrap: anywhere; }
+.pool-comparison .pool-cost-help { width: 24px; height: 24px; min-height: 24px; padding: 3px; flex: 0 0 24px; border: 0; background: transparent; color: var(--muted); }
+.pool-cost-help > span { display: flex; align-items: center; justify-content: center; width: 15px; height: 15px; border: 1px solid currentColor; border-radius: 50%; font-size: 10px; font-weight: 650; line-height: 1; }
+.pool-comparison .pool-cost-help:hover, .pool-cost-help[aria-expanded="true"] { color: var(--blue); }
+.pool-cost-tooltip { position: fixed; z-index: 20; visibility: hidden; width: 340px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); box-shadow: 0 8px 28px rgb(0 0 0 / 16%); font-size: 12px; line-height: 1.5; text-align: left; }
+.pool-cost-tooltip > strong { font-size: 13px; font-weight: 650; }
+.pool-cost-tooltip p { margin: 6px 0 0; color: var(--muted); }
+.pool-cost-period { margin-top: 10px; }
+.pool-cost-period + .pool-cost-period { border-top: 1px solid var(--line); padding-top: 10px; }
+.pool-cost-period > strong { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; }
+.pool-cost-tooltip dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 12px; margin: 0; }
+.pool-cost-tooltip dt { color: var(--muted); }
+.pool-cost-tooltip dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
+@container(max-width:720px){.pool-comparison .pool-mobile .pool-cost-help{width:36px;height:36px;min-height:36px;flex-basis:36px}}

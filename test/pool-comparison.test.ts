@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sortPools, poolSparkline, poolPayouts } from "../src/pool-comparison.ts";
+import { sortPools, poolSparkline, poolPayouts, realCostPeriods } from "../src/pool-comparison.ts";
 import type { PoolOverview } from "../src/types.ts";
 
 test("pool sorting: genuine zero is ordered, missing values stay last in either direction", () => {
@@ -21,4 +21,24 @@ test("pool charts: missing samples break the line and constant hashrate remains 
 test("old API snapshots: missing new metrics stay unknown and original payout remains usable", () => {
   const pool = { scheme: "PPS+", fee: 2, earningsPerPH: 20, pps: true, solo: false, blocksSample: 30 } as PoolOverview;
   assert.deepEqual(poolPayouts(pool), [{ scheme: "PPS+", fee: 2, grossPerPH: 20, realFeePercent: null, estimated: true, solo: false }]);
+});
+
+test("Real Cost help: groups identical periods, preserves different windows and includes a measured zero", () => {
+  const pool = (name: string, start: number, end: number, value: number | null = 5) => ({ name, realFeeMeasurement: { start, end }, payouts: [{ realFeePercent: value }] }) as PoolOverview;
+  const rows = [pool("A", 200, 300), pool("B", 100, 150), pool("C", 200, 300, 0), pool("A", 200, 300), pool("Unknown", 100, 150, null)];
+  assert.deepEqual(realCostPeriods(rows), [{ start: 100, end: 150, names: ["B"] }, { start: 200, end: 300, names: ["A", "C"] }]);
+  assert.equal(rows.length, 5);
+  for (const [start, end] of [[NaN, 300], [100, Infinity], [300, 200], [200, 200], [0, 300], [100, 9e12]]) assert.deepEqual(realCostPeriods([pool("Invalid", start, end)]), []);
+  assert.deepEqual(realCostPeriods([{ name: "Legacy" } as PoolOverview]), []);
+});
+test("Real Cost help distinguishes PPLNS and PPS windows without borrowing a PPS measurement", () => {
+  const row = { name: "Fortune", realFeeMeasurement: { scheme: "PPS", start: 100, end: 600 },
+    payouts: [{ scheme: "PPS", realFeePercent: 5 },
+      { scheme: "PPLNS", realFeePercent: 21.6, realFeePeriod: { start: 500, end: 600 } }] } as PoolOverview;
+  assert.deepEqual(realCostPeriods([row]), [{ start: 100, end: 600, names: ["Fortune (PPS)"] },
+    { start: 500, end: 600, names: ["Fortune (PPLNS)"] }]);
+  const before = structuredClone(row);
+  const missing = { ...row, payouts: [{ scheme: "PPLNS", realFeePercent: 0 }] } as PoolOverview;
+  assert.deepEqual(realCostPeriods([missing]), []);
+  assert.deepEqual(row, before);
 });
