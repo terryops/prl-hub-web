@@ -2339,3 +2339,28 @@ main.pool-page .page-heading p { margin-top: 4px; font-size: 12px; }
 .pool-cost-tooltip dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
 @container(max-width:720px){.pool-comparison .pool-mobile .pool-cost-help{width:36px;height:36px;min-height:36px;flex-basis:36px}}
+
+/* Settings and account access live at the bottom of the desktop sidebar. */
+.sidebar-foot { padding: 20px 0 0; }
+.sidebar-actions { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+.sidebar-actions .settings-button { position: static; width: 40px; height: 40px; min-height: 40px; padding: 8px; margin: 0; justify-content: center; }
+.sidebar-actions .account-entry { width: 100%; min-width: 0; min-height: 40px; padding: 8px; white-space: normal; }
+.sidebar-actions .account-entry > span { min-width: 0; overflow-wrap: anywhere; }
+.sidebar-footer-copy { padding: 16px 12px 0; }
+@media (min-width: 641px) {
+  .sidebar { overflow-y: auto; }
+  .sidebar > .brand, .sidebar > nav, .sidebar-foot { flex-shrink: 0; }
+}
+@media (max-width: 640px) {
+  .sidebar-foot { display: contents; }
+  .sidebar-footer-copy { display: none; }
+  .sidebar-actions { position: absolute; top: 10px; right: 16px; z-index: 5; width: 140px; grid-template-columns: 36px minmax(0, 1fr); padding: 0; border: 0; }
+  .sidebar-actions .settings-button, .sidebar-actions .account-entry { height: 36px; min-height: 36px; padding: 6px; }
+  .sidebar-actions .settings-button { width: 36px; }
+  .global-actions { right: 164px; }
+}
+@media (max-width: 380px) {
+  .sidebar-actions { width: 80px; }
+  .sidebar-actions .account-entry { width: 36px; }
+  .global-actions { right: 104px; }
+}

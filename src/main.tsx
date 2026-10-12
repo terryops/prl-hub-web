@@ -713,7 +713,13 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-foot">
-          Cyber Corner<small>{t("subtitle")}</small>
+          <div className="sidebar-actions">
+            <button className="settings-button" aria-label={t("settings")} title={t("settings")} onClick={() => setPanel("settings")}><Icon name="settings" /></button>
+            <button className={`account-entry ${accountReady && state.accountId ? "" : "primary"}`} onClick={() => setPanel("account")} aria-label={accountReady && state.accountId ? accountCopy(state.lang).account : t("signIn")} aria-haspopup="dialog">
+              <Icon name="account" /><span>{accountReady && state.accountId ? accountCopy(state.lang).account : t("signIn")}</span>
+            </button>
+          </div>
+          <div className="sidebar-footer-copy">Cyber Corner<small>{t("subtitle")}</small></div>
         </div>
       </aside>
       <main className={page === "pools" ? "pool-page" : undefined}>
@@ -740,12 +746,6 @@ function App() {
             </p>
           </div>
         </header>
-        <div className="global-actions">
-          <button className="settings-button" aria-label={t("settings")} title={t("settings")} onClick={() => setPanel("settings")}><Icon name="settings" /></button>
-          <button className={`account-entry ${accountReady && state.accountId ? "" : "primary"}`} onClick={() => setPanel("account")} aria-label={accountReady && state.accountId ? accountCopy(state.lang).account : t("signIn")} aria-haspopup="dialog">
-            <Icon name="account" /><span>{accountReady && state.accountId ? accountCopy(state.lang).account : t("signIn")}</span>
-          </button>
-        </div>
         </div>
         {page === "market" && (
           <>
