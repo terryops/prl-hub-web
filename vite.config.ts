@@ -5,14 +5,15 @@ export default defineConfig({
   plugins: [{
     name: "privacy-page",
     generateBundle() {
-      const source = readFileSync(new URL("./content/privacy.html", import.meta.url), "utf8");
-      const style = source.match(/<style>([\s\S]*?)<\/style>/);
-      if (!style) throw new Error("Privacy page stylesheet is missing");
-      // Keep the canonical policy in sync while honoring the SPA's strict CSP.
-      this.emitFile({ type: "asset", fileName: "assets/privacy.css", source: style[1] });
-      this.emitFile({ type: "asset", fileName: "privacy.html", source: source
-        .replace(style[0], '<link rel="stylesheet" href="/assets/privacy.css">')
-        .replace('src="/logo.png"', 'src="/icon-192.png"') });
+      for (const page of ["privacy", "support"]) {
+        const source = readFileSync(new URL(`./content/${page}.html`, import.meta.url), "utf8");
+        const style = source.match(/<style>([\s\S]*?)<\/style>/);
+        if (!style) throw new Error(`${page} page stylesheet is missing`);
+        this.emitFile({ type: "asset", fileName: `assets/${page}.css`, source: style[1] });
+        this.emitFile({ type: "asset", fileName: `${page}.html`, source: source
+          .replace(style[0], `<link rel="stylesheet" href="/assets/${page}.css">`)
+          .replace('src="/logo.png"', 'src="/icon-192.png"') });
+      }
     },
   }],
 });
