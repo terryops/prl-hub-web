@@ -23,7 +23,7 @@ export function WalletExtension({ t, copy, lang }: {
           <li><Icon name="wallet" />{t("extensionRestore")}</li>
           <li><Icon name="lock" />{t("extensionLocal")}</li>
         </ul>
-        <a className="primary extension-download" href={`https://prl.tools.video/downloads/pearl-hub-wallet-${manifest.version}.zip`} download>
+        <a className="primary extension-download" href={`https://pearlhub.net/downloads/pearl-hub-wallet-${manifest.version}.zip`} download>
           {t("extensionDownload")} <Icon name="down" />
         </a>
         <p className="extension-release">v{manifest.version} · {t("extensionRelease")}</p>

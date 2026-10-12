@@ -24,7 +24,7 @@
     "type": "git",
     "url": "https://github.com/terryops/prl-hub-web.git"
   },
-  "homepage": "https://prl.tools.video",
+  "homepage": "https://pearlhub.net",
   "engines": {
     "node": ">=22.6.0"
   }

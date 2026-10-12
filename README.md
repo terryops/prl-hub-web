@@ -1,6 +1,6 @@
 # Pearl Hub Web
 
-The open-source Web frontend for [Pearl Hub](https://prl.tools.video): PRL market data,
+The open-source Web frontend for [Pearl Hub](https://pearlhub.net): PRL market data,
 pool comparison, worker monitoring, GPU economics, alerts and optional account settings.
 It supports 16 interface languages, light/dark appearance and mobile layouts.
 
