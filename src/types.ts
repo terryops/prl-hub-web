@@ -17,6 +17,7 @@ export type Rule = Item & {
   window: number;
   enabled: boolean;
   seen_fired: number;
+  repeat?: boolean;
 };
 export type PushWindow = { start: number; end: number; tz: string } | null;
 export type State = {
@@ -124,8 +125,8 @@ export type PoolPayout = {
   fee: number | null;
   grossPerPH: number | null;
   realFeePercent: number | null;
-  realFeePeriod?: { start: number; end: number } | null;
   realFeeEstimated?: boolean | null;
+  realFeePeriod?: { start: number; end: number } | null;
   estimated: boolean;
   solo: boolean;
 };

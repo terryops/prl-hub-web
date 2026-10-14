@@ -14,7 +14,7 @@ export function WalletExtension({ t, copy, lang }: {
     <div className="wallet-guide">
       <section className="card extension-hero">
         <div className="extension-brand">
-          <img src="/icon-192.png?v=pearl" alt="" />
+          <img src="/icon-192.png?v=pearl-light" alt="" />
           <div><span className="badge">{t("extensionBadge")}</span><h2>Pearl Hub Wallet</h2></div>
         </div>
         <p className="extension-intro">{t("extensionIntro")}</p>

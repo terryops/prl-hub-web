@@ -50,8 +50,8 @@ test("translations: sixteen dictionaries have exactly the same keys and nonempty
       ),
     );
 });
-test("navigation: all sixteen languages have six nonempty short labels within the character budget", () => {
-  const keys = ["navMarketShort", "navWorkersShort", "navPoolsShort", "navCalculatorShort", "navWalletShort", "navAlertsShort"];
+test("navigation: all sixteen languages have seven nonempty short labels within the character budget", () => {
+  const keys = ["navMarketShort", "navWorkersShort", "navPoolsShort", "navCalculatorShort", "navWalletShort", "navAlertsShort", "navAppShort"];
   for (const lang of ["en", "ru", "zh-Hans", "zh-Hant", "vi", "id", "es", "pt-BR", "fr", "de", "it", "tr", "ja", "ko", "hi", "th"]) {
     const dictionary = JSON.parse(readFileSync(new URL(`../src/i18n/${lang}.json`, import.meta.url), "utf8"));
     const limit = lang.startsWith("zh") ? 4 : 8;

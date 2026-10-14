@@ -120,7 +120,7 @@
     "loading": "Cargando…",
     "intro": "Inicia sesión con tu correo para gestionar dispositivos y compras. La sincronización requiere Pro; las cuentas gratuitas guardan los datos solo en este dispositivo. Sin contraseña.",
     "syncRequiresPro": "La sincronización de datos requiere Pro. Los datos de una cuenta gratuita se guardan solo en este dispositivo.",
-    "privacy": "Se sincronizan direcciones públicas, contactos, alertas y preferencias. Las frases de recuperación, claves privadas y contraseñas del monedero permanecen en tu dispositivo.",
+    "privacy": "Se sincronizan direcciones públicas, contactos, alertas y preferencias. Las frases de recuperación, claves privadas y contraseñas de la billetera permanecen en tu dispositivo.",
     "security": "Seguridad de la cuenta",
     "rightsNote": "Los pagos del App Store y con PRL activan las mismas funciones Pro. Inicia sesión con el mismo correo en la web y en las apps para compartir tu compra verificada.",
     "proRights": "Pro",
@@ -162,7 +162,7 @@
     "guestPro": "Pro ativado neste navegador",
     "savePurchase": "Opcional: salve a compra com seu e-mail",
     "purchaseLinkedElsewhere": "A compra deste navegador está vinculada a outro e-mail. Pro continua disponível aqui; entre com esse e-mail para usar em outros dispositivos.",
-    "guestCheckout": "Sem login. Pro funciona neste navegador; vincule um e-mail para recuperar a compra."
+    "guestCheckout": "Sem login. O Pro funciona neste navegador; vincule um e-mail para restaurar a compra."
   },
   "fr": {
     "account": "Compte",
@@ -193,9 +193,9 @@
     "human": "Terminez la vérification pour envoyer automatiquement le code par e-mail.",
     "guestPurchaseNote": "Achetez sans vous connecter. Pro fonctionne dans ce navigateur. Associez un e-mail si vous souhaitez l’utiliser sur d’autres appareils et le restaurer après avoir effacé les données du site.",
     "guestPro": "Pro activé dans ce navigateur",
-    "savePurchase": "Facultatif : conserver l’achat par e-mail",
+    "savePurchase": "Facultatif : associer l’achat à un e-mail",
     "purchaseLinkedElsewhere": "L’achat de ce navigateur est lié à une autre adresse e-mail. Pro reste disponible ici ; connectez-vous avec cette adresse sur les autres appareils.",
-    "guestCheckout": "Sans connexion. Pro fonctionne ici ; liez une adresse e-mail pour restaurer votre achat."
+    "guestCheckout": "Aucun compte requis. Pro fonctionne ici ; liez une adresse e-mail pour restaurer votre achat."
   },
   "de": {
     "account": "Konto",
@@ -217,17 +217,17 @@
     "remove": "Konto löschen",
     "cancel": "Abbrechen",
     "loading": "Laden…",
-    "intro": "Melde dich per E-Mail an, um Geräte und Käufe zu verwalten. Synchronisierung erfordert Pro; kostenlose Konten speichern Daten nur auf diesem Gerät. Kein Passwort nötig.",
+    "intro": "Melden Sie sich per E-Mail an, um Geräte und Käufe zu verwalten. Synchronisierung erfordert Pro; kostenlose Konten speichern Daten nur auf diesem Gerät. Kein Passwort nötig.",
     "syncRequiresPro": "Datensynchronisierung erfordert Pro. Die Daten eines kostenlosen Kontos bleiben nur auf diesem Gerät.",
-    "privacy": "Öffentliche Adressen, Kontakte, Warnungen und Einstellungen können synchronisiert werden. Wiederherstellungsphrasen, private Schlüssel und Wallet-Passwörter bleiben auf deinem Gerät.",
+    "privacy": "Öffentliche Adressen, Kontakte, Alarme und Einstellungen können synchronisiert werden. Wiederherstellungsphrasen, private Schlüssel und Wallet-Passwörter bleiben auf Ihrem Gerät.",
     "security": "Kontosicherheit",
-    "rightsNote": "App-Store- und PRL-Zahlungen schalten dieselben Pro-Funktionen frei. Melde dich im Web und in den Apps mit derselben E-Mail-Adresse an, um deinen verifizierten Kauf zu nutzen.",
+    "rightsNote": "App-Store- und PRL-Zahlungen schalten dieselben Pro-Funktionen frei. Melden Sie sich im Web und in den Apps mit derselben E-Mail-Adresse an, um Ihren verifizierten Kauf zu nutzen.",
     "proRights": "Pro",
-    "human": "Schließe die Verifizierung ab, um den E-Mail-Code automatisch zu senden.",
-    "guestPurchaseNote": "Kaufe ohne Anmeldung. Pro funktioniert in diesem Browser. Verknüpfe optional eine E-Mail, um Pro auf anderen Geräten zu nutzen und nach dem Löschen von Website-Daten wiederherzustellen.",
+    "human": "Schließen Sie die Verifizierung ab, um den E-Mail-Code automatisch zu senden.",
+    "guestPurchaseNote": "Kauf ohne Anmeldung möglich. Pro funktioniert in diesem Browser. Verknüpfen Sie optional eine E-Mail, um Pro auf anderen Geräten zu nutzen und nach dem Löschen von Website-Daten wiederherzustellen.",
     "guestPro": "Pro in diesem Browser aktiviert",
     "savePurchase": "Optional: Kauf mit E-Mail sichern",
-    "purchaseLinkedElsewhere": "Der Kauf in diesem Browser ist mit einer anderen E-Mail verknüpft. Pro bleibt hier verfügbar; melde dich auf anderen Geräten mit dieser E-Mail an.",
+    "purchaseLinkedElsewhere": "Der Kauf in diesem Browser ist mit einer anderen E-Mail verknüpft. Pro bleibt hier verfügbar; melden Sie sich auf anderen Geräten mit dieser E-Mail an.",
     "guestCheckout": "Ohne Anmeldung. Pro gilt in diesem Browser; eine E-Mail hilft beim Wiederherstellen des Kaufs."
   },
   "it": {
@@ -252,7 +252,7 @@
     "loading": "Caricamento…",
     "intro": "Accedi con l’email per gestire dispositivi e acquisti. La sincronizzazione richiede Pro; gli account gratuiti conservano i dati solo su questo dispositivo. Senza password.",
     "syncRequiresPro": "La sincronizzazione dei dati richiede Pro. I dati di un account gratuito restano solo su questo dispositivo.",
-    "privacy": "Indirizzi pubblici, contatti, avvisi e preferenze possono essere sincronizzati. Frasi di recupero, chiavi private e password del portafoglio rimangono sul dispositivo.",
+    "privacy": "Indirizzi pubblici, contatti, avvisi e preferenze possono essere sincronizzati. Frasi di recupero, chiavi private e password del wallet rimangono sul dispositivo.",
     "security": "Sicurezza dell’account",
     "rightsNote": "I pagamenti App Store e PRL sbloccano le stesse funzioni Pro. Accedi con la stessa email sul Web e nelle app per condividere l’acquisto verificato.",
     "proRights": "Pro",
@@ -261,7 +261,7 @@
     "guestPro": "Pro attivo in questo browser",
     "savePurchase": "Facoltativo: salva l’acquisto con l’email",
     "purchaseLinkedElsewhere": "L’acquisto in questo browser è collegato a un’altra email. Pro resta disponibile qui; accedi con quella email sugli altri dispositivi.",
-    "guestCheckout": "Senza accesso. Pro funziona in questo browser; collega un’email per recuperare l’acquisto."
+    "guestCheckout": "Accesso non necessario. Pro funziona in questo browser; collega un’email per ripristinare l’acquisto."
   },
   "tr": {
     "account": "Hesap",
@@ -292,9 +292,9 @@
     "human": "E-posta kodunun otomatik gönderilmesi için doğrulamayı tamamlayın.",
     "guestPurchaseNote": "Giriş yapmadan satın alın. Pro bu tarayıcıda kullanılabilir. Diğer cihazlarda kullanmak ve site verileri silindiğinde geri yüklemek için isteğe bağlı olarak e-posta bağlayın.",
     "guestPro": "Pro bu tarayıcıda etkin",
-    "savePurchase": "İsteğe bağlı: satın alımı e-postayla saklayın",
-    "purchaseLinkedElsewhere": "Bu tarayıcıdaki satın alma başka bir e-postaya bağlı. Pro burada kullanılabilir; diğer cihazlarda o e-postayla giriş yapın.",
-    "guestCheckout": "Giriş gerekmez. Pro bu tarayıcıda çalışır; satın almayı geri yüklemek için e-posta bağlayın."
+    "savePurchase": "İsteğe bağlı: satın alımı e-postaya bağla",
+    "purchaseLinkedElsewhere": "Bu tarayıcıdaki satın alım başka bir e-postaya bağlı. Pro burada kullanılabilir; diğer cihazlarda kullanmak için o e-postayla giriş yapın.",
+    "guestCheckout": "Giriş gerekmez. Pro bu tarayıcıda çalışır; satın alımı geri yüklemek için e-posta bağlayın."
   },
   "ja": {
     "account": "アカウント",
@@ -318,13 +318,13 @@
     "loading": "読み込み中…",
     "intro": "メールアドレスでログインして、デバイスと購入を管理できます。同期にはProが必要で、無料アカウントのデータはこのデバイスにのみ保存されます。パスワードは不要です。",
     "syncRequiresPro": "データ同期にはProが必要です。無料アカウントのデータはこのデバイスにのみ保存されます。",
-    "privacy": "公開アドレス、連絡先、通知、設定を同期できます。復元フレーズ、秘密鍵、ウォレットのパスワードはデバイス内に保存されます。",
+    "privacy": "公開アドレス、連絡先、通知、設定を同期できます。リカバリーフレーズ、秘密鍵、ウォレットのパスワードはデバイス内にのみ保存されます。",
     "security": "アカウントのセキュリティ",
     "rightsNote": "App StoreとPRLのどちらで支払っても、同じPro機能を利用できます。Webとアプリで同じメールアドレスでログインすると、確認済みの購入を共有できます。",
     "proRights": "Pro",
     "human": "認証を完了すると、メールの確認コードが自動送信されます。",
-    "guestPurchaseNote": "ログインせずに購入でき、このブラウザでProを利用できます。メール連携は任意です。他の端末での利用やサイトデータ削除後の購入復元に使えます。",
-    "guestPro": "このブラウザでProが有効になりました",
+    "guestPurchaseNote": "ログインせずに購入でき、このブラウザーでProを利用できます。メール連携は任意です。他のデバイスでの利用やサイトデータ削除後の購入復元に使えます。",
+    "guestPro": "このブラウザーでProが有効になりました",
     "savePurchase": "任意：メールを連携して購入を保存",
     "purchaseLinkedElsewhere": "このブラウザーの購入は別のメールアドレスに登録されています。ここでは引き続きProを使えます。他のデバイスでは登録したメールでログインしてください。",
     "guestCheckout": "ログイン不要。このブラウザーでProを使えます。メールを登録すると購入を復元できます。"
@@ -386,10 +386,10 @@
     "syncRequiresPro": "डेटा सिंक के लिए Pro ज़रूरी है। मुफ़्त खाते का डेटा केवल इस डिवाइस पर रहता है।",
     "privacy": "सार्वजनिक पते, संपर्क, अलर्ट और प्राथमिकताएँ सिंक हो सकती हैं। रिकवरी फ़्रेज़, निजी कुंजियाँ और वॉलेट पासवर्ड डिवाइस पर रहते हैं।",
     "security": "खाते की सुरक्षा",
-    "rightsNote": "App Store और PRL भुगतान से एक ही Pro सुविधाएँ मिलती हैं। सत्यापित खरीद साझा करने के लिए वेब और ऐप में उसी ईमेल से साइन इन करें।",
+    "rightsNote": "App Store और PRL भुगतान, दोनों से वही Pro सुविधाएँ मिलती हैं। अपनी सत्यापित खरीद वेब और ऐप दोनों में इस्तेमाल करने के लिए उसी ईमेल से साइन इन करें।",
     "proRights": "Pro",
     "human": "सत्यापन पूरा करें, फिर ईमेल कोड अपने आप भेज दिया जाएगा।",
-    "guestPurchaseNote": "साइन इन किए बिना खरीदें। Pro इस ब्राउज़र में काम करता है। दूसरे उपकरणों पर उपयोग और साइट डेटा हटाने के बाद खरीद बहाल करने के लिए चाहें तो ईमेल जोड़ें।",
+    "guestPurchaseNote": "साइन इन किए बिना खरीदें। Pro इस ब्राउज़र में काम करता है। दूसरे डिवाइस पर उपयोग और साइट डेटा हटाने के बाद खरीद बहाल करने के लिए चाहें तो ईमेल जोड़ें।",
     "guestPro": "इस ब्राउज़र में Pro सक्रिय है",
     "savePurchase": "वैकल्पिक: ईमेल से खरीद सुरक्षित रखें",
     "purchaseLinkedElsewhere": "इस ब्राउज़र की खरीद किसी अन्य ईमेल से जुड़ी है। यहाँ Pro उपलब्ध है; अन्य डिवाइस पर उसी ईमेल से साइन इन करें।",
@@ -417,14 +417,14 @@
     "loading": "กำลังโหลด…",
     "intro": "เข้าสู่ระบบด้วยอีเมลเพื่อจัดการอุปกรณ์และการซื้อ การซิงค์ต้องใช้ Pro ส่วนข้อมูลของบัญชีฟรีจะเก็บไว้บนอุปกรณ์นี้เท่านั้น ไม่ต้องใช้รหัสผ่าน",
     "syncRequiresPro": "การซิงค์ข้อมูลต้องใช้ Pro ข้อมูลของบัญชีฟรีจะเก็บไว้บนอุปกรณ์นี้เท่านั้น",
-    "privacy": "ซิงค์ที่อยู่สาธารณะ รายชื่อติดต่อ การแจ้งเตือนและการตั้งค่าได้ วลีการกู้คืน คีย์ส่วนตัว และรหัสผ่านกระเป๋าเงินยังอยู่ในอุปกรณ์",
+    "privacy": "ซิงค์ที่อยู่สาธารณะ รายชื่อผู้ติดต่อ การแจ้งเตือนและการตั้งค่าได้ วลีกู้คืน กุญแจส่วนตัว และรหัสผ่านกระเป๋าเงินยังอยู่ในอุปกรณ์",
     "security": "ความปลอดภัยของบัญชี",
     "rightsNote": "การชำระผ่าน App Store และ PRL เปิดใช้ฟีเจอร์ Pro เดียวกัน เข้าสู่ระบบด้วยอีเมลเดียวกันบนเว็บและในแอปเพื่อใช้สิทธิ์การซื้อที่ยืนยันแล้วร่วมกัน",
     "proRights": "Pro",
     "human": "ยืนยันให้เสร็จเพื่อส่งรหัสทางอีเมลโดยอัตโนมัติ",
     "guestPurchaseNote": "ซื้อได้โดยไม่ต้องเข้าสู่ระบบ Pro ใช้ได้ในเบราว์เซอร์นี้ เลือกเชื่อมโยงอีเมลได้เพื่อใช้บนอุปกรณ์อื่นและกู้คืนการซื้อหลังล้างข้อมูลเว็บไซต์",
     "guestPro": "เปิดใช้ Pro ในเบราว์เซอร์นี้แล้ว",
-    "savePurchase": "ทางเลือก: บันทึกการซื้อด้วยอีเมล",
+    "savePurchase": "ไม่บังคับ: บันทึกการซื้อไว้กับอีเมล",
     "purchaseLinkedElsewhere": "การซื้อในเบราว์เซอร์นี้เชื่อมกับอีเมลอื่น คุณยังใช้ Pro ที่นี่ได้ ให้เข้าสู่ระบบด้วยอีเมลนั้นบนอุปกรณ์อื่น",
     "guestCheckout": "ไม่ต้องเข้าสู่ระบบ ใช้ Pro ในเบราว์เซอร์นี้ได้ เชื่อมอีเมลเพื่อกู้คืนการซื้อได้"
   }

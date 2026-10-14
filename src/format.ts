@@ -23,7 +23,7 @@ export const usd = (x: number, lang: Lang = "en") => currencyAmount(x, "$", lang
 export const roundRent = (value: number) => Number(value.toFixed(4));
 export const change = (x: number | null | undefined) =>
   x == null ? "—" : `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(2)}%`;
-export function hashrate(x: number | undefined): string {
+export function hashrate(x: number | undefined, lang?: Lang): string {
   if (x == null) return "—";
   for (const [u, n] of [
     ["EH/s", 1e18],
@@ -33,7 +33,7 @@ export function hashrate(x: number | undefined): string {
     ["MH/s", 1e6],
     ["kH/s", 1e3],
   ] as const)
-    if (x >= n) return `${(x / n).toFixed(2)} ${u}`;
+    if (x >= n) return `${lang ? (x / n).toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (x / n).toFixed(2)} ${u}`;
   return `${Math.round(x)} H/s`;
 }
 export function rate(s: Stats, w: WindowName) {

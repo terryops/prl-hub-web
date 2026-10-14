@@ -5,7 +5,8 @@ import { calculatorDefaults } from "../src/calculator.ts";
 import { fleetDefaults, fleet, gpuEconomics, deviceWatts, syncDevices, projection, effectiveGrowth, normalizeDevice, normalizeFleet, type EconomicsContext } from "../src/fleet.ts";
 import { configOf, defaults, normalizeConfig, mergeConfig } from "../src/store.ts";
 import type { Device, Monitor, Stats, Network } from "../src/types.ts";
-const catalog = JSON.parse(readFileSync(new URL("../src/gpus.json", import.meta.url), "utf8"));
+// Fixed figures, so the fleet math below doesn't move whenever src/gpus.json is revised.
+const catalog = [{ name: "RTX 4090", th: 250, watts: 450, price: 1600, rentDefault: 60 }];
 const gpu = catalog.find((g: { name: string }) => g.name === "RTX 4090");
 const ctx = (): EconomicsContext => ({ input: { ...calculatorDefaults(), fee: 0 }, settings: fleetDefaults(), price: 2, unit: .01, networkHash: 1e15, code: "CNY", rate: 10, rates: { CNY: 10, JPY: 100 } });
 const device = (id: string, patch: Partial<Device> = {}): Device => ({ id, updated: 1, name: id, gpu: gpu.name, count: 1, rented: false, hoursPerDay: 24, ...patch });

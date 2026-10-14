@@ -5,7 +5,7 @@ self.addEventListener("push", (event) => {
   let o; try { o = event.data.json(); } catch { return; }
   if (!o || typeof o !== "object") return;
   const url = o.url === "/#workers" ? "/#workers" : "/#alerts";
-  event.waitUntil(self.registration.showNotification(o.title || "Pearl Hub", { body: o.body, tag: o.tag, renotify: !!o.tag, icon: "/icon-192.png?v=pearl", data: { url } }));
+  event.waitUntil(self.registration.showNotification(o.title || "Pearl Hub", { body: o.body, tag: o.tag, renotify: !!o.tag, icon: "/icon-192.png?v=pearl-light", data: { url } }));
 });
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

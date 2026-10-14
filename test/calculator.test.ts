@@ -14,6 +14,7 @@ import {
   normalizeConfig,
   mergeConfig,
 } from "../src/store.ts";
+import { newest, validCatalog } from "../src/gpu-catalog.ts";
 const near = (a: number | null, b: number) =>
   assert.ok(
     a != null && Math.abs(a - b) < Math.max(1e-9, Math.abs(b) * 1e-12),
@@ -130,25 +131,19 @@ test("calculator config: old encrypted configs acquire defaults; inputs persist 
   ])
     assert.throws(() => normalizeCalculator(c));
 });
-test("GPU references: all 27 match the original Swift catalog snapshot, including H100 and RTX 5090", () => {
-  const catalog = JSON.parse(
-    readFileSync(new URL("../src/gpus.json", import.meta.url), "utf8"),
-  );
-  const swift = readFileSync(
-    new URL("./fixtures/gpu-catalog.swift", import.meta.url),
-    "utf8",
-  );
-  assert.equal(catalog.length, 27);
-  for (const g of catalog) {
-    const escaped = g.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const m = swift.match(
-      new RegExp(
-        `GPU\\(name:\\s*"${escaped}",\\s*pearl:\\s*([\\d.]+),\\s*watts:\\s*([\\d.]+),\\s*price:\\s*([\\d.]+)`,
-      ),
-    );
-    assert.ok(m, g.name);
-    assert.deepEqual([g.th, g.watts, g.price], m.slice(1).map(Number));
-  }
+test("GPU references: the bundled copy is the app's gpus.json, and the served table wins unless older", () => {
+  const copy = JSON.parse(readFileSync(new URL("../src/gpus.json", import.meta.url), "utf8"));
+  const shared = JSON.parse(readFileSync(new URL("./fixtures/gpus.json", import.meta.url), "utf8"));
+  assert.deepEqual(copy, shared);
+  assert.equal(copy.gpus.length, 27);
+  assert.ok(validCatalog(copy));
+  const at = (updated: string, th: number) => ({ updated, gpus: [{ name: "RTX 5090", th, watts: 525, price: 2200, rentDefault: 120 }] });
+  const fallback = at("2026-10-14", 1);
+  assert.equal(newest(at("2026-10-01", 2), fallback).gpus[0].th, 1);
+  assert.equal(newest(at("2026-10-14", 3), fallback).gpus[0].th, 3);
+  assert.equal(newest(at("2026-11-01", 4), fallback).gpus[0].th, 4);
+  for (const bad of [null, "x", { updated: "2026-11-01", gpus: [] }, at("2026-11-01", 0), at("soon", 5)])
+    assert.equal(newest(bad, fallback), fallback);
 });
 test("push service worker: received JSON displays expected text; malformed events do not throw; click focuses existing origin", async () => {
   const handlers: Record<string, Function> = {},

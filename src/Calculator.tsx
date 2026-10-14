@@ -2,7 +2,7 @@ import { Money, PRLAmount } from "./Money.tsx";
 import type { CalculatorInput, Overview, Price, Lang } from "./types.ts";
 import { calculate, normalizeCalculator, scenarioUnit } from "./calculator.ts";
 import { NetworkSummary, numeric, type Translate } from "./PoolOverview.tsx";
-import gpus from "./gpus.json";
+import { useGPUs } from "./gpus.ts";
 import { usd, roundRent } from "./format.ts";
 export function Calculator({
   value,
@@ -23,6 +23,7 @@ export function Calculator({
   lang: Lang;
   formatMoney?: (v: number) => string;
 }) {
+  const gpus = useGPUs();
   const p = value.price ?? price?.usd ?? null,
     unit = scenarioUnit(value, data?.network?.prlPerTHDay ?? null, data?.network?.hashrate ?? null);
   const r = calculate(value, p, unit);

@@ -67,7 +67,7 @@ function EmailProof({ purpose, email: fixed, accountId = "", lang, siteKey, onPr
     {challenge && <label>{c.code}<input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} required disabled={busy || sendPending} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} /></label>}
     <div className="actions">
       {challenge && <button type="submit" className="primary" disabled={busy || sendPending || code.length !== 6}>{busy ? c.loading : c.verify}</button>}
-      <button type={challenge ? "button" : "submit"} disabled={busy || sendPending || clock < retryAt || !email.includes("@")} onClick={challenge ? requestSend : undefined}>{challenge ? c.resend : c.send}{clock < retryAt ? ` (${Math.ceil((retryAt - clock) / 1000)})` : ""}</button>
+      <button type={challenge ? "button" : "submit"} className={challenge ? undefined : "primary"} disabled={busy || sendPending || clock < retryAt || !email.includes("@")} onClick={challenge ? requestSend : undefined}>{challenge ? c.resend : c.send}{clock < retryAt ? ` (${Math.ceil((retryAt - clock) / 1000)})` : ""}</button>
       {challenge && !fixed && <button type="button" disabled={busy || sendPending} onClick={() => { setChallenge(""); setCode(""); setHumanNeeded(false); setHuman(""); setMessage(""); }}>{c.change}</button>}
     </div>
     {message && <p role="status" className="muted">{message}</p>}

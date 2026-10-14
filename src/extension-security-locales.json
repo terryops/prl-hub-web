@@ -67,7 +67,7 @@
   },
   "es": {
     "title": "Código abierto y comprobaciones de seguridad",
-    "body": "Pearl Hub ofrece código abierto para que puedas revisar y verificar la implementación de la cartera.",
+    "body": "Pearl Hub ofrece código abierto para que puedas revisar y verificar la implementación de la billetera.",
     "channels": "Canales de instalación: Chrome Web Store o paquetes oficiales de GitHub Release (descomprime y carga manualmente).",
     "details": "Código fuente y canales oficiales de instalación",
     "check": "Antes de instalar, comprueba el editor oficial, la versión y los permisos solicitados. Si la página de la versión ofrece una suma de comprobación, compárala con tu descarga.",
@@ -88,30 +88,30 @@
     "releases": "GitHub Release"
   },
   "fr": {
-    "title": "Code ouvert et vérifications de sécurité",
-    "body": "Pearl Hub fournit du code ouvert pour examiner et vérifier le fonctionnement du portefeuille.",
+    "title": "Open source et vérifications de sécurité",
+    "body": "Pearl Hub publie son code en open source afin que vous puissiez examiner et vérifier l’implémentation du portefeuille.",
     "channels": "Canaux d’installation : Chrome Web Store ou packages officiels GitHub Release (décompressez et chargez manuellement).",
     "details": "Code source et canaux d’installation officiels",
     "check": "Avant l’installation, vérifiez l’éditeur officiel, la version et les autorisations demandées. Si une somme de contrôle est fournie, comparez-la avec le package téléchargé.",
     "source": "Code source sur GitHub",
-    "pending": "Lien à compléter",
+    "pending": "Lien à venir",
     "store": "Chrome Web Store",
     "releases": "GitHub Release"
   },
   "de": {
     "title": "Offener Quellcode und Sicherheitsprüfung",
-    "body": "Pearl Hub stellt offenen Quellcode bereit, damit du die Wallet-Implementierung prüfen und nachvollziehen kannst.",
+    "body": "Pearl Hub stellt offenen Quellcode bereit, damit Sie die Wallet-Implementierung prüfen und nachvollziehen können.",
     "channels": "Installationswege: Chrome Web Store oder offizielle GitHub-Release-Pakete (entpacken und manuell laden).",
     "details": "Quellcode und offizielle Installationswege",
-    "check": "Prüfe vor der Installation den offiziellen Herausgeber, die Version und die angeforderten Berechtigungen. Falls eine Prüfsumme veröffentlicht wurde, vergleiche sie mit deinem Download.",
+    "check": "Prüfen Sie vor der Installation den offiziellen Herausgeber, die Version und die angeforderten Berechtigungen. Falls eine Prüfsumme veröffentlicht wurde, vergleichen Sie sie mit Ihrem Download.",
     "source": "Quellcode auf GitHub",
     "pending": "Link folgt",
     "store": "Chrome Web Store",
     "releases": "GitHub Release"
   },
   "it": {
-    "title": "Codice aperto e verifiche di sicurezza",
-    "body": "Pearl Hub fornisce codice aperto per esaminare e verificare l’implementazione del portafoglio.",
+    "title": "Open source e verifiche di sicurezza",
+    "body": "Pearl Hub rende disponibile il codice open source, così puoi esaminare e verificare l’implementazione del wallet.",
     "channels": "Canali di installazione: Chrome Web Store o pacchetti ufficiali GitHub Release (estrai e carica manualmente).",
     "details": "Codice sorgente e canali ufficiali di installazione",
     "check": "Prima di installare, verifica l’editore ufficiale, la versione e le autorizzazioni richieste. Se viene fornita una somma di controllo, confrontala con il pacchetto scaricato.",

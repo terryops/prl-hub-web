@@ -31,7 +31,7 @@ export function poolPayouts(pool: PoolOverview): PoolPayout[] {
 export function sortPools(rows: PoolOverview[], key: PoolSortKey, ascending: boolean): PoolOverview[] {
   const value = (p: PoolOverview) => ({
     hashrate: p.hashrate, earnings: p.solo ? null : p.earningsPerPH, blocks: p.blocksPerDay,
-    fee: p.fee, realFee: poolPayouts(p).find((c) => /^(PPS|FPPS)/i.test(c.scheme || ""))?.realFeePercent, lastBlock: p.lastBlockTime,
+    fee: p.fee, realFee: poolPayouts(p).find((c) => c.realFeePercent != null && Number.isFinite(c.realFeePercent))?.realFeePercent, lastBlock: p.lastBlockTime,
   })[key as Exclude<PoolSortKey, "name">];
   return [...rows].sort((a, b) => {
     const tie = a.name.localeCompare(b.name);

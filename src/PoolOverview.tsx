@@ -11,7 +11,7 @@ export const numeric = (v: number | null | undefined, digits = 2, lang: Lang = "
 export function NetworkSummary({ data, t, lang, failed }: { data?: Overview; lang: Lang; t: Translate; failed?: boolean }) {
   const n = data?.network;
   return <section className="network-grid" aria-label={t("network")}>{[
-    [t("network"), n?.hashrate != null ? hashrate(n.hashrate) : "—"],
+    [t("network"), n?.hashrate != null ? hashrate(n.hashrate, lang) : "—"],
     [t("difficulty"), difficulty(n?.difficulty, lang)],
     [t("blockReward"), n?.reward != null ? numeric(n.reward, 4, lang) + " PRL" : "—"],
     [t("unitOutput"), unitYield(n?.prlPerTHDay, lang, t("perDay"))],
@@ -59,8 +59,8 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
     })}
     {kind === "earnings" && <small>{t("poolPerPHDay")}</small>}
   </div>;
-  const hash = (r: PoolRow) => <div className="pool-metric"><strong className={r.hashrate == null ? "missing-value" : undefined}>{hashrate(r.hashrate ?? undefined)}</strong>
-    {r.averageHashrate7d != null ? <small>{t("poolAverage7d").replace("%@", hashrate(r.averageHashrate7d))}</small> : r.miners != null && <small>{numeric(r.miners, 0, lang)} {t("participants")}</small>}
+  const hash = (r: PoolRow) => <div className="pool-metric"><strong className={r.hashrate == null ? "missing-value" : undefined}>{hashrate(r.hashrate ?? undefined, lang)}</strong>
+    {r.averageHashrate7d != null ? <small>{t("poolAverage7d").replace("%@", hashrate(r.averageHashrate7d, lang))}</small> : r.miners != null && <small>{numeric(r.miners, 0, lang)} {t("participants")}</small>}
   </div>;
   const blocks = (r: PoolRow) => <div className="pool-metric"><strong className={r.blocksPerDay == null ? "missing-value" : undefined}>
     {r.blocksPerDay == null ? "—" : (r.source === "miningpoolstats" ? "≈" : "") + numeric(r.blocksPerDay, r.blocksPerDay === Math.round(r.blocksPerDay) ? 0 : 1, lang)}</strong>

@@ -1,6 +1,6 @@
 # Web interface icons
 
-All 29 functional icon names use the original selected SVG drawings from
+All 33 functional icon names use the original selected SVG drawings from
 [Ionicons 8.1.0](https://www.npmjs.com/package/ionicons/v/8.1.0),
 [upstream repository](https://github.com/ionic-team/ionicons). The outlined family
 provides a consistent iOS-style appearance for the cross-platform website.
@@ -24,7 +24,10 @@ Apple SF Symbols exports are not added to the Web bundle.
 | `calculator` | `calculator-outline.svg` |
 | `wallet` | `wallet-outline.svg` |
 | `alerts` | `notifications-outline.svg` |
+| `app` | `phone-portrait-outline.svg` |
+| `mac` | `desktop-outline.svg` |
 | `settings` | `settings-outline.svg` |
+| `appearance` | `color-palette-outline.svg` |
 | `refresh` | `refresh-outline.svg` |
 | `qr` | `qr-code-outline.svg` |
 | `send` | `paper-plane-outline.svg` |
@@ -34,6 +37,9 @@ Apple SF Symbols exports are not added to the Web bundle.
 | `copy` | `copy-outline.svg` |
 | `external` | `open-outline.svg` |
 | `edit` | `create-outline.svg` |
+| `rename` | `pencil-outline.svg` |
+| `pause` | `pause-outline.svg` |
+| `play` | `play-outline.svg` |
 | `delete` | `trash-outline.svg` |
 | `up` | `arrow-up-outline.svg` |
 | `down` | `arrow-down-outline.svg` |

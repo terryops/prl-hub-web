@@ -38,11 +38,11 @@ export function WatchWallet({ wallets, price, refresh, t, lang, onAdd, onRename,
   }, [targets, refresh]);
   return <>
     <div className="list-toolbar"><span className="badge">{t("readOnly")} · {wallets.length} / 10</span><button className="primary" disabled={wallets.length >= 10} onClick={onAdd}><Icon name="plus" />{t("add")}</button></div>
-    {!wallets.length && <section className="card empty"><Icon name="wallet" /><h2>{t("noWallets")}</h2></section>}
+    {!wallets.length && <section className="card empty"><span><Icon name="wallet" /></span><h2>{t("noWallets")}</h2><button className="primary" onClick={onAdd}><Icon name="plus" />{t("add")}</button></section>}
     {wallets.map((w) => {
       const snap = snapshots[w.addr], data = snap?.data, more = expanded[w.id];
       return <section className="card wallet-card" key={w.id}>
-        <div className="card-heading"><h2>{w.label}</h2><details className="menu"><summary aria-label={t("manage")}><Icon name="more" /></summary><div><button onClick={() => onRename(w)}><Icon name="edit" />{t("rename")}</button><button className="danger" onClick={() => onRemove(w)}><Icon name="delete" />{t("delete")}</button></div></details></div>
+        <div className="card-heading"><h2>{w.label}</h2><details className="menu"><summary aria-label={t("manage")}><Icon name="more" /></summary><div><button onClick={() => onRename(w)}><Icon name="rename" />{t("rename")}</button><button className="danger" onClick={() => onRemove(w)}><Icon name="delete" />{t("delete")}</button></div></details></div>
         <div className="wallet-address"><code className="watch-address" title={w.addr}><span className="address-full">{w.addr}</span><span className="address-short">{w.addr.slice(0, 8)}…{w.addr.slice(-5)}</span></code><button className="icon-button" aria-label={t("copy")} onClick={() => { if (onCopy) void onCopy(w.addr); }}><Icon name="copy" /></button></div>
         {!data && !snap?.failed ? <><Skeleton label={t("loading")} kind="balance" /><Skeleton label={t("loading")} /></> : data && <>
           <div className="wallet-balance"><small>{t("balance")}</small><strong><PRLAmount value={data.balance} lang={lang} /></strong>{price && <Money amount={money(Number(BigInt(data.balance)) / 1e8 * price.usd)} />}</div>
@@ -57,7 +57,7 @@ export function WatchWallet({ wallets, price, refresh, t, lang, onAdd, onRename,
               <span className="transaction-value"><strong className={sent ? "negative" : "positive"}><PRLAmount value={value} lang={lang} signed /></strong><small>{tx.confirmations.toLocaleString(lang)} {t("confirmations")}</small>{sent && tx.fee != null && <small>{t("networkFee")} · <PRLAmount value={tx.fee} lang={lang} /></small>}</span>
             </a>{tx.address && <div className="wallet-address transaction-peer"><small>{t(sent ? "recipient" : "sender")}</small><code className="watch-address" title={tx.address}><span className="address-full">{tx.address}</span><span className="address-short">{tx.address.slice(0, 8)}…{tx.address.slice(-5)}</span></code><button className="icon-button" aria-label={t("copy")} onClick={() => { if (onCopy) void onCopy(tx.address!); }}><Icon name="copy" /></button></div>}</div>;
           })}</div>{(data.history.length > 8 || data.hasMore) && <div className="wallet-history-actions">{data.history.length > 8 && <button aria-expanded={!!more} onClick={() => setExpanded((s) => ({ ...s, [w.id]: !more }))}>{t(more ? "collapse" : "showMore")}</button>}
-          {data.hasMore && <button disabled={snap?.loading} onClick={() => { setExpanded((s) => ({ ...s, [w.id]: true })); void load(w.addr, (data.page || 1) + 1); }}>{t(snap?.loading ? "loading" : "loadMore")}</button>}</div>}
+          {data.hasMore && (more || data.history.length <= 8) && <button disabled={snap?.loading} onClick={() => { setExpanded((s) => ({ ...s, [w.id]: true })); void load(w.addr, (data.page || 1) + 1); }}>{t(snap?.loading ? "loading" : "loadMore")}</button>}</div>}
         </>}
         {snap?.failed && <p className="status warn">{t(data ? "stale" : "error")}</p>}
       </section>;

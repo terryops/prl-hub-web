@@ -66,6 +66,29 @@ test("A3: an old-condition or older firing reply cannot disable a new rule", () 
   assert.equal(fired.enabled, false); assert.equal(fired.seen_fired, 300);
   assert.ok(fired.updated > edited.updated);
 });
+test("A3: frequency edits and repeating firings preserve history without changing the user stamp", () => {
+  const once = { id: "frequency", updated: 100, kind: "above" as const, value: 1, window: 0, enabled: false, seen_fired: 123 };
+  const repeating = applyingEdit(once, { ...once, repeat: true });
+  assert.equal(repeating.repeat, true);
+  assert.equal(repeating.enabled, true);
+  assert.equal(repeating.seen_fired, 123);
+  const pushed = reconcileRule(repeating, { ...repeating, last_fired: 300 });
+  assert.equal(pushed.enabled, true);
+  assert.equal(pushed.seen_fired, 300);
+  assert.equal(pushed.updated, repeating.updated);
+  assert.equal(reconcileRule(repeating, { ...once, last_fired: 400 }), repeating);
+  const off = { ...repeating, enabled: false };
+  assert.equal(reconcileRule(off, { ...repeating, last_fired: 400 }).enabled, false);
+  const back = applyingEdit(pushed, { ...pushed, repeat: false });
+  assert.equal(back.repeat, false);
+  assert.equal(back.enabled, true);
+  assert.equal(back.seen_fired, 300);
+  const state = defaults();
+  state.rules = [repeating];
+  const config = configOf(state);
+  assert.equal(normalizeConfig(config).rules[0].repeat, true);
+});
+
 test("A4: language currency defaults, precision, missing FX and settings sync", () => {
   const fx = { ok: true, ts: 1, base: "USD" as const, rates: { CNY: 7.1, TWD: 32.1 } };
   assert.equal(secondaryCode("__auto__", "zh-Hant"), "TWD"); assert.equal(secondaryCode("__auto__", "en"), "");

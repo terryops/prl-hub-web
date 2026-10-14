@@ -62,7 +62,8 @@ const ruleOK = (o: Rule) =>
         ? [300, 3600, 86400].includes(o.window)
         : o.window === 0) &&
       typeof o.enabled === "boolean" &&
-      Number.isFinite(o.seen_fired)));
+      Number.isFinite(o.seen_fired) &&
+      (o.repeat == null || typeof o.repeat === "boolean")));
 export function normalizeConfig(o: Partial<Config>): Config {
   if (!o || typeof o !== "object") throw new Error("invalid_config");
   const take = <T>(
@@ -206,7 +207,7 @@ export const configOf = (state: State): Config => {
     window: state.window ? pick(state.window, ["start", "end", "tz"]) : null,
     monitors: items(state.monitors, ["pool", "addr", "acct", "label", "alert", "after", "paused"]),
     wallets: items(state.wallets, ["addr", "label"]),
-    rules: items(state.rules, ["kind", "value", "window", "enabled", "seen_fired"]),
+    rules: items(state.rules, ["kind", "value", "window", "enabled", "seen_fired", "repeat"]),
     contacts: items(state.contacts || [], ["name", "address", "note"]),
     devices: items(state.devices || [], ["name", "gpu", "count", "rented", "hoursPerDay", "customPearl", "rentDaily", "rentCurrency", "rentFX", "sourceKey"]),
     calculator: pick(state.calculator, ["gpu", "count", "th", "watts", "hardware", "hours", "fee", "electricity", "rent", "rented", "rentCoversPower", "growth", "price", "yield", "networkHash"]),

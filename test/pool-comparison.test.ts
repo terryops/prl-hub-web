@@ -22,7 +22,6 @@ test("old API snapshots: missing new metrics stay unknown and original payout re
   const pool = { scheme: "PPS+", fee: 2, earningsPerPH: 20, pps: true, solo: false, blocksSample: 30 } as PoolOverview;
   assert.deepEqual(poolPayouts(pool), [{ scheme: "PPS+", fee: 2, grossPerPH: 20, realFeePercent: null, estimated: true, solo: false }]);
 });
-
 test("Real Cost help: groups identical periods, preserves different windows and includes a measured zero", () => {
   const pool = (name: string, start: number, end: number, value: number | null = 5) => ({ name, realFeeMeasurement: { start, end }, payouts: [{ realFeePercent: value }] }) as PoolOverview;
   const rows = [pool("A", 200, 300), pool("B", 100, 150), pool("C", 200, 300, 0), pool("A", 200, 300), pool("Unknown", 100, 150, null)];
@@ -31,6 +30,16 @@ test("Real Cost help: groups identical periods, preserves different windows and 
   for (const [start, end] of [[NaN, 300], [100, Infinity], [300, 200], [200, 200], [0, 300], [100, 9e12]]) assert.deepEqual(realCostPeriods([pool("Invalid", start, end)]), []);
   assert.deepEqual(realCostPeriods([{ name: "Legacy" } as PoolOverview]), []);
 });
+
+test("Real Cost sorting includes PPLNS, preserves zero and negative values and falls back from missing PPS", () => {
+  const pool = (id: string, values: (number | null)[]) => ({ id, name: id,
+    payouts: values.map((realFeePercent, i) => ({ scheme: values.length > 1 && i === 0 ? "PPS" : "PPLNS", realFeePercent })) }) as PoolOverview;
+  const rows = [pool("unknown", [null]), pool("zero", [0]), pool("cost", [21.6]), pool("lucky", [-20]),
+    pool("Fortune", [null, 5]), pool("measured", [3, 10]), pool("invalid", [NaN, Infinity])];
+  assert.deepEqual(sortPools(rows, "realFee", true).map((r) => r.id), ["lucky", "zero", "measured", "Fortune", "cost", "invalid", "unknown"]);
+  assert.deepEqual(sortPools(rows, "realFee", false).map((r) => r.id), ["cost", "Fortune", "measured", "zero", "lucky", "invalid", "unknown"]);
+});
+
 test("Real Cost help distinguishes PPLNS and PPS windows without borrowing a PPS measurement", () => {
   const row = { name: "Fortune", realFeeMeasurement: { scheme: "PPS", start: 100, end: 600 },
     payouts: [{ scheme: "PPS", realFeePercent: 5 },

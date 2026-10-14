@@ -12,6 +12,6 @@ export function WorkerList({ workers, window, lang, t, onlineOnly = false }: { w
   const [expanded, setExpanded] = useState(false), visible = visibleWorkers(workers, lang, expanded, onlineOnly), count = workers.filter((w) => !onlineOnly || w.online).length;
   return <><div className="worker-list">{visible.map((worker, i) => <div className={`worker-row ${worker.online ? "" : "worker-offline"}`} key={worker.name + i}>
     <span className={worker.online ? "dot up" : "dot down"} /><span className="worker-name">{worker.name}</span>
-    <span className="worker-rate">{worker.online ? hashrate(worker.rates[window]) : <span title={worker.last ? new Date(worker.last * 1000).toLocaleString(lang) : undefined}>{t("offline")}{worker.last ? " · " + relativeTime(worker.last, lang) : ""}</span>}</span>
+    <span className="worker-rate">{worker.online ? hashrate(worker.rates[window], lang) : <span title={worker.last ? new Date(worker.last * 1000).toLocaleString(lang) : undefined}>{t("offline")}{worker.last ? " · " + relativeTime(worker.last, lang) : ""}</span>}</span>
   </div>)}</div>{!count && <p className="muted">{t("noOnlineWorkers")}</p>}{(count > visible.length || expanded) && <button className="worker-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? t("collapse") : t("showAllWorkers").replace("%@", count.toLocaleString(lang))}</button>}</>;
 }

@@ -24,6 +24,7 @@ import {
 } from "./store.ts";
 import { dictionaries, languageNames, type TextKey } from "./i18n/index.ts";
 import { applyAppearance, browserLanguage } from "./preferences.ts";
+import { AppearanceMenu } from "./AppearanceMenu.tsx";
 import { hashrate, rate, f2ref } from "./format.ts";
 import type {
   State,
@@ -58,7 +59,9 @@ import { WalletExtension } from "./WalletExtension.tsx";
 import { pushTimeout, subscribePush } from "./push.ts";
 import type { Overview } from "./types.ts";
 
-type Page = "market" | "workers" | "pools" | "calculator" | "wallet" | "alerts";
+type Page = "market" | "workers" | "pools" | "calculator" | "wallet" | "alerts" | "app";
+const appStoreURL = "https://apps.apple.com/app/id6777132941";
+const macStoreURL = `${appStoreURL}?platform=mac`;
 const navShortKeys = {
   market: "navMarketShort",
   workers: "navWorkersShort",
@@ -66,23 +69,24 @@ const navShortKeys = {
   calculator: "navCalculatorShort",
   wallet: "navWalletShort",
   alerts: "navAlertsShort",
+  app: "navAppShort",
 } as const;
-type Panel = "settings" | "account" | "restore" | "monitor" | "rule" | "payment" | "wallet" | null;
+type Panel = "settings" | "account" | "restore" | "monitor" | "rule" | "pro" | "payment" | "wallet" | "appqr" | null;
 type Snapshot<T> = { data?: T; failed?: boolean; target?: string };
 const pageFromHash = (): Page => {
   const page = location.hash.slice(1).split("?")[0];
-  return ["market", "workers", "pools", "calculator", "wallet", "alerts"].includes(page) ? page as Page : "market";
+  return ["market", "workers", "pools", "calculator", "wallet", "alerts", "app"].includes(page) ? page as Page : "market";
 };
 const uid = () => crypto.randomUUID();
 const hasPush = () =>
   "serviceWorker" in navigator &&
   "PushManager" in window &&
   "Notification" in window;
-const QR = ({ value }: { value: string }) => {
+const QR = ({ value, cell = 5, margin = 12 }: { value: string; cell?: number; margin?: number }) => {
   const q = qrcode(0, "M");
   q.addData(value);
   q.make();
-  return <img className="qr" src={q.createDataURL(5, 12)} alt="QR" />;
+  return <img className="qr" src={q.createDataURL(cell, margin)} alt="QR" />;
 };
 const initialState = readStore();
 applyAppearance(initialState.theme, initialState.palette);
@@ -442,6 +446,7 @@ function App() {
       await navigator.clipboard.writeText(value);
       setMessage(t("copied"));
     });
+  const showPro = () => setPanel("pro");
   const buy = () => {
     if (!availability.pay.enabled) {
       setMessage(t("paymentsOff"));
@@ -549,7 +554,7 @@ function App() {
   }, [pushValues, state.token, me?.pro]);
   const enablePush = () => {
     if (!me?.pro) {
-      buy();
+      showPro();
       return;
     }
     if (!hasPush() || !availability.vapid_key) {
@@ -622,15 +627,17 @@ function App() {
     }));
   };
   const gated = (fn: () => void) => {
-    if (!me?.pro) buy();
+    if (!me?.pro) showPro();
     else fn();
   };
   const toggleMonitorAlert = (m: Monitor) => {
     if (!m.alert && (!me?.pro || !state.token || permission !== "granted")) {
       setPendingMonitor(m.id);
-      setPage("alerts");
-      if (!me?.pro) buy();
-      else setMessage(t("pushSetupMonitor"));
+      if (!me?.pro) showPro();
+      else {
+        setPage("alerts");
+        setMessage(t("pushSetupMonitor"));
+      }
       return;
     }
     gated(() => {
@@ -673,11 +680,25 @@ function App() {
   const fleetHash = fleetStats.reduce((n, s) => n + rate(s, nearestWindow(selected, s.windows)), 0);
   const fleetOnline = fleetStats.reduce((n, s) => n + s.workers.filter((w) => w.online).length, 0), fleetTotal = fleetStats.reduce((n, s) => n + s.workers.length, 0);
   const summaryWaiting = fleetSnapshots.some((s) => !s?.data && !s?.failed) || incomeAddresses.some((a) => !incomes[a] || incomes[a].target !== incomeTarget);
+  const restoreLink = <a className="pro-restore" href="/?account=restore#alerts" onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) { e.preventDefault(); setPanel("restore"); } }}>{t("restorePurchase")}</a>;
+  const pendingOrderLink = order && order.status !== "paid" && <button onClick={() => setPanel("payment")}>{t("order")} · {order.id.slice(0, 8)}</button>;
+  const proOffer = <div className="pro-intro">
+    <div className="pro-price"><strong><Money amount={money(availability.pay.usd)} block /></strong><span>{t("payWithPRL")}</span></div>
+    <p>{t("proCopy")}</p>
+    <ul className="pro-features"><li><Icon name="market" />{t("priceAlerts")}</li><li><Icon name="workers" />{t("offlineAlert")}</li><li><Icon name="alerts" />{t("pushWindow")}</li><li><Icon name="refresh" />{t("dataSync")}</li></ul>
+    <p className="muted">{t("proSyncNote")}</p>
+    <button className="primary" disabled={busy || !accountReady || !availability.pay.enabled} onClick={buy}>{t("buy")}</button>
+    {restoreLink}
+    {!availability.pay.enabled && <p className="muted">{t("paymentsOff")}</p>}
+    {!state.accountId && <p className="muted guest-purchase-note">{accountCopy(state.lang).guestPurchaseNote}</p>}
+    {pendingOrderLink}
+    <p className="muted">{t("appPurchaseLink")}</p>
+  </div>;
   return (
     <div className="app">
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Pearl Hub">
-          <img src="/icon-192.png?v=pearl" alt="" width="44" height="44" />
+          <img src="/icon-192.png?v=pearl-light" alt="" width="44" height="44" />
           <span className="brand-copy">
             <span className="brand-name">Pearl Hub</span>
             <small className="brand-meta"><span>PRL</span><span className="brand-dot" aria-hidden="true" /><span className="brand-platform">WEB</span></small>
@@ -692,6 +713,7 @@ function App() {
               "calculator",
               "wallet",
               "alerts",
+              "app",
             ] as Page[]
           ).map((p) => (
             <button
@@ -719,34 +741,54 @@ function App() {
               <Icon name="account" /><span>{accountReady && state.accountId ? accountCopy(state.lang).account : t("signIn")}</span>
             </button>
           </div>
-          <div className="sidebar-footer-copy">Cyber Corner<small>{t("subtitle")}</small></div>
         </div>
       </aside>
-      <main className={page === "pools" ? "pool-page" : undefined}>
+      <main className={page === "pools" ? "pool-page" : page === "wallet" || page === "alerts" || page === "app" ? "narrow-page" : undefined}>
         <div className="page-toolbar">
         <header className="page-heading">
           <div>
-            <div className="eyebrow">
-              PEARL HUB / {page === "market" ? "PRL" : t(page)}
-            </div>
             <div className="page-title"><h1>{t(page === "pools" ? "poolOverview" : page)}</h1>{page === "alerts" && me?.pro && <span className="badge" title={t("proActive")}><Icon name="check" />PRO · {me.pro_src === "apple" ? t("appleSource") : me.pro_src || "PRO"}</span>}</div>
-            <p>
-              {t(
-                (
-                  {
-                    market: "marketNote",
-                    workers: "workerNote",
-                    pools: "poolsNote",
-                    calculator: "calculatorNote",
-                    wallet: "walletNote",
-                    alerts: "alertNote",
-                  } as const
-                )[page],
-              )}
-            </p>
+            {page !== "app" && (
+              <p>
+                {t(
+                  (
+                    {
+                      market: "marketNote",
+                      workers: "workerNote",
+                      pools: "poolsNote",
+                      calculator: "calculatorNote",
+                      wallet: "walletNote",
+                      alerts: "alertNote",
+                    } as const
+                  )[page],
+                )}
+              </p>
+            )}
           </div>
         </header>
+        <div className="global-actions">
+          <AppearanceMenu state={state} t={t} onChange={(appearance) => update((s) => ({ ...s, ...appearance, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))} />
         </div>
+        </div>
+        {page === "app" && (
+          <section className="app-download" aria-labelledby="app-download-title">
+            <div className="app-download-main">
+              <img className="app-download-logo" src="/icon-192.png?v=pearl-light" alt="" width="88" height="88" />
+              <h2 id="app-download-title">Pearl Hub</h2>
+              <p className="app-download-note">{t("appDownloadDescription")}</p>
+              <div className="app-download-actions">
+                <a className="primary app-download-button" href={appStoreURL} target="_blank" rel="noreferrer"><Icon name="app" />{t("iosDownload")}</a>
+                <a className="primary app-download-button" href={macStoreURL} target="_blank" rel="noreferrer"><Icon name="mac" />{t("macDownload")}</a>
+              </div>
+              <p className="app-coming-soon">Android<span>{t("appComingSoon")}</span></p>
+            </div>
+            <div className="app-download-qr">
+              <QR value={appStoreURL} cell={4} margin={16} />
+              <p>{t("appScanDownload")}</p>
+            </div>
+            <button className="app-qr-button" aria-label={t("appShowQR")} title={t("appShowQR")} aria-haspopup="dialog" onClick={() => setPanel("appqr")}><Icon name="qr" /></button>
+          </section>
+        )}
         {page === "market" && (
           <>
             <MarketData price={price.data} overview={overview.data} history={history.data} failed={price.failed || overview.failed || history.failed} t={t} lang={state.lang} money={money} refresh={refreshEpoch} />
@@ -808,7 +850,7 @@ function App() {
               {addButton("monitor", activeMonitors.length, 20)}
             </div>
             {enabledMonitors(state.monitors).length > 0 && <section className="card monitor-summary" aria-label={t("overview")}>{summaryWaiting ? <Skeleton label={t("loading")} /> : <div className="fleet-strip">
-              <div><small>{t("fleetHash")} · {t(selected)}</small><strong>{fleetStats.length ? hashrate(fleetHash) : "—"}</strong></div>
+              <div><small>{t("fleetHash")} · {t(selected)}</small><strong>{fleetStats.length ? hashrate(fleetHash, state.lang) : "—"}</strong></div>
               <div><small>{t("onlineWorkers")}</small><strong>{fleetStats.length ? `${fleetOnline.toLocaleString(state.lang)} / ${fleetTotal.toLocaleString(state.lang)}` : "—"}</strong></div>
               <div><small>{t("recent24h")}</small><strong><PRLAmount lang={state.lang} value={fleetIncomes.length ? fleetIncomes.reduce((n, i) => n + i.h24, 0) : null} /></strong></div>
               <div><small>{t("recent7d")}</small><strong><PRLAmount lang={state.lang} value={fleetIncomes.length ? fleetIncomes.reduce((n, i) => n + i.d7, 0) : null} /></strong></div>
@@ -829,7 +871,7 @@ function App() {
                 <section className="card monitor-card" key={m.id} draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", m.id)} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); moveMonitor(e.dataTransfer.getData("text/plain"), activeMonitors.findIndex((x) => x.id === m.id)); }}>
                   <div className="card-heading">
                     <div className="card-name">
-                      <div className="monitor-title"><h2>{m.label}</h2><small>{m.pool}</small>{m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : ""}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
+                      <div className="monitor-title"><h2>{m.label}</h2><small>{m.pool}</small>{m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : "online-badge"}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
                     </div>
                     <div className="inline-controls"><div className="alert-controls">
                       {availability.vapid_key && !m.paused && (
@@ -873,9 +915,9 @@ function App() {
                         </>
                       )}
                       </div><details className="menu"><summary aria-label={t("manage")}><Icon name="more" /></summary><div>
-                        <button onClick={(e) => { e.currentTarget.closest("details")?.removeAttribute("open"); setMonitorPaused(m, !m.paused); }}>{t(m.paused ? "resume" : "pause")}</button>
+                        <button onClick={(e) => { e.currentTarget.closest("details")?.removeAttribute("open"); setMonitorPaused(m, !m.paused); }}><Icon name={m.paused ? "play" : "pause"} />{t(m.paused ? "resume" : "pause")}</button>
                         <button onClick={() => { setEditingMonitor(m); setDraftAddress(m.pool === "F2Pool" ? `https://www.f2pool.com/mining-user/${m.addr}?user_name=${encodeURIComponent(m.acct || "")}` : m.addr); setPanel("monitor"); }}><Icon name="edit" />{t("edit")}</button>
-                        <button onClick={() => rename("monitors", m.id, m.label)}><Icon name="edit" />{t("rename")}</button>
+                        <button onClick={() => rename("monitors", m.id, m.label)}><Icon name="rename" />{t("rename")}</button>
                         <button disabled={activeMonitors[0].id === m.id} onClick={() => moveMonitor(m.id, activeMonitors.findIndex((x) => x.id === m.id) - 1)}><Icon name="up" />{t("moveUp")}</button>
                         <button disabled={activeMonitors.at(-1)!.id === m.id} onClick={() => moveMonitor(m.id, activeMonitors.findIndex((x) => x.id === m.id) + 1)}><Icon name="down" />{t("moveDown")}</button>
                         <button className="danger" onClick={() => remove("monitors", m.id)}><Icon name="delete" />{t("delete")}</button>
@@ -893,7 +935,7 @@ function App() {
                       <div className="monitor-stats">
                         <div>
                           <div className="rate-value">
-                            {hashrate(rate(s, w))}
+                            {hashrate(rate(s, w), state.lang)}
                           </div>
                           <div className="segments">
                             {s.windows.map((win) => (
@@ -945,16 +987,16 @@ function App() {
         {page === "alerts" && (
           <>
             {me?.pro&&me.pro_scope==="device"&&<section className="card"><p role="status">{accountCopy(state.lang).guestPro}</p>{!state.accountId&&<button onClick={()=>setPanel("account")}>{accountCopy(state.lang).savePurchase}</button>}</section>}
-            {!me?.pro && <section className="card pro-intro"><div className="card-heading"><h2>{t("pro")}</h2><span className="badge">PRO</span></div>
-              <div className="pro-price"><strong><Money amount={money(availability.pay.usd)} block /></strong><span>{t("payWithPRL")}</span></div>
-              <p>{t("proCopy")}</p><ul className="pro-features"><li><Icon name="market" />{t("priceAlerts")}</li><li><Icon name="workers" />{t("offlineAlert")}</li><li><Icon name="alerts" />{t("pushWindow")}</li><li><Icon name="refresh" />{t("dataSync")}</li></ul>
-              <p className="muted">{t("proSyncNote")}</p>
-              <button className="primary" disabled={busy || !accountReady || !availability.pay.enabled} onClick={buy}>{t("buy")}</button>
-              <a className="pro-restore" href="/?account=restore#alerts" onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) { e.preventDefault(); setPanel("restore"); } }}>{t("restorePurchase")}</a>
-              {!availability.pay.enabled && <p className="muted">{t("paymentsOff")}</p>}
-              {!state.accountId&&<p className="muted guest-purchase-note">{accountCopy(state.lang).guestPurchaseNote}</p>}
-              {order&&order.status!=="paid"&&<button onClick={()=>setPanel("payment")}>{t("order")} · {order.id.slice(0,8)}</button>}
-              <p className="muted">{t("appPurchaseLink")}</p>
+            {!me?.pro && <section className="card pro-preview">
+              <img className="pro-preview-logo" src="/icon-192.png?v=pearl-light" alt="" width="40" height="40" />
+              <div className="pro-preview-copy">
+                <h2>{t("pro")}</h2>
+                <p>{t("priceAlerts")} · {t("offlineAlert")} · {t("dataSync")}</p>
+              </div>
+              <div className="pro-preview-actions">
+                <strong className="pro-preview-price"><Money amount={money(availability.pay.usd)} block /></strong>
+                <button className="primary" onClick={showPro}>{t("learnMore")}<Icon name="right" /></button>
+              </div>
             </section>}
             {!availability.vapid_key ? (
               <Empty symbol="alerts" text={t("pushOff")} />
@@ -1022,7 +1064,7 @@ function App() {
                   <button onClick={() => setPage("workers")}>{t("workers")} <Icon name="right" /></button>
                 </section>
                 <div className="list-toolbar">
-                  <span>{activeRules.length} / 20</span>
+                  <span>{t("priceAlerts")} {activeRules.length} / 20</span>
                   <button
                     className="primary"
                     onClick={() =>
@@ -1039,9 +1081,9 @@ function App() {
                 {!activeRules.length ? <Empty symbol="alerts" text={t("noRules")} button={t("addPriceAlert")} onClick={() => gated(() => { setEditingRule(null); setPanel("rule"); })} /> : <section className="card rules-card" aria-label={t("alerts")}>{activeRules.map((r) => (
                   <div className="rule-card" key={r.id}>
                     <Icon name={r.kind === "above" ? "up" : r.kind === "below" ? "down" : "change"} />
-                    <div className="rule-label"><button className="text-button" onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><strong>{t(r.kind)} {r.kind === "move" ? `${r.value}% · ${r.window === 300 ? "5m" : r.window === 3600 ? "1h" : "24h"}` : <Money amount={money(r.value)} compact />}</strong></button>
+                    <div className="rule-label"><button className="text-button" onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><strong>{t(r.kind)} {r.kind === "move" ? `${r.value}% · ${r.window === 300 ? "5m" : r.window === 3600 ? "1h" : "24h"}` : <Money amount={money(r.value)} />}</strong></button>
                       {deliveries[r.id]?.deferred && deliveries[r.id].kind === r.kind && deliveries[r.id].value === r.value && deliveries[r.id].window === r.window && <small className="status warn">{t("deferredAlert").replace("%@", state.window ? `${String(Math.floor(state.window.start / 60)).padStart(2, "0")}:${String(state.window.start % 60).padStart(2, "0")} · ${state.window.tz}` : t("start"))}</small>}
-                      <small>{r.kind !== "move" && <Money amount={money(r.value)} secondaryOnly />}{r.kind !== "move" && money(r.value).includes(" · ") && r.seen_fired > 0 && <span aria-hidden="true">·</span>}{r.seen_fired > 0 && <span title={new Date(r.seen_fired * 1000).toLocaleString(state.lang)}>{t("lastAlert").replace("%@", relativeTime(r.seen_fired, state.lang))}</span>}</small>
+                      <small><span>{t(r.repeat ? "repeatingAlert" : "oneShotAlert")}</span>{r.seen_fired > 0 && <span title={new Date(r.seen_fired * 1000).toLocaleString(state.lang)}>{t("lastAlert").replace("%@", relativeTime(r.seen_fired, state.lang))}</span>}</small>
                     </div>
                     <div className="rule-controls"><input type="checkbox" className="switch" aria-label={t("alerts")} checked={r.enabled} onChange={() => gated(() => update((s) => ({ ...s, rules: s.rules.map((x) => x.id === r.id ? { ...x, enabled: !x.enabled, updated: Math.max(fresh(), x.updated + 1) } : x) })))} /><details className="menu"><summary aria-label={t("manage")}><Icon name="more" /></summary><div><button onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><Icon name="edit" />{t("edit")}</button><button className="danger" onClick={() => remove("rules", r.id)}><Icon name="delete" />{t("delete")}</button></div></details></div>
                   </div>
@@ -1132,7 +1174,7 @@ function App() {
       )}
       <dialog
         ref={dialog}
-        className={panel === "settings" ? "settings-dialog" : panel === "account" || panel === "restore" ? "account-dialog" : panel === "payment" ? "payment-dialog" : undefined}
+        className={panel === "appqr" ? "app-qr-dialog" : panel === "settings" ? "settings-dialog" : panel === "account" || panel === "restore" ? "account-dialog" : panel === "payment" ? "payment-dialog" : undefined}
         onCancel={() => setPanel(null)}
         onClick={(e) => {
           if (e.target === dialog.current) setPanel(null);
@@ -1141,7 +1183,7 @@ function App() {
         <div className={`dialog-content ${panel === "payment" ? "payment-content" : ""}`}>
           <div className="dialog-heading">
             <h2>
-              {panel === "payment"
+              {panel === "appqr" ? t("appShowQR") : panel === "payment" || panel === "pro"
                 ? t("pro")
                 : panel === "monitor"
                   ? t(editingMonitor ? "editMonitor" : "addMonitor")
@@ -1153,6 +1195,8 @@ function App() {
               <Icon name="close" />
             </button>
           </div>
+          {panel === "pro" && proOffer}
+          {panel === "appqr" && <div className="app-qr-content"><QR value={appStoreURL} /><p>{t("appScanDownload")}</p></div>}
           {panel === "settings" && (
             <>
               <div className="setting-section appearance-settings">
@@ -1179,34 +1223,17 @@ function App() {
                     ))}
                   </select>
                 </label>
-                <label className="form-field">
-                  {t("theme")}
-                  <select
-                    aria-label={t("theme")}
-                    value={state.theme || "system"}
-                    onChange={(e) => {
-                      const theme = e.target.value as State["theme"];
-                      update((s) => ({ ...s, theme, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }));
-                    }}
-                  >
-                    {(["system", "light", "dark"] as const).map((v) => (
-                      <option key={v} value={v}>{t(v === "system" ? "systemTheme" : v)}</option>
-                    ))}
-                  </select>
-                </label>
                 <label className="settings-toggle"><span>{t("autoRefresh")}</span><input type="checkbox" className="switch" checked={state.autoRefresh !== false} onChange={(e) => update((s) => ({ ...s, autoRefresh: e.target.checked, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))} /></label>
               </div>
               <details className="settings-group display-options">
                 <summary>{t("moreDisplayOptions")}<Icon name="chevron" /></summary>
                 <div className="settings-group-body">
-                <label className="form-field">{t("palette")}<select aria-label={t("palette")} value={state.palette === "mono" ? "mono" : "classic"} onChange={(e) => update((s) => ({ ...s, palette: e.target.value, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))}><option value="classic">{t("classicBlue")}</option><option value="mono">{t("monochrome")}</option></select></label>
                 <label className="form-field">{t("secondaryCurrency")}<select aria-label={t("secondaryCurrency")} value={state.secondary || (state.secondary === "" ? "" : "__auto__")} onChange={(e) => update((s) => ({ ...s, secondary: e.target.value, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))}><option value="__auto__">{t("followLanguage")}</option><option value="">{t("hideCurrency")}</option>{currencies.map(([code, symbol]) => <option key={code} value={code}>{code} · {symbol}</option>)}</select></label>
                 <p className="muted">{fx?.rates[secondaryCode(state.secondary, state.lang)] ? rateLine(secondaryCode(state.secondary, state.lang), fx.rates[secondaryCode(state.secondary, state.lang)], state.lang) : "—"}<br />{t("updated")} · {fx ? new Date(fx.ts * 1000).toLocaleString(state.lang) : "—"}{fx?.stale && <> · {t("stale")}</>}</p>
                 </div>
               </details>
               <p className="settings-saved muted">{t("settingsSaved")}</p>
               <div className="settings-links">
-                <a href="https://apps.apple.com/app/id6777132941" target="_blank" rel="noreferrer">{t("appStore")} <Icon name="external" /></a>
                 <a href="https://t.me/prl_hub" target="_blank" rel="noreferrer">{t("support")} <Icon name="external" /></a>
                 <a href="/privacy.html" target="_blank" rel="noreferrer">{t("privacy")} <Icon name="external" /></a>
               </div>
@@ -1255,7 +1282,7 @@ function App() {
                 </div>
                 <p className="muted">{canSync ? t("proSyncNote") : t("syncRequiresPro")}</p>
                 {canSync && <p className="muted">{accountCopy(state.lang).syncNote}</p>}
-                {!canSync && <button className="primary" disabled={busy || !availability.pay.enabled} onClick={buy}>{t("buy")}</button>}
+                {!canSync && <button className="primary" onClick={showPro}>{t("buy")}</button>}
                 {canSync && state.sync && (
                   <div className="actions">
                     <button disabled={syncing} onClick={() => void sync()}>
@@ -1320,7 +1347,7 @@ function App() {
               key={editingRule?.id || "new"}
               initialRule={editingRule}
               t={t}
-              onSave={(kind, value, window) => {
+              onSave={(kind, value, window, repeat) => {
                 if (
                   !(
                     value >= (kind === "move" ? 0.5 : 0.01) &&
@@ -1333,7 +1360,7 @@ function App() {
                 }
                 update((s) => ({
                   ...s,
-                  rules: editingRule ? s.rules.map((r) => r.id === editingRule.id ? applyingEdit(r, { kind, value, window }) : r) : [
+                  rules: editingRule ? s.rules.map((r) => r.id === editingRule.id ? applyingEdit(r, { kind, value, window, repeat }) : r) : [
                     ...s.rules,
                     {
                       id: uid(),
@@ -1343,6 +1370,7 @@ function App() {
                       window,
                       enabled: true,
                       seen_fired: 0,
+                      repeat,
                     },
                   ],
                 }));
@@ -1514,9 +1542,10 @@ function RuleForm({
 }: {
   initialRule?: Rule | null;
   t: (k: TextKey) => string;
-  onSave: (kind: Rule["kind"], value: number, window: number) => void;
+  onSave: (kind: Rule["kind"], value: number, window: number, repeat: boolean) => void;
 }) {
   const [kind, setKind] = useState<Rule["kind"]>(initialRule?.kind || "above");
+  const [repeat, setRepeat] = useState(initialRule?.repeat === true);
   return (
     <form
       onSubmit={(e) => {
@@ -1526,6 +1555,7 @@ function RuleForm({
           kind,
           Math.round(Number(data.get("value")) * 100) / 100,
           kind === "move" ? Number(data.get("window")) : 0,
+          repeat,
         );
       }}
     >
@@ -1564,6 +1594,14 @@ function RuleForm({
           </select>
         </label>
       )}
+      <label className="form-field">
+        {t("alertFrequency")}
+        <select value={repeat ? "repeat" : "once"} onChange={(e) => setRepeat(e.target.value === "repeat")}>
+          <option value="once">{t("oneShotAlert")}</option>
+          <option value="repeat">{t("repeatingAlert")}</option>
+        </select>
+      </label>
+      <p className="muted">{t(repeat ? "repeatingAlertNote" : "oneShotAlertNote")}</p>
       <div className="actions form-actions"><button className="primary">{t("save")}</button></div>
     </form>
   );

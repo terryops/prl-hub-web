@@ -194,6 +194,27 @@ test("polish: wallet first render uses skeletons instead of missing balance or a
   assert.match(html, /skeleton-balance/); assert.ok(!html.includes("Recent transactions")); assert.ok(!html.includes("— PRL")); assert.match(html, /address-short/);
 });
 
+test("pool comparison renders PPLNS real cost estimates and separate Fortune schemes on desktop and phones", () => {
+  for (const lang of Object.keys(dictionaries)) {
+    const t = (key: string) => dictionaries[lang][key];
+    const data = { ts, rows: [{ id: "fortune", name: "Pearl Fortune", hashrate: 1e15,
+      payouts: [{ scheme: "PPS", fee: 5, grossPerPH: 100, realFeePercent: 5, realFeeEstimated: true },
+        { scheme: "PPLNS", fee: 2, grossPerPH: 80, realFeePercent: 21.6, realFeeEstimated: true }] },
+      { id: "lucky", name: "Lucky", hashrate: 1e14,
+        payouts: [{ scheme: "PPLNS", fee: 0, grossPerPH: 120, realFeePercent: -20, realFeeEstimated: true }] }] };
+    const html = renderToStaticMarkup(React.createElement(PoolComparison, { data, t, lang, onUse: () => {} }));
+    const cost = "≈" + (21.6).toLocaleString(lang, { maximumFractionDigits: 2 }) + "%";
+    const negative = "≈−" + (20).toLocaleString(lang) + "%";
+    for (const view of [html.slice(html.indexOf("<tbody"), html.indexOf("</tbody>")), html.slice(html.indexOf('class="pool-mobile-list"'))]) {
+      assert.ok(view.includes(cost), lang);
+      assert.ok(view.includes(negative), lang);
+      assert.match(view, /<small>PPS<\/small>/);
+      assert.match(view, /<small>PPLNS<\/small>/);
+    }
+    assert.ok(html.includes(t("poolContractNotes")), lang);
+  }
+});
+
 test("review: a single-axis chart uses no right slot; only a network companion can reserve shared bounds", () => {
   const props = { points, lang: "en", label: "History", empty: "Empty" };
   const priceChart = renderToStaticMarkup(React.createElement(LineChart, props));
