@@ -2164,7 +2164,6 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .appearance-menu select { width: 100%; min-height: 44px; font-size: var(--font-14); }
 .account-entry { min-height: 36px; padding: 8px 12px; font-size: var(--font-12); white-space: nowrap; }
 .account-entry .icon { width: 18px; height: 18px; }
-.account-entry .account-entry-email, .sidebar-actions .account-entry > .account-entry-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
 .sidebar-foot { margin-top: auto; }
 .settings-dialog { max-width: 640px; }
 .payment-dialog { max-width: 560px; max-height: calc(100dvh - 24px); overflow: hidden; }
@@ -2561,9 +2560,6 @@ input.switch::before { background: var(--switch-off); transition: background 0.1
 .online-badge { color: var(--green); border-color: color-mix(in srgb, var(--green) 28%, var(--line)); background: color-mix(in srgb, var(--green) 9%, var(--surface)); }
 .status { padding: 3px 8px; font-weight: 550; line-height: 1.4; background: color-mix(in srgb, var(--green) 10%, var(--surface)); }
 .status.warn { padding: 8px 12px; border-radius: 8px; font-weight: 500; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
-.status-link { justify-content: flex-start; gap: 8px; min-height: 0; text-align: start; }
-.status-link .icon { width: 16px; height: 16px; }
-.status-link:hover, :root[data-theme="dark"] .status-link:hover, :root[data-palette="mono"] .status-link:hover { background: var(--warning-bg); text-decoration: underline; }
 .empty { padding: 56px 24px; }
 .empty > span { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 18px; background: var(--selected); }
 .empty > span .icon { width: 30px; height: 30px; }
