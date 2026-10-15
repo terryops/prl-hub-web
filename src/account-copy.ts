@@ -1,4 +1,4 @@
-import localized from "./account-locales.json";
+import localized from "./account-locales.json" with { type: "json" };
 import type { Lang } from "./types.ts";
 const en = {
   guestCheckout: "No sign-in needed. Pro works in this browser; link an email to restore your purchase.",

@@ -225,7 +225,7 @@
   "offlineGuide": "Dopo aver attivato Pro e consentito le notifiche, abilita gli avvisi offline per ciascun monitor nella pagina Worker. Scegli 10, 15, 30 o 60 minuti. Il server controlla circa ogni 3 minuti, avvisa dopo la soglia offline e invia un'altra notifica dopo circa 1 minuto di ripristino stabile. I timeout del pool non vengono trattati come interruzioni. I worker già offline al momento dell'attivazione non generano avvisi.",
   "pushHelp": "Requisiti per le notifiche",
   "extensionUpdate": "Aggiornamento di un'estensione installata",
-  "extensionUpdateNote": "La versione 0.3 usa un ID fisso. Conserva la vecchia estensione e salva le frasi di recupero di ogni wallet. Installa 0.3 in una nuova cartella e ripristina i wallet. Per gli aggiornamenti successivi 0.3+, sostituisci i file e ricarica.",
+  "extensionUpdateNote": "Prima salva la frase di recupero di ogni wallet. Poi sostituisci i file nella cartella di installazione originale con quelli della nuova versione e ricarica l’estensione in chrome://extensions. Di norma i wallet restano. Se dopo il ricaricamento l’elenco dei wallet è vuoto (le prime versioni di prova usavano un altro ID dell’estensione), ripristina ogni wallet con la sua frase di recupero.",
   "paste": "Incolla",
   "edit": "Modifica",
   "pause": "Sospendi monitoraggio",

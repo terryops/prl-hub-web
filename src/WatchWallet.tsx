@@ -13,10 +13,11 @@ export function WatchWallet({ wallets, price, refresh, t, lang, onAdd, onRename,
   onAdd: () => void; onRename: (w: Wallet) => void; onRemove: (w: Wallet) => void; onCopy?: (value: string) => Promise<void>; money?: (x: number) => string;
 }) {
   const [snapshots, setSnapshots] = useState<Record<string, { data?: Address; failed?: boolean; loading?: boolean }>>({}), [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const generation = useRef<Record<string, number>>({});
+  const generation = useRef<Record<string, number>>({}), loading = useRef<Record<string, boolean>>({});
   const addresses = useRef(new Set<string>()); addresses.current = new Set(wallets.map((w) => w.addr));
   const load = async (addr: string, page = 1) => {
     const at = generation.current[addr] = (generation.current[addr] || 0) + 1;
+    loading.current[addr] = true;
     setSnapshots((s) => ({ ...s, [addr]: { ...s[addr], loading: true } }));
     try {
       const data = await api<Address>("/v1/address", "POST", { addr, page });
@@ -29,13 +30,20 @@ export function WatchWallet({ wallets, price, refresh, t, lang, onAdd, onRename,
       });
     } catch {
       if (generation.current[addr] === at && addresses.current.has(addr)) setSnapshots((s) => ({ ...s, [addr]: { ...s[addr], loading: false, failed: true } }));
+    } finally {
+      if (generation.current[addr] === at) loading.current[addr] = false;
     }
   };
   const targets = wallets.map((w) => w.addr).join(",");
   useEffect(() => {
     for (const addr of addresses.current) void load(addr);
     return () => { for (const addr of Object.keys(generation.current)) generation.current[addr]++; };
-  }, [targets, refresh]);
+  }, [targets]);
+  // Each refresh tick reloads page 1, but skips an address whose request is still in flight so the
+  // tick cannot cancel a "load more" (or pile up behind a slow response).
+  useEffect(() => {
+    for (const addr of addresses.current) if (!loading.current[addr]) void load(addr);
+  }, [refresh]);
   return <>
     <div className="list-toolbar"><span className="badge">{t("readOnly")} · {wallets.length} / 10</span><button className="primary" disabled={wallets.length >= 10} onClick={onAdd}><Icon name="plus" />{t("add")}</button></div>
     {!wallets.length && <section className="card empty"><span><Icon name="wallet" /></span><h2>{t("noWallets")}</h2><button className="primary" onClick={onAdd}><Icon name="plus" />{t("add")}</button></section>}

@@ -225,7 +225,7 @@
   "offlineGuide": "Sau khi kích hoạt Pro và cho phép thông báo, bật cảnh báo ngoại tuyến cho từng mục ở trang Workers. Chọn 10, 15, 30 hoặc 60 phút. Máy chủ kiểm tra khoảng mỗi 3 phút, cảnh báo khi đủ thời gian ngoại tuyến và báo lại sau khoảng 1 phút hoạt động ổn định. Pool hết thời gian chờ không bị coi là mất kết nối. Worker đã ngoại tuyến trước khi bật sẽ không gửi cảnh báo.",
   "pushHelp": "Điều kiện nhận thông báo",
   "extensionUpdate": "Cập nhật tiện ích đã cài",
-  "extensionUpdateNote": "Bản 0.3 dùng ID tiện ích cố định. Giữ tiện ích cũ, sao lưu cụm từ khôi phục của từng ví, cài 0.3 vào thư mục mới rồi khôi phục ví. Các bản 0.3+ sau này có thể thay tệp và tải lại.",
+  "extensionUpdateNote": "Trước tiên, hãy sao lưu cụm từ khôi phục của từng ví. Sau đó thay các tệp trong thư mục cài đặt ban đầu bằng bản mới và tải lại tiện ích tại chrome://extensions. Thông thường các ví vẫn được giữ. Nếu danh sách ví trống sau khi tải lại (các bản thử nghiệm đầu dùng ID tiện ích khác), hãy khôi phục từng ví bằng cụm từ khôi phục.",
   "paste": "Dán",
   "edit": "Sửa",
   "pause": "Tạm dừng theo dõi",

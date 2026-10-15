@@ -1,0 +1,23 @@
+.security-entry { display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; min-height: 52px; margin: 0; padding: 14px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--text); font-size: var(--font-14); font-weight: 550; text-align: start; }
+.security-entry:hover, :root[data-theme="dark"] .security-entry:hover, :root[data-palette="mono"] .security-entry:hover { background: transparent; color: var(--blue-text); }
+.security-entry > .icon { width: 18px; height: 18px; flex-shrink: 0; color: var(--blue-text); }
+.security-entry > span { min-width: 0; overflow-wrap: anywhere; }
+.security-entry > .security-entry-chevron { margin-left: auto; color: var(--muted); transform: rotate(-90deg); }
+.security-back { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin: 0 0 12px; padding: 4px 0; border: 0; background: transparent; color: var(--blue-text); font-size: var(--font-14); font-weight: 550; }
+.security-back:hover, :root[data-theme="dark"] .security-back:hover, :root[data-palette="mono"] .security-back:hover { background: transparent; text-decoration: underline; }
+.security-back .icon { width: 16px; height: 16px; transform: rotate(90deg); }
+.security-overview { display: grid; gap: 20px; min-width: 0; }
+.security-group { min-width: 0; }
+.security-group h3 { margin: 0 0 8px; color: var(--muted); font-size: var(--font-12); font-weight: 600; line-height: 1.5; }
+.security-group ul { margin: 0; padding: 0 14px; list-style: none; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+.security-group li + li { border-top: 1px solid var(--line); }
+.security-row, .security-repo > a, .security-repo > div { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: 12px; padding: 12px 0; }
+.security-row > .icon, .security-repo .icon { width: 20px; height: 20px; margin-top: 1px; color: var(--blue-text); }
+.security-row strong, .security-repo strong { display: block; color: var(--text); font-size: var(--font-14); font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.security-row p { margin: 3px 0 0; color: var(--muted); font-size: var(--font-12); line-height: 1.6; overflow-wrap: anywhere; }
+.security-repo a { color: inherit; text-decoration: none; }
+.security-repo a:hover strong { color: var(--blue-text); }
+.security-repo code { display: block; margin-top: 2px; color: var(--blue-text); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--font-12); line-height: 1.5; overflow-wrap: anywhere; }
+.security-repo small { display: block; margin-top: 2px; color: var(--muted); font-size: var(--font-12); }
+.security-repo .source-pending .icon { color: var(--muted); }
+.setting > .security-entry { min-height: 44px; padding: 4px 0; border-top: 0; }

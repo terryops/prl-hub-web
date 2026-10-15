@@ -225,7 +225,7 @@
   "offlineGuide": "Après avoir activé Pro et autorisé les notifications, activez les alertes hors ligne pour chaque moniteur sur la page Workers. Choisissez 10, 15, 30 ou 60 minutes. Le serveur vérifie toutes les 3 minutes environ, alerte après le seuil de déconnexion et notifie à nouveau après environ 1 minute de reconnexion stable. Les délais d'attente du pool ne sont pas traités comme des pannes. Les workers déjà hors ligne au moment de l'activation ne déclenchent pas d'alerte.",
   "pushHelp": "Prérequis des notifications",
   "extensionUpdate": "Mise à jour d'une extension installée",
-  "extensionUpdateNote": "La version 0.3 utilise un identifiant fixe. Conservez l’ancienne extension et sauvegardez les phrases de récupération de chaque portefeuille. Installez la 0.3 dans un nouveau dossier et restaurez vos portefeuilles. Pour les versions 0.3+ suivantes, remplacez les fichiers et rechargez.",
+  "extensionUpdateNote": "Sauvegardez d’abord la phrase de récupération de chaque portefeuille. Remplacez ensuite les fichiers du dossier d’installation d’origine par ceux de la nouvelle version, puis rechargez l’extension dans chrome://extensions. Vos portefeuilles sont normalement conservés. Si la liste est vide après le rechargement (les premières versions de test utilisaient un autre identifiant d’extension), restaurez chaque portefeuille avec sa phrase de récupération.",
   "paste": "Coller",
   "edit": "Modifier",
   "pause": "Suspendre le suivi",

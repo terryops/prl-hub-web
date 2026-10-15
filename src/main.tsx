@@ -43,6 +43,8 @@ import "./style.css";
 import { MarketData, PoolDonut } from "./MarketData.tsx";
 import { PoolComparison } from "./PoolOverview.tsx";
 import { FleetCalculator } from "./FleetCalculator.tsx";
+import { SecurityOverview } from "./SecurityOverview.tsx";
+import { securityCopy, webSecurity } from "./security-overview.ts";
 import { calculatorWithPoolFee } from "./calculator.ts";
 import { quoteExpired } from "./orders.ts";
 import { dual, rateLine, secondaryCode, currencies, type FX } from "./currency.ts";
@@ -58,6 +60,9 @@ import { WatchWallet } from "./WatchWallet.tsx";
 import { WalletExtension } from "./WalletExtension.tsx";
 import { pushTimeout, subscribePush } from "./push.ts";
 import type { Overview } from "./types.ts";
+import { appClient } from "./app-client.ts";
+
+const fromApp = appClient();
 
 type Page = "market" | "workers" | "pools" | "calculator" | "wallet" | "alerts" | "app";
 const appStoreURL = "https://apps.apple.com/app/id6777132941";
@@ -71,8 +76,16 @@ const navShortKeys = {
   alerts: "navAlertsShort",
   app: "navAppShort",
 } as const;
-type Panel = "settings" | "account" | "restore" | "monitor" | "rule" | "pro" | "payment" | "wallet" | "appqr" | null;
+type Panel = "settings" | "security" | "account" | "restore" | "monitor" | "rule" | "pro" | "payment" | "wallet" | "appqr" | null;
 type Snapshot<T> = { data?: T; failed?: boolean; target?: string };
+// ?account=manage|delete|restore opens a panel once, when the page loads; keeping it in the address bar
+// reopened that panel on every reload. The device-connect flow keeps its parameters.
+function keptSearch() {
+  const q = new URLSearchParams(location.search);
+  if (q.get("account") !== "connect") q.delete("account");
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
 const pageFromHash = (): Page => {
   const page = location.hash.slice(1).split("?")[0];
   return ["market", "workers", "pools", "calculator", "wallet", "alerts", "app"].includes(page) ? page as Page : "market";
@@ -122,6 +135,7 @@ function App() {
     [busy, setBusy] = useState(false);
   const [clock, setClock] = useState(Date.now());
   const [accountReady, setAccountReady] = useState(false);
+  const accountReadyRef = useRef(accountReady); accountReadyRef.current = accountReady;
   const [permission, setPermission] = useState(
     hasPush() ? Notification.permission : "unavailable",
   );
@@ -158,13 +172,13 @@ function App() {
       setPage(pageFromHash());
       const d = deepLink(location.hash);
       if (d) { setDraftAddress(d.addr); setPanel(d.page === "wallet" ? "wallet" : "monitor"); }
-      window.history.replaceState(null, "", `/${location.search}#${pageFromHash()}`);
+      window.history.replaceState(null, "", `/${keptSearch()}#${pageFromHash()}`);
     };
     window.addEventListener("hashchange", changed);
     return () => window.removeEventListener("hashchange", changed);
   }, []);
   useEffect(() => {
-    window.history.replaceState(null, "", `/${location.search}#${page}`);
+    window.history.replaceState(null, "", `/${keptSearch()}#${page}`);
     window.scrollTo(0, 0);
   }, [page]);
   useEffect(() => {
@@ -271,7 +285,8 @@ function App() {
     }); };
     check();
     const changed = (e: StorageEvent) => { if (e.key === "prl.web.v1.active") { accountGeneration.current++; setAccountReady(false); check(); } };
-    const visible = () => { if (!document.hidden && !accountReady) check(); };
+    // Re-check on focus only while the session is still unsettled (e.g. it started offline).
+    const visible = () => { if (!document.hidden && !accountReadyRef.current) check(); };
     window.addEventListener("storage", changed); document.addEventListener("visibilitychange", visible);
     return () => { disposed = true; window.removeEventListener("storage", changed); document.removeEventListener("visibilitychange", visible); };
   }, [adoptAccount, leaveAccount]);
@@ -448,6 +463,7 @@ function App() {
     });
   const showPro = () => setPanel("pro");
   const buy = () => {
+    if (fromApp) return;
     if (!availability.pay.enabled) {
       setMessage(t("paymentsOff"));
       return;
@@ -683,16 +699,18 @@ function App() {
   const restoreLink = <a className="pro-restore" href="/?account=restore#alerts" onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) { e.preventDefault(); setPanel("restore"); } }}>{t("restorePurchase")}</a>;
   const pendingOrderLink = order && order.status !== "paid" && <button onClick={() => setPanel("payment")}>{t("order")} · {order.id.slice(0, 8)}</button>;
   const proOffer = <div className="pro-intro">
-    <div className="pro-price"><strong><Money amount={money(availability.pay.usd)} block /></strong><span>{t("payWithPRL")}</span></div>
+    {!fromApp && <div className="pro-price"><strong><Money amount={money(availability.pay.usd)} block /></strong><span>{t("payWithPRL")}</span></div>}
     <p>{t("proCopy")}</p>
     <ul className="pro-features"><li><Icon name="market" />{t("priceAlerts")}</li><li><Icon name="workers" />{t("offlineAlert")}</li><li><Icon name="alerts" />{t("pushWindow")}</li><li><Icon name="refresh" />{t("dataSync")}</li></ul>
     <p className="muted">{t("proSyncNote")}</p>
-    <button className="primary" disabled={busy || !accountReady || !availability.pay.enabled} onClick={buy}>{t("buy")}</button>
+    {!fromApp && <button className="primary" disabled={busy || !accountReady || !availability.pay.enabled} onClick={buy}>{t("buy")}</button>}
     {restoreLink}
-    {!availability.pay.enabled && <p className="muted">{t("paymentsOff")}</p>}
-    {!state.accountId && <p className="muted guest-purchase-note">{accountCopy(state.lang).guestPurchaseNote}</p>}
-    {pendingOrderLink}
-    <p className="muted">{t("appPurchaseLink")}</p>
+    {!fromApp && <>
+      {!availability.pay.enabled && <p className="muted">{t("paymentsOff")}</p>}
+      {!state.accountId && <p className="muted guest-purchase-note">{accountCopy(state.lang).guestPurchaseNote}</p>}
+      {pendingOrderLink}
+      <p className="muted">{t("appPurchaseLink")}</p>
+    </>}
   </div>;
   return (
     <div className="app">
@@ -994,7 +1012,7 @@ function App() {
                 <p>{t("priceAlerts")} · {t("offlineAlert")} · {t("dataSync")}</p>
               </div>
               <div className="pro-preview-actions">
-                <strong className="pro-preview-price"><Money amount={money(availability.pay.usd)} block /></strong>
+                {!fromApp && <strong className="pro-preview-price"><Money amount={money(availability.pay.usd)} block /></strong>}
                 <button className="primary" onClick={showPro}>{t("learnMore")}<Icon name="right" /></button>
               </div>
             </section>}
@@ -1174,7 +1192,7 @@ function App() {
       )}
       <dialog
         ref={dialog}
-        className={panel === "appqr" ? "app-qr-dialog" : panel === "settings" ? "settings-dialog" : panel === "account" || panel === "restore" ? "account-dialog" : panel === "payment" ? "payment-dialog" : undefined}
+        className={panel === "appqr" ? "app-qr-dialog" : panel === "settings" || panel === "security" ? "settings-dialog" : panel === "account" || panel === "restore" ? "account-dialog" : panel === "payment" ? "payment-dialog" : undefined}
         onCancel={() => setPanel(null)}
         onClick={(e) => {
           if (e.target === dialog.current) setPanel(null);
@@ -1189,7 +1207,7 @@ function App() {
                   ? t(editingMonitor ? "editMonitor" : "addMonitor")
                   : panel === "rule"
                     ? t(editingRule ? "editPriceAlert" : "addPriceAlert")
-                    : panel === "wallet" ? t("addWatchAddress") : panel === "restore" ? t("restorePurchase") : panel === "account" ? accountReady && state.accountId ? accountCopy(state.lang).account : accountCopy(state.lang).login : t("settings")}
+                    : panel === "wallet" ? t("addWatchAddress") : panel === "restore" ? t("restorePurchase") : panel === "security" ? securityCopy(state.lang).title : panel === "account" ? accountReady && state.accountId ? accountCopy(state.lang).account : accountCopy(state.lang).login : t("settings")}
             </h2>
             <button onClick={() => setPanel(null)} aria-label={t("close")}>
               <Icon name="close" />
@@ -1233,12 +1251,17 @@ function App() {
                 </div>
               </details>
               <p className="settings-saved muted">{t("settingsSaved")}</p>
+              <button className="security-entry" onClick={() => { dialog.current?.scrollTo({ top: 0 }); setPanel("security"); }}><Icon name="shield" /><span>{securityCopy(state.lang).title}</span><Icon name="chevron" className="security-entry-chevron" /></button>
               <div className="settings-links">
                 <a href="https://t.me/prl_hub" target="_blank" rel="noreferrer">{t("support")} <Icon name="external" /></a>
                 <a href="/privacy.html" target="_blank" rel="noreferrer">{t("privacy")} <Icon name="external" /></a>
               </div>
             </>
           )}
+          {panel === "security" && <>
+            <button className="security-back" onClick={() => { dialog.current?.scrollTo({ top: 0 }); setPanel("settings"); }}><Icon name="chevron" />{securityCopy(state.lang).back}</button>
+            <SecurityOverview lang={state.lang} sections={webSecurity} />
+          </>}
           {(panel === "account" || panel === "restore") && (
             <AccountPanel restore={panel === "restore" && !canSync} accountId={accountReady ? state.accountId : ""} lang={state.lang} auth={availability.auth} onLogin={(a) => adoptAccount(a)} onLogout={leaveAccount} purchases={(
                 <div className="setting-section">
@@ -1248,17 +1271,17 @@ function App() {
                       <p className="muted">
                         {me?.pro
                           ? `${me.pro_scope==="device"?accountCopy(state.lang).guestPro:t("proActive")} · ${me.pro_src === "apple" ? t("appleSource") : me.pro_src} · ${new Date(me.pro_at! * 1000).toLocaleDateString(state.lang)}`
-                          : <><Money amount={money(availability.pay.usd)} /> · {t("proCopy")}</>}
+                          : fromApp ? t("proCopy") : <><Money amount={money(availability.pay.usd)} /> · {t("proCopy")}</>}
                       </p>
                     </div>
-                    {!me?.pro && availability.pay.enabled && (
+                    {!me?.pro && !fromApp && availability.pay.enabled && (
                       <button className="primary" disabled={busy} onClick={buy}>
                         {t("buy")}
                       </button>
                     )}
                   </div>
-                  {!me?.pro && <p className="muted">{t("appPurchaseLink")}</p>}
-                  {order && order.status !== "paid" && (
+                  {!me?.pro && !fromApp && <p className="muted">{t("appPurchaseLink")}</p>}
+                  {!fromApp && order && order.status !== "paid" && (
                     <button onClick={() => setPanel("payment")}>
                       {t("order")} · {order.id.slice(0, 8)}
                     </button>
@@ -1282,7 +1305,7 @@ function App() {
                 </div>
                 <p className="muted">{canSync ? t("proSyncNote") : t("syncRequiresPro")}</p>
                 {canSync && <p className="muted">{accountCopy(state.lang).syncNote}</p>}
-                {!canSync && <button className="primary" onClick={showPro}>{t("buy")}</button>}
+                {!canSync && <button className="primary" onClick={showPro}>{t(fromApp ? "learnMore" : "buy")}</button>}
                 {canSync && state.sync && (
                   <div className="actions">
                     <button disabled={syncing} onClick={() => void sync()}>
@@ -1378,7 +1401,7 @@ function App() {
               }}
             />
           )}
-          {panel === "payment" && order && (
+          {panel === "payment" && order && !fromApp && (
             <>
               <div className="payment-body">
               <div className="payment-overview">

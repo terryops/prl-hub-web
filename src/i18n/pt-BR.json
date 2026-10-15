@@ -225,7 +225,7 @@
   "offlineGuide": "Após ativar o Pro e permitir notificações, habilite os alertas de offline de cada monitor na página Workers. Escolha 10, 15, 30 ou 60 minutos. O servidor verifica a cada 3 minutos, aproximadamente, alerta após o limite de offline e notifica novamente após cerca de 1 minuto de recuperação estável. Timeouts do pool não são tratados como quedas. Workers que já estavam offline no momento da ativação não disparam alertas.",
   "pushHelp": "Requisitos para notificações",
   "extensionUpdate": "Atualizar uma extensão instalada",
-  "extensionUpdateNote": "A versão 0.3 usa um ID fixo. Mantenha a extensão antiga, faça backup das frases de recuperação de todas as carteiras, instale a 0.3 em uma nova pasta e restaure as carteiras. Nas próximas versões 0.3+, substitua os arquivos e recarregue.",
+  "extensionUpdateNote": "Primeiro faça backup da frase de recuperação de cada carteira. Depois substitua os arquivos da pasta de instalação original pelos da nova versão e recarregue a extensão em chrome://extensions. Normalmente suas carteiras são mantidas. Se a lista de carteiras ficar vazia após recarregar (as primeiras versões de teste usavam outro ID de extensão), restaure cada carteira com a frase de recuperação.",
   "paste": "Colar",
   "edit": "Editar",
   "pause": "Pausar monitoramento",

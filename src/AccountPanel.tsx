@@ -79,18 +79,21 @@ const connection = (() => {
   return { redirect_uri: q.get("redirect_uri"), code_challenge: q.get("code_challenge"), device_id: q.get("device_id"), platform: q.get("platform"), device_name: q.get("device_name"), state: q.get("state"), reauth: q.get("reauth") === "1" };
 })();
 export const connectingDevice = !!connection;
+// Read once at load like the connect parameters: the page removes ?account= from the address bar,
+// and only the first account panel opened from a delete link enters delete mode.
+let deleteRequested = new URLSearchParams(location.search).get("account") === "delete";
 type Device = { id: string; name: string; platform: string; seen_at: number; current: boolean; notifications: boolean };
 type Grant = { source: string; platform: string; granted_at: number; revoked_at: number | null };
 export function AccountPanel({ accountId, lang, auth, onLogin, onLogout, children, purchases, restore = false }: { accountId: string; lang: Lang; auth?: Availability["auth"]; onLogin: (account: Account) => Promise<void>; onLogout: (expected?: string) => Promise<void>; children?: ReactNode; purchases?: ReactNode; restore?: boolean }) {
   const c = accountCopy(lang), [account, setAccount] = useState<Account | null>(null), [devices, setDevices] = useState<Device[]>([]), [rights, setRights] = useState<Grant[]>([]), [mode, setMode] = useState<"normal" | "delete" | "change">("normal"), [old, setOld] = useState<Proof | null>(null), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
-  const deleteLink = useRef(new URLSearchParams(location.search).get("account") === "delete");
+  const deleteLink = useRef(deleteRequested);
   const sensitive = useRef<HTMLDivElement>(null);
   const [reauth, setReauth] = useState(false);
   const currentAccount = useRef(accountId); currentAccount.current = accountId;
   useEffect(() => { if (mode !== "normal") sensitive.current?.scrollIntoView({ block: "center" }); }, [mode, account]);
   useEffect(() => {
     let disposed = false; setAccount(null); setDevices([]); setRights([]); setMode("normal"); setOld(null); setBusy(false); setMessage(""); setReauth(false);
-    if (accountId) void Promise.all([api<Account>("/v1/account", "GET", undefined, accountId), api<{ devices: Device[] }>("/v1/account/devices", "GET", undefined, accountId), api<{ entitlements: Grant[] }>("/v1/account/entitlements", "GET", undefined, accountId)]).then(([a, d, r]) => { if (!disposed) { setAccount(a); setDevices(d.devices); setRights(r.entitlements); if (deleteLink.current) { deleteLink.current = false; setMode("delete"); } } }).catch((e) => { if (!disposed) setMessage(accountError(e, lang)); });
+    if (accountId) void Promise.all([api<Account>("/v1/account", "GET", undefined, accountId), api<{ devices: Device[] }>("/v1/account/devices", "GET", undefined, accountId), api<{ entitlements: Grant[] }>("/v1/account/entitlements", "GET", undefined, accountId)]).then(([a, d, r]) => { if (!disposed) { setAccount(a); setDevices(d.devices); setRights(r.entitlements); if (deleteLink.current) { deleteLink.current = deleteRequested = false; setMode("delete"); } } }).catch((e) => { if (!disposed) setMessage(accountError(e, lang)); });
     return () => { disposed = true; };
   }, [accountId, lang]);
   const run = async (fn: () => Promise<void>) => { setBusy(true); setMessage(""); try { await fn(); } catch (e) { if (currentAccount.current === accountId) setMessage(accountError(e, lang)); } finally { if (currentAccount.current === accountId) setBusy(false); } };

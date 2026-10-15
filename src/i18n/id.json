@@ -225,7 +225,7 @@
   "offlineGuide": "Setelah mengaktifkan Pro dan mengizinkan notifikasi, aktifkan peringatan offline untuk setiap monitor di halaman Workers. Pilih 10, 15, 30, atau 60 menit. Server memeriksa sekitar setiap 3 menit, memberi tahu setelah ambang offline tercapai, lalu memberi tahu pemulihan setelah sekitar 1 menit stabil. Waktu tunggu pool yang habis tidak dianggap offline. Worker yang sudah offline saat diaktifkan tidak memicu notifikasi.",
   "pushHelp": "Persyaratan notifikasi",
   "extensionUpdate": "Memperbarui ekstensi yang terpasang",
-  "extensionUpdateNote": "Versi 0.3 memakai ID ekstensi tetap. Simpan ekstensi lama, cadangkan frasa pemulihan setiap dompet, lalu pasang 0.3 di folder baru dan pulihkan dompet. Pembaruan 0.3+ berikutnya dapat mengganti berkas dan memuat ulang.",
+  "extensionUpdateNote": "Cadangkan dulu frasa pemulihan setiap dompet. Lalu ganti berkas di folder instalasi semula dengan versi baru dan muat ulang ekstensi di chrome://extensions. Biasanya dompet tetap tersimpan. Jika daftar dompet kosong setelah dimuat ulang (versi uji awal memakai ID ekstensi yang berbeda), pulihkan setiap dompet dengan frasa pemulihannya.",
   "paste": "Tempel",
   "edit": "Edit",
   "pause": "Jeda pemantauan",

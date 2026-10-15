@@ -99,7 +99,8 @@
   keyed hashes. Request limits use keyed hashes of IP addresses and emails. Web sessions use Secure,
   HttpOnly cookies. Native apps keep access and refresh credentials in the device-only Keychain;
   the extension keeps them in local storage restricted to trusted extension contexts.</p>
-  <p>Sync includes public watch addresses, contacts (names, addresses and notes), monitors, alerts, devices,
+  <p>Sync includes public watch addresses (from the native app, each wallet's first receive address and its
+  name, shown read-only on the Web), contacts (names, addresses and notes), monitors, alerts, devices,
   calculator inputs, language and display preferences. It excludes recovery phrases, private keys,
   wallet passwords, API secrets and signed transactions. Transport uses HTTPS. Cloud configuration is
   encrypted at rest with a key stored in Cloudflare Worker secrets. <strong>This is not end-to-end encryption:

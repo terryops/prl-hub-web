@@ -225,7 +225,7 @@
   "offlineGuide": "Después de activar Pro y permitir las notificaciones, habilita las alertas de desconexión de cada monitor en la página Workers. Elige 10, 15, 30 o 60 minutos. El servidor comprueba aproximadamente cada 3 minutos, avisa al superar el umbral de desconexión y vuelve a avisar tras cerca de 1 minuto de recuperación estable. Los tiempos de espera del pool no se tratan como caídas. Los workers que ya estaban desconectados al habilitarlas no generan alertas.",
   "pushHelp": "Requisitos para las notificaciones",
   "extensionUpdate": "Actualizar una extensión instalada",
-  "extensionUpdateNote": "La versión 0.3 usa un ID de extensión fijo. Conserva la extensión anterior y respalda las frases de recuperación de todas las billeteras. Instala 0.3 en una carpeta nueva y restaura allí tus billeteras. Para próximas versiones 0.3+, reemplaza los archivos y recarga.",
+  "extensionUpdateNote": "Primero respalda la frase de recuperación de cada billetera. Después reemplaza los archivos de la carpeta de instalación original por los de la nueva versión y recarga la extensión en chrome://extensions. Normalmente tus billeteras se conservan. Si la lista de billeteras queda vacía tras recargar (las primeras versiones de prueba usaban otro ID de extensión), restaura cada billetera con su frase de recuperación.",
   "paste": "Pegar",
   "edit": "Editar",
   "pause": "Pausar monitor",

@@ -225,7 +225,7 @@
   "offlineGuide": "Pro'yu etkinleştirip bildirimlere izin verdikten sonra, Worker sayfasında her izleme için “Çevrimdışı uyarıları” seçeneğini açın. 10, 15, 30 veya 60 dakika seçin. Sunucu yaklaşık 3 dakikada bir kontrol eder; çevrimdışı eşiği aşılınca uyarır, worker yeniden çevrimiçi olup yaklaşık 1 dakika kararlı kalınca tekrar bildirir. Havuz zaman aşımları kesinti sayılmaz. Uyarı açıldığında zaten çevrimdışı olan worker'lar için bildirim gönderilmez.",
   "pushHelp": "Bildirim gereksinimleri",
   "extensionUpdate": "Kurulu bir uzantıyı güncelleme",
-  "extensionUpdateNote": "0.3 sürümü sabit bir uzantı kimliği kullanır. Eski uzantıyı kaldırmayın; önce her cüzdanın kurtarma ifadesini yedekleyin, ardından 0.3 sürümünü yeni bir klasöre kurup cüzdanlarınızı orada geri yükleyin. Sonraki 0.3+ güncellemelerinde dosyaların üzerine yazıp uzantıyı yeniden yüklemeniz yeterlidir.",
+  "extensionUpdateNote": "Önce her cüzdanın kurtarma ifadesini yedekleyin. Ardından ilk kurulum klasöründeki dosyaları yeni sürümle değiştirin ve uzantıyı chrome://extensions sayfasında yeniden yükleyin. Cüzdanlarınız normalde korunur. Yeniden yüklemeden sonra cüzdan listesi boşsa (ilk test sürümleri farklı bir uzantı kimliği kullanıyordu), her cüzdanı kurtarma ifadesiyle geri yükleyin.",
   "paste": "Yapıştır",
   "edit": "Düzenle",
   "pause": "İzlemeyi duraklat",

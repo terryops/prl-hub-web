@@ -225,7 +225,7 @@
   "offlineGuide": "Nachdem Sie Pro aktiviert und Benachrichtigungen zugelassen haben, aktivieren Sie auf der Seite „Worker“ für jeden Monitor die Offline-Alarme. Wählen Sie 10, 15, 30 oder 60 Minuten. Der Server prüft etwa alle 3 Minuten, alarmiert nach Erreichen des Offline-Schwellenwerts und benachrichtigt erneut, sobald die Worker etwa 1 Minute stabil wieder online sind. Pool-Timeouts gelten nicht als Ausfälle. Worker, die beim Aktivieren bereits offline sind, lösen keinen Alarm aus.",
   "pushHelp": "Voraussetzungen für Benachrichtigungen",
   "extensionUpdate": "Installierte Erweiterung aktualisieren",
-  "extensionUpdateNote": "Version 0.3 verwendet eine feste Erweiterungs-ID. Behalten Sie die alte Erweiterung und sichern Sie die Wiederherstellungsphrase jeder Wallet. Installieren Sie 0.3 in einem neuen Ordner und stellen Sie dort die Wallets wieder her. Bei späteren Versionen ab 0.3 ersetzen Sie die Dateien und laden die Erweiterung neu.",
+  "extensionUpdateNote": "Sichern Sie zuerst die Wiederherstellungsphrase jeder Wallet. Ersetzen Sie dann die Dateien im ursprünglichen Installationsordner durch die neue Version und laden Sie die Erweiterung unter chrome://extensions neu. Normalerweise bleiben Ihre Wallets erhalten. Ist die Wallet-Liste nach dem Neuladen leer (frühe Testversionen hatten eine andere Erweiterungs-ID), stellen Sie jede Wallet mit ihrer Wiederherstellungsphrase wieder her.",
   "paste": "Einfügen",
   "edit": "Bearbeiten",
   "pause": "Monitor pausieren",

@@ -1,6 +1,6 @@
 # Web interface icons
 
-All 33 functional icon names use the original selected SVG drawings from
+All 43 functional icon names use the original selected SVG drawings from
 [Ionicons 8.1.0](https://www.npmjs.com/package/ionicons/v/8.1.0),
 [upstream repository](https://github.com/ionic-team/ionicons). The outlined family
 provides a consistent iOS-style appearance for the cross-platform website.
@@ -15,6 +15,12 @@ bundled locally; no CDN, system font, platform detection or icon runtime is need
 The MIT copyright and full license are retained in
 `public/licenses/ionicons.txt`, which is copied into every production build.
 Apple SF Symbols exports are not added to the Web bundle.
+
+The browser wallet (`extension/`) uses the same drawings: `extension/src/icon-symbols.tsx`
+spreads this table and adds four wallet-only shapes from the same package, `create`
+(`add-circle-outline.svg`), `restore` (`download-outline.svg`), `backup` (`key-outline.svg`)
+and `options` (`options-outline.svg`). The extension ships the license as
+`extension/public/licenses/ionicons.txt`; it contains no SF Symbols either.
 
 | Interface name | Ionicons source |
 | --- | --- |
@@ -53,6 +59,16 @@ Apple SF Symbols exports are not added to the Web bundle.
 | `lock` | `lock-closed-outline.svg` |
 | `account` | `person-circle-outline.svg` |
 | `chevron` | `chevron-down-outline.svg` |
+| `shield` | `shield-checkmark-outline.svg` |
+| `key` | `key-outline.svg` |
+| `card` | `card-outline.svg` |
+| `eyeOff` | `eye-off-outline.svg` |
+| `cube` | `cube-outline.svg` |
+| `server` | `server-outline.svg` |
+| `code` | `code-slash-outline.svg` |
+| `globe` | `globe-outline.svg` |
+| `sparkles` | `sparkles-outline.svg` |
+| `cloudOff` | `cloud-offline-outline.svg` |
 
 To update the drawings, retrieve the pinned Ionicons npm package and select
 `dist/svg/<source>.svg` using the mapping above. Preserve all child shapes and

@@ -225,7 +225,7 @@
   "offlineGuide": "After activating Pro and allowing notifications, enable Offline alerts for each monitor on the Workers page. Choose 10, 15, 30 or 60 minutes. The server checks about every 3 minutes, alerts after the offline threshold, and notifies again after roughly 1 minute of stable recovery. Pool timeouts are not treated as outages. Workers already offline when enabled do not trigger alerts.",
   "pushHelp": "Notification requirements",
   "extensionUpdate": "Updating an installed extension",
-  "extensionUpdateNote": "Version 0.3 uses a fixed extension ID. Keep your old extension. Back up every wallet’s recovery phrase, install 0.3 in a new folder, and restore your wallets there. For later 0.3+ updates, replace the files and reload.",
+  "extensionUpdateNote": "Back up every wallet’s recovery phrase first. Then replace the files in the original install folder with the new version and reload the extension on chrome://extensions. Your wallets are normally kept. If the wallet list is empty after reloading (early test builds used a different extension ID), restore each wallet with its recovery phrase.",
   "paste": "Paste",
   "edit": "Edit",
   "pause": "Pause monitoring",
