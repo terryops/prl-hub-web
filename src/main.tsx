@@ -127,7 +127,8 @@ function App() {
     vapid_key: null,
   });
   const [me, setMe] = useState<Me | null>(null),
-    [order, setOrder] = useState<Order | null>(null);
+    [order, setOrder] = useState<Order | null>(null),
+    [accountEmail, setAccountEmail] = useState("");
   const canSync = !!(state.accountId && me?.pro && me.pro_scope !== "device");
   const canSyncRef = useRef(canSync);
   canSyncRef.current = canSync;
@@ -251,7 +252,7 @@ function App() {
     pushGeneration.current++;
     const guest = {...readGuest(),token:localPurchase()?.token || readGuest().token};
     stateRef.current = guest; setState(guest); writeStore(guest);
-    setMe(null); setOrder(null); setDeliveries({}); setPushState("idle"); setAccountReady(true);
+    setMe(null); setOrder(null); setDeliveries({}); setPushState("idle"); setAccountEmail(""); setAccountReady(true);
     if (hasPush() && !localPurchase()) {
       try { const reg = await pushTimeout(navigator.serviceWorker.ready); const sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch { /* Local features remain available. */ }
     }
@@ -259,7 +260,8 @@ function App() {
   const adoptAccount = useCallback(async (account: Account, askImport = true, generation = ++accountGeneration.current) => {
     const id = account.user_id;
     const association=localPurchase()?await associatePurchase(id):null;
-    const profile = await api<Me>("/v1/me", "GET", undefined, id);
+    // Email sign-in returns only the ids; the email labels the account button.
+    const [profile, email] = await Promise.all([api<Me>("/v1/me", "GET", undefined, id), account.email || api<Account>("/v1/account", "GET", undefined, id).then((a) => a.email, () => "")]);
     const paid = profile.pro && profile.pro_scope !== "device";
     const server = paid ? await api<{ schema_version: number; data: import("./types.ts").Config | null }>("/v1/account/config", "GET", undefined, id) : { schema_version: 1, data: null };
     if (generation !== accountGeneration.current) return;
@@ -274,7 +276,7 @@ function App() {
     const followBrowserLanguage = cached?.followBrowserLanguage ?? stateRef.current.followBrowserLanguage;
     const next: State = { ...(cached || (paid ? defaults() : guest)), ...config, followBrowserLanguage, lang: followBrowserLanguage ? browserLanguage() : config.lang, accountId: id, purchaseId:localPurchase()?.id||"", token: localPurchase()?.token || cached?.token || "", sync: cached?.sync ?? true };
     pushGeneration.current++; stateRef.current = next; setState(next); writeStore(next);
-    setMe(profile); setOrder(profile.order); setDeliveries({}); setAccountReady(true);
+    setMe(profile); setOrder(profile.order); setDeliveries({}); setAccountEmail(email); setAccountReady(true);
   }, []);
   useEffect(() => {
     let disposed = false;
@@ -755,8 +757,8 @@ function App() {
         <div className="sidebar-foot">
           <div className="sidebar-actions">
             <button className="settings-button" aria-label={t("settings")} title={t("settings")} onClick={() => setPanel("settings")}><Icon name="settings" /></button>
-            <button className={`account-entry ${accountReady && state.accountId ? "" : "primary"}`} onClick={() => setPanel("account")} aria-label={accountReady && state.accountId ? accountCopy(state.lang).account : t("signIn")} aria-haspopup="dialog">
-              <Icon name="account" /><span>{accountReady && state.accountId ? accountCopy(state.lang).account : t("signIn")}</span>
+            <button className={`account-entry ${accountReady && state.accountId ? "" : "primary"}`} onClick={() => setPanel("account")} title={accountReady && state.accountId ? accountEmail || undefined : undefined} aria-label={accountReady && state.accountId ? accountEmail ? `${accountCopy(state.lang).account}: ${accountEmail}` : accountCopy(state.lang).account : t("signIn")} aria-haspopup="dialog">
+              <Icon name="account" /><span className={accountReady && state.accountId && accountEmail ? "account-entry-email" : undefined}>{accountReady && state.accountId ? accountEmail || accountCopy(state.lang).account : t("signIn")}</span>
             </button>
           </div>
         </div>
@@ -943,7 +945,7 @@ function App() {
                     </div>
                   </div>
                   {!m.paused && stale(snap?.failed)}
-                  {!m.paused && m.alert && (pushState === "error" || !state.token) && <p className="status warn">{t("pushNeedsConnection")}</p>}
+                  {!m.paused && m.alert && (pushState === "error" || !state.token) && <button className="status warn status-link" onClick={() => setPage("alerts")}><span>{t("pushNeedsConnection")}</span><Icon name="right" /></button>}
                   {m.paused ? <div className="monitor-paused"><p className="muted">{t("pausedNote")}</p><button onClick={() => setMonitorPaused(m, false)}>{t("resume")}</button></div> : !s ? (
                     snap?.failed ? <p className="muted">{t("error")}</p> : <Skeleton label={t("loading")} />
                   ) : s.missing ? (
@@ -1263,7 +1265,7 @@ function App() {
             <SecurityOverview lang={state.lang} sections={webSecurity} />
           </>}
           {(panel === "account" || panel === "restore") && (
-            <AccountPanel restore={panel === "restore" && !canSync} accountId={accountReady ? state.accountId : ""} lang={state.lang} auth={availability.auth} onLogin={(a) => adoptAccount(a)} onLogout={leaveAccount} purchases={(
+            <AccountPanel restore={panel === "restore" && !canSync} accountId={accountReady ? state.accountId : ""} lang={state.lang} auth={availability.auth} onLogin={(a) => adoptAccount(a)} onLogout={leaveAccount} onEmail={setAccountEmail} purchases={(
                 <div className="setting-section">
                   <div className="card-heading">
                     <div>
