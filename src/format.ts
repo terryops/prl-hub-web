@@ -23,18 +23,24 @@ export const usd = (x: number, lang: Lang = "en") => currencyAmount(x, "$", lang
 export const roundRent = (value: number) => Number(value.toFixed(4));
 export const change = (x: number | null | undefined) =>
   x == null ? "—" : `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(2)}%`;
-export function hashrate(x: number | undefined, lang?: Lang): string {
-  if (x == null) return "—";
-  for (const [u, n] of [
+/// The largest unit `x` H/s reaches, and its size in H/s.
+export function hashUnit(x: number): [string, number] {
+  for (const unit of [
     ["EH/s", 1e18],
     ["PH/s", 1e15],
     ["TH/s", 1e12],
     ["GH/s", 1e9],
     ["MH/s", 1e6],
     ["kH/s", 1e3],
-  ] as const)
-    if (x >= n) return `${lang ? (x / n).toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (x / n).toFixed(2)} ${u}`;
-  return `${Math.round(x)} H/s`;
+  ] as [string, number][])
+    if (x >= unit[1]) return unit;
+  return ["H/s", 1];
+}
+export function hashrate(x: number | undefined, lang?: Lang): string {
+  if (x == null) return "—";
+  const [u, n] = hashUnit(x);
+  if (n === 1) return `${Math.round(x)} H/s`;
+  return `${lang ? (x / n).toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (x / n).toFixed(2)} ${u}`;
 }
 export function rate(s: Stats, w: WindowName) {
   const sum = s.workers.reduce((n, x) => n + (x.rates[w] || 0), 0);

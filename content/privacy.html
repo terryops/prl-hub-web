@@ -26,7 +26,7 @@
 <body>
 <header><div class="in"><img src="/logo.png" alt="Pearl Hub"><div><h1>Privacy Policy</h1><a href="/">← Pearl Hub</a></div></div></header>
 <main>
-  <p class="muted">Last updated: October 10, 2026</p>
+  <p class="muted">Last updated: October 21, 2026</p>
 
   <p><strong>Pearl Hub</strong> provides a native self-custody cryptocurrency wallet and mining
   monitor for the Pearl ($PRL) network, a Chrome wallet extension, and a web mining companion. We do not sell your
@@ -83,13 +83,21 @@
   and preferences are stored in your browser. We never request recovery phrases or private keys.</p>
   <p>The read-only wallet page sends watch addresses to our service, which queries
   Blockbook for balances and paginated transaction history, including fees and counterparties. Mining income queries also send your
-  monitored payout addresses to exclude transfers between them. These results are briefly
-  cached using hashed address keys. The web page cannot sign or send transactions.
+  monitored payout addresses to exclude transfers between them. Transaction lookups on the same
+  page send the transaction ID you enter, and our service queries Blockbook for that transaction.
+  These results are briefly cached using hashed address and transaction keys. The web page cannot
+  sign transactions. Its broadcast tab sends a transaction you signed elsewhere and paste there to
+  our service, which passes it to the Pearl network through our own index and Pearl's official
+  indexer; the transaction is not stored. Rebroadcasting a transaction by its ID has our service fetch
+  it from one of those indexes and send it the same way.
   Watch addresses remain in local settings and optional encrypted sync. A collapsed card
   on the same page contains the Chrome extension download and installation guide.</p>
   <p>USD exchange rates come from ExchangeRate-API's public USD feed; extended price
   history comes from BigONE's public PRL/USDT daily candles. These requests contain
-  no wallet address or identity. Network charts use public Blockbook samples retained
+  no wallet address or identity. The candlestick chart on the Market page is the one
+  exception that does not pass through our service: your browser loads it directly from
+  SafeTrade's public PEARL/USDT market data (<code>safetrade.com</code>), without an address,
+  account or cookies, so SafeTrade receives your IP address. Network charts use public Blockbook samples retained
   by our service. Device lists, rental costs and calculator preferences remain in your
   browser and, if enabled, your encrypted settings sync. Synchronizing pool workers
   into your device list queries only the monitors you have enabled.</p>
@@ -130,9 +138,12 @@
   <h2>Chrome wallet extension</h2>
   <p>The extension encrypts recovery phrases and pending transaction records in local
   extension storage using your password. It does not sync private keys through a Chrome
-  account or our web service. Blockchain queries send account extended public keys,
-  addresses and transaction identifiers to the selected network's Blockbook service;
-  transfers send signed transactions. Recovery phrases and private keys are not sent.
+  account or our web service. On mainnet, blockchain queries send account extended public keys,
+  addresses and transaction identifiers first to our own Pearl blockchain index (reached at
+  <code>pearlhub.net/node</code>; the Blockbook server described under &ldquo;Wallet balances and
+  transactions&rdquo;), and to Pearl's official indexer when ours is unavailable or behind; on testnet
+  only to the official testnet indexer. Transfers send the signed transaction to both. Recovery
+  phrases and private keys are not sent.
   Uninstalling the extension removes its local wallet records.</p>
   <p>On mainnet the extension requests the public PRL price and exchange rates from our
   service to show an estimate of your balance; these requests carry no wallet address or
@@ -144,18 +155,40 @@
   <p>Opening a public wallet address in the Web companion places the selected address in the
   URL fragment. The browser reads it after the page loads; it is not sent in the initial page request.</p>
 
+  <h2>Wallet balances and transactions</h2>
+  <p>To show a wallet's balance and history, the native app first queries our own Pearl
+  blockchain index (<code>node.pearlhub.net</code>, a Blockbook server we run, reached through
+  Cloudflare). These queries send each wallet's extended public key (xpub), from which all of
+  that wallet's addresses can be derived, and the transaction identifiers involved. They are used
+  only to answer the request and are not stored. When our index is unavailable or behind, the app
+  sends the same queries to Pearl's official indexer instead. Signed transactions are broadcast to
+  both. The on-chain income shown for monitored mining addresses (which sends those payout
+  addresses) and the network hashrate chart (which requests public blocks) use the same two
+  indexes in the same order. Recovery phrases and private keys are never sent.</p>
+
+  <h2>NOCK (Nockchain) wallet</h2>
+  <p>The same recovery phrase also opens a NOCK address on Nockchain, derived on your device. To
+  show its balance, the native app asks NockBox's public Nockchain node (<code>rpc.nockbox.org</code>)
+  for the coins locked to that address; these requests carry two lock identifiers derived from your
+  NOCK address, so the node can tell which address is asking. The same node answers the transaction
+  and block lookups behind your NOCK history, and a NOCK send is broadcast through it. Your NOCK
+  history is kept on your device only. Recovery phrases and private keys are never sent.</p>
+
   <h2>Third-party services the app contacts</h2>
   <p>To provide its features, the native app makes direct requests from your device to public
   services. These requests carry only what is needed to fulfill them (for example a wallet
   or mining address you enter), and each service has its own privacy policy:</p>
   <ul>
-    <li><strong>Pearl blockchain indexer</strong> (<code>blockbook.pearlresearch.ai</code>) — to read balances and broadcast transactions.</li>
-    <li><strong>Public market data</strong> (e.g. SafeTrade public ticker, CoinGecko) — to display the $PRL price and charts, for reference only.</li>
+    <li><strong>Pearl blockchain indexer</strong> (<code>blockbook.pearlresearch.ai</code>) — for balances, history, mining-address income and network charts when our own index is unavailable or behind; signed transactions are broadcast to it as well.</li>
+    <li><strong>Public market data</strong> (e.g. SafeTrade public ticker, CoinGecko) — to display the $PRL and NOCK prices and charts, for reference only.</li>
+    <li><strong>Nockchain public node</strong> (<code>rpc.nockbox.org</code>, run by NockBox) — for your NOCK balance, transaction status and block times; NOCK transactions you sign are broadcast through it.</li>
+    <li><strong>Nockchain explorer</strong> (<code>nockscan.net</code>) — only when you open a NOCK transaction in the explorer from its details.</li>
     <li><strong>SafeTrade trading API</strong> (<code>safetrade.com</code>) — only if you add your own SafeTrade API key, to show your exchange balances and place or cancel your orders.</li>
-    <li><strong>Mining pool public APIs</strong> (AlphaPool, Lucky Pool, HeroMiners, Pearl Fortune, PearlHash, Kryptex, F2Pool) — to show stats for a mining address you choose to monitor.</li>
+    <li><strong>Mining pool public APIs</strong> (AlphaPool, Lucky Pool, HeroMiners, Pearl Fortune, PearlHash, Kryptex, Jetski, F2Pool) — to show stats for a mining address you choose to monitor.</li>
   </ul>
   <p>We do not control these services. Native app queries go directly to them; web queries
-  pass through our service as described in the Web version section.</p>
+  pass through our service as described in the Web version section, except the SafeTrade
+  candlestick chart, which the browser loads directly.</p>
 
   <h2>iCloud sync (optional, Apple-encrypted)</h2>
   <p>While signed out of the email account, iCloud can sync your preferences (language, currency, pool setup) across your own

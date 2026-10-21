@@ -1,23 +1,8 @@
 import type { Network, PoolOverview } from "./types.ts";
 export type NetworkPoint = { height: number; ts: number; difficulty: number; hashrate: number | null; blockTime: number | null };
-export type NetworkHistory = { ok: boolean; source: string; span: string; points: NetworkPoint[]; avgBlockTime: number | null; firstHeight: number | null; lastHeight: number | null };
+/// `hashrate` and `blockTime` cover the `window` blocks behind each point (alerts/src/network.js).
+export type NetworkHistory = { ok: boolean; source: string; span: string; window?: number; points: NetworkPoint[]; avgBlockTime: number | null; firstHeight: number | null; lastHeight: number | null };
 export const diffChange = (current?: number | null, ref?: number | null, inverse = false) => current && ref ? ((inverse ? ref / current : current / ref) - 1) * 100 : null;
-/// PRLDashboard.measuredHashPoints: nearest measured sample, within half a day.
-export function measuredHashPoints(n: Network | undefined, samples: NetworkPoint[]): number[][] {
-  if (!n?.hashrate || samples.length < 2) return [];
-  const points: number[][] = [];
-  for (const day of [7, 3, 1]) {
-    const target = n.ts - day * 86400;
-    const nearest = samples.reduce((a, b) => Math.abs(a.ts - target) <= Math.abs(b.ts - target) ? a : b);
-    if (Math.abs(nearest.ts - target) < 43200 && nearest.hashrate != null && nearest.hashrate > 0) points.push([target, nearest.hashrate]);
-  }
-  points.push([n.ts, n.hashrate]);
-  return points;
-}
-export const hashChange = (points: number[][], days: number) => {
-  const last = points.at(-1), first = last && points.find(([ts]) => ts === last[0] - days * 86400);
-  return last && first ? diffChange(last[1], first[1]) : null;
-};
 export function difficultyPoints(n?: Network, inverse = false): number[][] {
   if (!n?.difficulty || (inverse && !n.prlPerTHDay)) return [];
   const v = (diff: number) => inverse ? n.prlPerTHDay! * 1000 * n.difficulty! / diff : diff;

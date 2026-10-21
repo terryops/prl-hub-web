@@ -2,10 +2,11 @@ import { useState } from "react";
 import type { Lang, Overview, PoolOverview as PoolRow } from "./types.ts";
 import type { TextKey } from "./i18n/index.ts";
 import { difficulty, hashrate, unitYield, prlNumber } from "./format.ts";
-import { poolPayouts, poolSparkline, sortPools, relativePoolBlock, type PoolSortKey } from "./pool-comparison.ts";
+import { bestYield, netPerPH, orphanRate, ownApiMissing, payoutCost, poolPayouts, poolSparkline, rankedYield, sortPools, relativePoolBlock, weekLuck, type PoolSortKey } from "./pool-comparison.ts";
 import { Icon } from "./Icons.tsx";
 import { Skeleton } from "./Skeleton.tsx";
-import { PoolCostHelp } from "./PoolCostHelp.tsx";
+import { HelpTip, PoolCostHelp } from "./PoolCostHelp.tsx";
+import { PoolSchemeGuide } from "./PoolSchemeGuide.tsx";
 export type Translate = (key: TextKey) => string;
 export const numeric = (v: number | null | undefined, digits = 2, lang: Lang = "en") => v != null && Number.isFinite(v) ? v.toLocaleString(lang, { maximumFractionDigits: digits }).replace(/-/g, "−") : "—";
 export function NetworkSummary({ data, t, lang, failed }: { data?: Overview; lang: Lang; t: Translate; failed?: boolean }) {
@@ -32,32 +33,36 @@ function PoolShareBackground({ row }: { row: PoolRow }) {
 export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overview; failed?: boolean; lang: Lang; t: Translate; onUse: (r: PoolRow) => void }) {
   const [sort, setSort] = useState<{ key: PoolSortKey; ascending: boolean }>({ key: "hashrate", ascending: false });
   const rows = sortPools(data?.rows || [], sort.key, sort.ascending);
-  const best = Math.max(-1, ...rows.filter((r) => r.trustworthy && !r.pps && !r.solo).map((r) => r.earningsPerPH ?? -1));
+  const best = bestYield(rows);
+  const weekly = rows.some((r) => weekLuck(r));
   const columns: { key: PoolSortKey | "trend"; label: TextKey }[] = [
     { key: "name", label: "pool" }, { key: "hashrate", label: "hashrate" }, { key: "trend", label: "poolHashrate7d" },
     { key: "earnings", label: "poolEstYield" }, { key: "blocks", label: data?.source === "miningpoolstats" ? "blocksDay" : "poolBlocks24h" },
-    { key: "fee", label: "poolFee" }, { key: "realFee", label: "poolRealCost" }, { key: "lastBlock", label: "poolLastBlock" },
+    { key: "fee", label: "poolFee" }, { key: "realFee", label: "poolRealCost" }, { key: "orphans", label: "poolOrphanRate" }, { key: "lastBlock", label: "poolLastBlock" },
   ];
-  const choose = (key: PoolSortKey) => setSort((old) => ({ key, ascending: old.key === key ? !old.ascending : ["name", "fee", "realFee"].includes(key) }));
+  const choose = (key: PoolSortKey) => setSort((old) => ({ key, ascending: old.key === key ? !old.ascending : ["name", "fee", "realFee", "orphans"].includes(key) }));
   const calculate = (r: PoolRow) => <button className="pool-calculate" onClick={() => onUse(r)} aria-label={`${t("useFee")} · ${r.name}`} title={t("useFee")}><Icon name="calculator" /><span>{t("useFee")}</span></button>;
   const name = (r: PoolRow) => <div className="pool-identity">
-    <div className="pool-name-line">{r.url?.startsWith("https://") ? <a href={r.url} target="_blank" rel="noreferrer"><span>{r.name}</span><Icon name="external" /></a> : <strong>{r.name}</strong>}{calculate(r)}</div>
+    <div className="pool-name-line">{r.url?.startsWith("https://") ? <a href={r.url} target="_blank" rel="noreferrer"><span>{r.name}</span><Icon name="external" /></a> : <strong>{r.name}</strong>}
+      {ownApiMissing(r, data?.partial) && <HelpTip label={t("poolOwnApiMissing")} className="pool-api-dot" bubbleClassName="pool-cost-tooltip pool-api-tooltip" mark={<span aria-hidden="true" />}>{t("poolOwnApiMissing")}</HelpTip>}{calculate(r)}</div>
     <small>{r.share == null ? "—" : t("poolNetworkShare").replace("%@", numeric(r.share * 100, 1, lang) + "%")}</small>
     {r.solo && <small className="pool-solo">SOLO</small>}
   </div>;
   const payouts = (r: PoolRow, kind: "earnings" | "fee" | "realFee") => <div className={`pool-metric pool-${kind}${poolPayouts(r).length > 1 ? " pool-multiple" : ""}`}>
     {poolPayouts(r).map((p, i, all) => {
-      const amount = kind === "fee" ? p.fee : kind === "realFee" ? p.realFeePercent : p.solo ? null : p.grossPerPH;
+      // Earnings are what a miner keeps: the gross figure less the pool's cut (see payoutCost).
+      const amount = kind === "fee" ? p.fee : kind === "realFee" ? p.realFeePercent : netPerPH(p, r);
       const estimated = kind === "realFee" ? p.realFeeEstimated : p.estimated;
       const prefix = estimated && kind !== "fee" ? /^(PPS|FPPS)/i.test(p.scheme || "") || kind === "realFee" ? "≈" : "~" : "";
-      const top = kind === "earnings" && r.trustworthy && !/^(PPS|FPPS)/i.test(p.scheme || "") && r.earningsPerPH === best;
+      const top = kind === "earnings" && best != null && rankedYield(r, p) === best;
+      const formula = kind === "earnings" && amount != null ? `${numeric(p.grossPerPH, 8, lang)} × (1 − ${numeric(payoutCost(p, r), 2, lang)}%) = ` : "";
       return <div className="pool-payout" key={i}>
-        <strong className={`${amount == null ? "missing-value" : ""}${top ? " pool-top-yield" : ""}`} title={amount == null ? undefined : numeric(amount, 8, lang) + (kind === "earnings" ? " PRL/PH·" + t("perDay") : "%")}>
+        <strong className={`${amount == null ? "missing-value" : ""}${top ? " pool-top-yield" : ""}`} title={amount == null ? undefined : formula + numeric(amount, 8, lang) + (kind === "earnings" ? " PRL/PH·" + t("perDay") : "%")}>
           {amount == null ? "—" : prefix + numeric(amount, kind === "realFee" ? 2 : 1, lang) + (kind === "earnings" ? " PRL" : "%")}
         </strong>{(all.length > 1 || kind !== "earnings") && <small>{p.scheme || "—"}</small>}
       </div>;
     })}
-    {kind === "earnings" && <small>{t("poolPerPHDay")}</small>}
+    {kind === "earnings" && <small>{t(weekLuck(r) ? "poolPerPHDay7d" : "poolPerPHDay")}</small>}
   </div>;
   const hash = (r: PoolRow) => <div className="pool-metric"><strong className={r.hashrate == null ? "missing-value" : undefined}>{hashrate(r.hashrate ?? undefined, lang)}</strong>
     {r.averageHashrate7d != null ? <small>{t("poolAverage7d").replace("%@", hashrate(r.averageHashrate7d, lang))}</small> : r.miners != null && <small>{numeric(r.miners, 0, lang)} {t("participants")}</small>}
@@ -66,6 +71,17 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
     {r.blocksPerDay == null ? "—" : (r.source === "miningpoolstats" ? "≈" : "") + numeric(r.blocksPerDay, r.blocksPerDay === Math.round(r.blocksPerDay) ? 0 : 1, lang)}</strong>
     {r.source === "miningpoolstats" ? <small>{t("blocksDay")}</small> : r.yieldRatio != null && <small>{t("poolExpectedRatio").replace("%@", numeric(r.yieldRatio * 100, 0, lang) + "%")}</small>}
   </div>;
+  const dates = new Intl.DateTimeFormat(lang, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const orphans = (r: PoolRow) => {
+    const o = orphanRate(r);
+    return <div className="pool-metric pool-orphans"><strong className={o ? undefined : "missing-value"}
+      title={o ? `${dates.format(o.start * 1000)} – ${dates.format(o.end * 1000)}` : undefined}>{o ? numeric(o.percent, 2, lang) + "%" : "—"}</strong>
+      {o && <small>{t("poolOrphanBlocks").replace("%@", numeric(o.orphans, 0, lang)).replace("%@", numeric(o.blocks, 0, lang))}</small>}
+      {/* Where the count comes from and, for a window shorter than the week, how many days it covers. */}
+      {o && <small>{[o.end - o.start < 6 * 86400 ? t("poolOrphanDays").replace("%@", numeric((o.end - o.start) / 86400, 1, lang)) : null,
+        t(o.source === "chain" ? "poolOrphanChain" : "poolOrphanPool")].filter(Boolean).join(" · ")}</small>}
+    </div>;
+  };
   const lastBlock = (r: PoolRow) => <div className="pool-metric"><strong className={r.lastBlockTime == null ? "missing-value" : undefined} title={r.lastBlockTime ? new Date(r.lastBlockTime * 1000).toLocaleString(lang) : undefined}>
     {r.lastBlockTime == null ? "—" : relativePoolBlock(r.lastBlockTime, lang)}</strong>
     {r.lifetimeBlocks != null && <small>{t("poolLifetimeBlocks").replace("%@", numeric(r.lifetimeBlocks, 0, lang))}</small>}
@@ -78,27 +94,29 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
         {columns.filter((c) => c.key !== "trend").map((c) => <option key={c.key} value={c.key}>{t(c.label)}</option>)}
       </select></label>
     </div></div>
-    {(failed || data?.stale) && <p className="status warn">{t("stale")}</p>}{data?.partial && <p className="comparison-notice">{t("poolDataNotice")}</p>}
+    {(failed || data?.stale) && <p className="status warn">{t("stale")}</p>}
     {!data && !failed ? <Skeleton label={t("loading")} kind="table" /> : !rows.length ? <p className="empty-comparison">{t(failed ? "error" : "missing")}</p> : <>
       <div className="pool-table-scroll" tabIndex={0} role="region" aria-label={t("poolComparison")}>
         <table className="pool-table"><thead><tr>{columns.map((c) => <th key={c.key} scope="col" aria-sort={c.key === "trend" ? undefined : c.key === sort.key ? sort.ascending ? "ascending" : "descending" : "none"}>
           <span className="pool-column-heading">{c.key === "trend" ? t(c.label) : <button className="pool-sort-heading" onClick={() => choose(c.key as PoolSortKey)}><span>{t(c.label)}</span>{sort.key === c.key && <Icon name={sort.ascending ? "up" : "down"} />}</button>}{c.key === "realFee" && <PoolCostHelp rows={rows} lang={lang} t={t} />}</span>
         </th>)}</tr></thead><tbody>{rows.map((r) => <tr key={r.id}>
           <td className="pool-cell"><PoolShareBackground row={r} />{name(r)}</td><td>{hash(r)}</td><td className="pool-trend-cell"><PoolSparkline row={r} t={t} /></td>
-          <td>{payouts(r, "earnings")}</td><td>{blocks(r)}</td><td>{payouts(r, "fee")}</td><td>{payouts(r, "realFee")}</td><td>{lastBlock(r)}</td>
+          <td>{payouts(r, "earnings")}</td><td>{blocks(r)}</td><td>{payouts(r, "fee")}</td><td>{payouts(r, "realFee")}</td><td>{orphans(r)}</td><td>{lastBlock(r)}</td>
         </tr>)}</tbody></table>
       </div>
       <div className="pool-mobile-list">{rows.map((r) => <article className="pool-mobile" key={r.id}>
         <PoolShareBackground row={r} /><div className="pool-mobile-heading">{name(r)}<PoolSparkline row={r} t={t} /></div>
         <div className="pool-mobile-primary"><div><small>{t("hashrate")}</small>{hash(r)}</div><div><small>{t("poolEstYield")}</small>{payouts(r, "earnings")}</div></div>
         <div className="pool-mobile-secondary"><div><small>{t(columns[4].label)}</small>{blocks(r)}</div><div><small>{t("poolFee")}</small>{payouts(r, "fee")}</div><div><small className="pool-column-heading">{t("poolRealCost")}<PoolCostHelp rows={[r]} lang={lang} t={t} /></small>{payouts(r, "realFee")}</div></div>
+        {orphanRate(r) && <div className="pool-mobile-last"><small>{t("poolOrphanRate")}</small>{orphans(r)}</div>}
         <div className="pool-mobile-last"><small>{t("poolLastBlock")}</small>{lastBlock(r)}</div>
       </article>)}</div>
     </>}
+    <PoolSchemeGuide data={data} lang={lang} t={t} />
     <details className="card pool-data-notes"><summary>{t("comparisonMethod")}</summary>
-      {(["poolYieldBasis", "comparisonExplanation", "ppsExplanation", "sampleExplanation", "heroExplanation", "mixedSources", "poolContractNotes", "poolHistoryNotes", "poolMissing"] as const).map((k) => <p key={k}>{t(k)}</p>)}
+      {(["poolYieldBasis", ...(weekly ? ["poolWeekLuckExplanation", ...(rows.some((r) => !weekLuck(r) && !r.pps && !r.solo && r.earningsPerPH != null) ? ["poolWeekLuckFallback"] as const : [])] as const : ["comparisonExplanation"] as const),
+        "ppsExplanation", "sampleExplanation", "heroExplanation", "mixedSources", "poolContractNotes", "poolHistoryNotes", "poolMissing"] as const).map((k) => <p key={k}>{t(k)}</p>)}
       <footer className="data-footer"><span>{t("source")} · {data?.source || "—"}</span></footer>
     </details>
-    <details className="card pool-network-reference"><summary>{t("poolNetworkReference")}</summary><NetworkSummary data={data} t={t} lang={lang} failed={failed} /></details>
   </section>;
 }

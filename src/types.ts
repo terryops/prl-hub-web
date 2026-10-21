@@ -1,5 +1,5 @@
 export type Lang = "en" | "ru" | "zh-Hans" | "zh-Hant" | "vi" | "id" | "es" | "pt-BR" | "fr" | "de" | "it" | "tr" | "ja" | "ko" | "hi" | "th";
-export type WindowName = "live" | "m15" | "m30" | "hour" | "h3" | "day";
+export type WindowName = "live" | "m15" | "m30" | "hour" | "h3" | "h6" | "day";
 export type Item = { id: string; updated: number; deleted?: boolean; [key: string]: unknown };
 export type Monitor = Item & {
   pool: string;
@@ -8,6 +8,8 @@ export type Monitor = Item & {
   label: string;
   alert: boolean;
   after: number;
+  /// Seconds after the offline push to remind once more if still offline; absent or 0 = never.
+  again?: number;
   paused?: boolean;
 };
 export type Wallet = Item & { addr: string; label: string };
@@ -114,11 +116,22 @@ export type PoolOverview = {
   lastBlockTime?: number | null;
   lifetimeBlocks?: number | null;
   payouts?: PoolPayout[];
+  /** Block luck the service measured from five-minute samples, by window ("24h", "7d", "14d"). */
+  luck?: Partial<Record<string, PoolLuck>> | null;
+  /** Orphaned blocks over the last week: from the pool's own block list or seen on chain, whichever is higher; or null. */
+  orphans?: PoolOrphans | null;
   realFeeMeasurement?: {
     pool: string; scheme: string; netPRL: number; expectedPRL: number;
     start: number; end: number; measuredAt: number; estimated: boolean;
     sampleCount: number; theoryBasis: string;
   } | null;
+};
+/** Blocks from `start` to `end` and how many were orphaned; `source` says whose count it is. */
+export type PoolOrphans = { start: number; end: number; blocks: number; orphans: number; source?: "pool" | "chain" };
+/** One window: the pool's blocks ÷ the blocks its reported work should have found. */
+export type PoolLuck = {
+  ratio: number; blocks: number; expectedBlocks: number;
+  grossPerPH: number; theoreticalPerPH: number; start: number; end: number; covered: number;
 };
 export type PoolPayout = {
   scheme: string | null;
@@ -128,6 +141,8 @@ export type PoolPayout = {
   realFeeEstimated?: boolean | null;
   realFeePeriod?: { start: number; end: number } | null;
   estimated: boolean;
+  /** grossPerPH is today's theory × the pool's 7-day luck, not one day of blocks. */
+  weekly?: boolean;
   solo: boolean;
 };
 export type Overview = {
@@ -182,6 +197,26 @@ export type Address = {
   }[];
 };
 export type Income = { ok: boolean; ts: number; h24: number; d7: number; total: number };
+/// One input or output of a looked-up transaction. `address` is null for OP_RETURN data
+/// (`data`) and other scripts without an address.
+export type TxRow = { address: string | null; value: string; data?: boolean };
+/// POST /v1/tx: a transaction by txid. Amounts are atomic units (1 PRL = 10^8).
+export type TxDetail = {
+  txid: string;
+  confirmations: number;
+  height: number | null;
+  blockHash: string | null;
+  time: number | null;
+  size: number | null;
+  vsize: number | null;
+  value: string;
+  fee: string;
+  coinbase: boolean;
+  inputCount: number;
+  outputCount: number;
+  inputs: TxRow[];
+  outputs: TxRow[];
+};
 export type Order = {
   id: string;
   address: string;

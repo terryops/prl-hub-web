@@ -1,6 +1,6 @@
 # Web interface icons
 
-All 43 functional icon names use the original selected SVG drawings from
+All 49 functional icon names use the original selected SVG drawings from
 [Ionicons 8.1.0](https://www.npmjs.com/package/ionicons/v/8.1.0),
 [upstream repository](https://github.com/ionic-team/ionicons). The outlined family
 provides a consistent iOS-style appearance for the cross-platform website.
@@ -39,6 +39,7 @@ and `options` (`options-outline.svg`). The extension ships the license as
 | `send` | `paper-plane-outline.svg` |
 | `history` | `time-outline.svg` |
 | `plus` | `add-outline.svg` |
+| `minus` | `remove-outline.svg` |
 | `more` | `ellipsis-horizontal.svg` |
 | `copy` | `copy-outline.svg` |
 | `external` | `open-outline.svg` |
@@ -69,6 +70,9 @@ and `options` (`options-outline.svg`). The extension ships the license as
 | `globe` | `globe-outline.svg` |
 | `sparkles` | `sparkles-outline.svg` |
 | `cloudOff` | `cloud-offline-outline.svg` |
+| `cards` | `albums-outline.svg` |
+| `compact` | `list-outline.svg` |
+| `search` | `search-outline.svg` |
 
 To update the drawings, retrieve the pinned Ionicons npm package and select
 `dist/svg/<source>.svg` using the mapping above. Preserve all child shapes and

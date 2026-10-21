@@ -451,7 +451,7 @@ h1 {
   background: #4268da;
   color: #fff;
 }
-/* The wallet extension guide lives inside the wallet page's fold card: one column of plain sections. */
+/* The wallet extension guide lives in a dialog (from the wallet page's banner and Send): one column of plain sections. */
 .wallet-guide { container-type: inline-size; }
 .extension-brand { display: flex; align-items: flex-start; gap: 16px; }
 .extension-brand img { width: 52px; height: 52px; flex-shrink: 0; }
@@ -461,7 +461,13 @@ h1 {
 .extension-features li { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .extension-features .icon { color: var(--blue-text); width: 20px; height: 20px; flex-shrink: 0; }
 .extension-get { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-.extension-download { display: inline-flex; align-items: center; justify-content: center; gap: 12px; border-radius: 12px; padding: 13px 22px; text-align: center; }
+.extension-store, .extension-download { display: inline-flex; align-items: center; justify-content: center; gap: 12px; border-radius: 12px; padding: 13px 22px; text-align: center; text-decoration: none; }
+.extension-download { border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); padding: 9px 16px; }
+.extension-download .icon, .extension-store .icon { width: 18px; height: 18px; }
+/* Manual install: the ZIP and its steps, folded below the store install. */
+.extension-manual { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.extension-manual > summary { min-height: 36px; cursor: pointer; color: var(--blue-text); font-weight: 600; align-content: center; }
+.extension-manual-note { margin: 8px 0 16px; color: var(--muted); line-height: 1.7; }
 .extension-release { color: var(--muted); margin: 0; }
 .extension-desktop { color: var(--muted); margin: 12px 0 0; }
 .wallet-guide .extension-security { margin: 20px 0 0; }
@@ -478,7 +484,7 @@ h1 {
 .extension-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px 32px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
 .extension-notes h3 { margin-bottom: 4px; }
 @container (max-width: 520px) {
-  .extension-download { width: 100%; }
+  .extension-store, .extension-download { width: 100%; }
 }
 .muted {
   color: var(--muted);
@@ -533,6 +539,20 @@ h1 {
 }
 .main-foot a {
   min-height: 36px;
+}
+.main-foot-link,
+.main-foot-link:hover,
+:root[data-theme="dark"] .main-foot-link:hover,
+:root[data-palette="mono"] .main-foot-link:hover {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--blue-text);
+  font-size: inherit;
+}
+.main-foot-link .icon {
+  width: 1.15em;
+  height: 1.15em;
 }
 .inline-controls {
   display: flex;
@@ -1039,7 +1059,6 @@ form {
     --red: #ff83a5;
     --warn: #e9c96e;
     color: #e4eaf7;
-    background: #101724;
   }
 :root[data-theme="dark"] button:hover {
     background: #293956;
@@ -1323,15 +1342,6 @@ form {
   color: var(--pool-muted);
   font-size: var(--font-14);
   margin: 12px 0 20px;
-}
-.comparison-notice {
-  color: var(--pool-muted);
-  background: var(--soft);
-  border-left: 3px solid var(--pool-link);
-  border-radius: 4px;
-  padding: 12px 14px;
-  font-size: var(--font-13);
-  margin-bottom: 20px;
 }
 .sort-control {
   display: flex;
@@ -1712,35 +1722,16 @@ form {
 .wallet-balance strong { font-size: var(--font-28); overflow-wrap:anywhere; }
 .wallet-transactions a { display:flex; flex-wrap:wrap; justify-content:space-between; gap:.4rem; padding:.8rem 0; border-top:1px solid var(--line); }
 .wallet-transactions small { color:var(--muted); }
-.extension-fold > summary { cursor:pointer; font-weight:600; }
-.extension-fold[open] > summary { margin-bottom:20px; }
 
-.income-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.7rem; border-top:1px solid var(--line); padding:1rem 0; }
-.income-grid h3 { grid-column:1/-1; font-size: var(--font-14); }
-.income-grid div { min-width:0; display:flex; flex-direction:column; gap:.25rem; }
-.income-grid strong { overflow-wrap:anywhere; font-size: var(--font-14); }
-.income-grid small { color:var(--muted); font-size: var(--font-12); }
 
 :root[data-theme="light"] { color-scheme:light; }
 :root[data-theme="dark"] { color-scheme:dark; }
-:root[data-palette="mono"] { --blue:#1c1c1c; --soft:#efedea; --surface:#f5f4f1; --text:#1c1c1c; background:#faf9f7; color:#1c1c1c; }
-:root[data-palette="mono"][data-theme="dark"] { --blue:#efedea; --soft:#3a3a3a; --surface:#242424; --text:#efedea; --line:#3a3a3a; background:#000; color:#efedea; }
-:root[data-palette="mono"] .price-card { background:var(--surface); color:#1c1c1c; }
-:root[data-palette="mono"] .price-card small { color:#5c5c5c; }
-:root[data-palette="mono"] .nav-item.active { background:var(--soft); color:var(--blue-text); }
-:root[data-palette="mono"] .primary { background:var(--blue); border-color:var(--blue); color:#fff; }
-:root[data-palette="mono"][data-theme="dark"] .primary { color:#141414; }
-:root[data-palette="mono"] input[type="checkbox"] { accent-color:var(--blue); }
-:root[data-palette="mono"] .chart-line { stroke:var(--blue); }
-:root[data-palette="mono"] .chart-fill { fill:var(--soft); }
 
 .chart text, .pool-shares svg text { fill:var(--muted); font-size: var(--font-12); }
 .difficulty-line { stroke:var(--text); stroke-width:1.5; stroke-dasharray:5 4; fill:none; }
 .market-metrics .network-stat { min-width:0; text-align:left; }
 .market-metrics strong { overflow-wrap:anywhere; font-size: var(--font-20); }
 .metric-selected { border-color:var(--blue); }
-.network-history .chart-fill { fill:#36ac7030; }
-.network-history .chart-line { stroke:var(--green); }
 .donut-layout { display:grid; grid-template-columns:minmax(180px,260px) 1fr; align-items:center; gap:1rem; }
 .donut-layout svg { width:100%; }
 .donut-legend > div { display:grid; grid-template-columns:12px 1fr auto; gap:.35rem; padding:.3rem 0; }
@@ -1749,12 +1740,6 @@ form {
 .slice-0 { background:#5478ed; } .slice-1 { background:#57cbb3; } .slice-2 { background:#36ac70; } .slice-3 { background:#ffc747; } .slice-4 { background:#ef9a3b; } .slice-5 { background:#8775f2; } .slice-6 { background:#5cb8eb; } .slice-7 { background:#7d879e; } .slice-8 { background:#adb5c4; }
 @media(max-width:600px) { .donut-layout { grid-template-columns:1fr; } .donut-layout svg { max-width:240px; margin:auto; } }
 
-/* Palette tokens follow PearlTones; semantic green/red and pool identities stay stable. */
-:root[data-palette="mono"] { --muted:#707070; --line:#dedad4; }
-:root[data-palette="mono"][data-theme="dark"] { --muted:#bebbb6; --line:#3a3a3a; }
-:root[data-palette="mono"] button:hover { background:var(--soft); }
-:root[data-palette="mono"] .chart-dot { fill:var(--blue); }
-:root[data-palette="mono"] .pool-page { --pool-link:var(--blue); }
 
 .fleet-page { min-width:0; }
 .fleet-nav { display:flex; flex-wrap:wrap; gap:.6rem 1.2rem; margin-bottom:1rem; font-size: var(--font-14); }
@@ -1809,16 +1794,12 @@ form {
   font-size: var(--font-14);
 }
 :root[data-theme="dark"] { --page-bg: #101724; }
-:root[data-palette="mono"] { --page-bg: #faf9f7; }
-:root[data-palette="mono"][data-theme="dark"] { --page-bg: #000; }
 :root[data-theme="dark"] { --blue: #8faaff; --hover: #293956; --selected: #26395f; --warning-bg: #393224; --warning-line: #665434; --skeleton: #2c374c; --on-blue: #101724; --purple-bg: #2e2948; --cyan-bg: #203b4a; }
-:root[data-palette="mono"] { --hover: #e5e2dd; --selected: #e5e2dd; --warning-bg: #f1ede3; --warning-line: #cfc5ad; --skeleton: #dedad4; --purple: var(--text); --purple-bg: var(--soft); --cyan: var(--text); --cyan-bg: var(--soft); --on-blue: #fff; --slice-0: #292929; --slice-1: #555; --slice-2: #777; --slice-3: #999; --slice-4: #bbb; --slice-5: #444; --slice-6: #888; --slice-7: #aaa; --slice-8: #ccc; }
-:root[data-palette="mono"][data-theme="dark"] { --hover: #383838; --selected: #383838; --warning-bg: #343129; --warning-line: #6b6250; --skeleton: #3a3a3a; --on-blue: #141414; --slice-0: #eee; --slice-1: #bbb; --slice-2: #999; --slice-3: #777; --slice-4: #555; --slice-5: #ccc; --slice-6: #888; --slice-7: #666; --slice-8: #444; }
 button, input, select, textarea { font-size: var(--font-14); }
 h1 { font-size: var(--font-28); } h2 { font-size: var(--font-16); } h3 { font-size: var(--font-14); }
 .card p, .card .help p, .setting-section p, .extension-intro, .extension-steps p { font-size: var(--font-14); }
 button:hover, :root[data-theme="dark"] button:hover, :root[data-palette="mono"] button:hover { background: var(--hover); }
-.primary, :root[data-palette="mono"] .primary, :root[data-palette="mono"][data-theme="dark"] .primary { color: var(--on-blue); background: var(--blue-strong); border-color: var(--blue-strong); }
+.primary { color: var(--on-blue); background: var(--blue-strong); border-color: var(--blue-strong); }
 .primary:hover { background: var(--blue-strong); filter: brightness(.94); }
 .nav-item.active, :root[data-theme="dark"] .nav-item.active { background: var(--selected); }
 .purple { color: var(--purple); background: var(--purple-bg); } .cyan { color: var(--cyan); background: var(--cyan-bg); }
@@ -1886,9 +1867,6 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .chart-frame { display: grid; grid-template-columns: max-content minmax(0, 1fr); row-gap: 8px; margin: 20px 0 12px; }
 .chart-dual, .chart-aligned { grid-template-columns: max-content minmax(0, 1fr) max-content; }
 /* Subgrid shares the longest axis slots only within the two network plots. */
-.network-chart-stack { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; min-width: 0; }
-.network-chart-stack > * { grid-column: 1/-1; min-width: 0; }
-.network-chart-stack .chart-frame { grid-template-columns: subgrid; }
 .chart-plot { position: relative; height: 220px; min-width: 0; touch-action: pan-y; }
 .chart-frame .chart { height: 100%; max-height: none; width: 100%; }
 .chart-axis { display: flex; flex-direction: column; justify-content: space-between; padding: 2px 6px; font-size: var(--font-12); color: var(--muted); line-height: 1.2; white-space: nowrap; }
@@ -1896,14 +1874,11 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .chart-ticks { grid-column: 2; display: flex; justify-content: space-between; gap: 4px; font-size: var(--font-12); color: var(--muted); }
 .chart-ticks span { min-width: 0; text-align: center; } .chart-ticks span:first-child { text-align: left; } .chart-ticks span:last-child { text-align: right; }
 .chart-mini .chart-plot, .chart-empty.chart-mini { height: 90px; }
-.chart-frame .chart-line, .network-history .chart-line { stroke: var(--blue); stroke-width: 2; }
-.chart-frame .chart-fill, .network-history .chart-fill { fill: var(--blue); fill-opacity: .07; }
+.chart-frame .chart-line { stroke: var(--blue); stroke-width: 2; }
+.chart-frame .chart-fill { fill: var(--blue); fill-opacity: .07; }
 .chart-frame .difficulty-line { stroke: var(--muted); stroke-width: 2; } .chart-cursor { stroke: var(--muted); stroke-width: 1; }
 .chart-tooltip { position: absolute; top: 8px; left: 8px; max-width: calc(100% - 16px); padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); pointer-events: none; font-size: var(--font-12); overflow-wrap: anywhere; }
 .chart-tooltip > * { display: block; } .chart-tooltip time { color: var(--muted); }
-.chart-legend { display: flex; flex-wrap: wrap; gap: 12px 20px; font-size: var(--font-12); margin-top: 16px; }
-.chart-legend > span { display: flex; align-items: center; gap: 8px; } .chart-legend i { width: 20px; border-top: 3px solid var(--blue); } .chart-legend .legend-difficulty { border-color: var(--muted); border-top-style: dashed; }
-.block-chart-title { margin: 20px 0 0; font-size: var(--font-14); color: var(--muted); }
 .market-metrics .network-stat { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 4px; }
 .market-metrics strong { font-size: var(--font-20); margin: 4px 0; }
 .network-stat small.positive { color: var(--green); } .network-stat small.negative { color: var(--red); }
@@ -1923,20 +1898,18 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .monitor-card > .card-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
 .monitor-card .inline-controls { display: contents; } .monitor-card .inline-controls .menu { grid-column: 2; grid-row: 1; }
 .alert-controls { grid-column: 1/-1; grid-row: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; } .alert-controls:empty { display: none; }
-@media (min-width: 700px) {
+/* One title row while the card spans the column; two cards per row (from 1200px) keep the two-row heading. */
+@media (min-width: 700px) and (max-width: 1199px) {
   .monitor-card > .card-heading { grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; }
   .monitor-card .alert-controls { grid-column: 2; grid-row: 1; justify-content: flex-end; min-width: 0; }
   .monitor-card .inline-controls .menu { grid-column: 3; }
 }
 .monitor-title small { display: inline; margin: 0; } .offline-badge { color: var(--warn); background: var(--warning-bg); border-color: var(--warning-line); }
-.monitor-stats > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; } .monitor-stats .segments { margin: 0; } .rate-value { font-size: var(--font-28); }
-.worker-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 0 20px; padding-top: 8px; }
-.worker-row { min-height: 36px; padding: 6px 0; font-size: var(--font-12); gap: 6px; } .worker-row:last-child { border-bottom: 1px solid var(--line); }
+.monitor-stats .segments { margin: 0; } .rate-value { font-size: var(--font-28); }
 .worker-offline .worker-rate, .worker-offline .worker-name { color: var(--red); } .dot.down { background: var(--red); }
 .worker-rate { white-space: normal; text-align: right; } .worker-expand { margin: 12px 0 16px; }
-.income-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; } .income-grid h3 { font-size: var(--font-14); margin: 0; } .income-grid strong { font-size: var(--font-14); } .income-grid small { font-size: var(--font-12); }
 @media (max-width: 640px) {
-  .fleet-strip, .income-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fleet-strip strong { font-size: var(--font-16); }
+  .fleet-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fleet-strip strong { font-size: var(--font-16); }
   .monitor-stats { flex-wrap: wrap; margin: 16px 0; } .monitor-title h2 { font-size: var(--font-16); } .rate-value { font-size: var(--font-20); }
 }
 
@@ -1957,7 +1930,6 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .pool-table small { font-size: var(--font-12); line-height: 1.3; margin-top: 2px; } .pool-table td::before { display: none !important; }
 .pool-calculate { font-size: var(--font-12); padding: 5px 6px; min-height: 32px; } .pool-calculate .icon { width: 18px; height: 18px; }
 .pool-mobile-list { display: none; } .pool-mobile summary { list-style: none; cursor: pointer; } .pool-mobile summary::-webkit-details-marker { display: none; }
-:root[data-palette="mono"] .pool-page { --pool-muted: var(--muted); --pool-link: var(--blue); --pool-best-bg: var(--soft); --pool-best-badge: var(--surface); --pool-best-text: var(--green); --pool-expected-bg: var(--soft); --pool-uncertain-bg: var(--warning-bg); --pool-uncertain-text: var(--warn); }
 @media (max-width: 1279px) {
   .pool-table { display: none; } .pool-mobile-list { display: grid; gap: 8px; }
   .pool-mobile { padding: 12px; border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
@@ -2115,7 +2087,7 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .payment-unit-row .icon, .pay-address button .icon { width: 1.15em; height: 1.15em; }
 .payment-content .qr { width: 144px; height: 144px; margin: 8px auto; }
 .pay-address { padding: 8px; border: 1px solid var(--line); border-radius: 10px; display: grid; gap: 6px; justify-items: center; }
-.pay-address code { max-width: 100%; font-size: var(--font-12); }
+.pay-address code { max-width: 100%; font-size: var(--font-12); -webkit-user-select: all; user-select: all; }
 .pay-address code span { display: block; white-space: nowrap; }
 .payment-warning { padding: 10px; margin: 8px 0; line-height: 1.5; } .payment-steps { margin: 8px 0; } .payment-steps li { padding: 2px 0; }
 .countdown { margin: 12px 0; display: grid; gap: 4px; font-size: var(--font-12); } .countdown strong { font-size: var(--font-16); color: var(--text); }
@@ -2131,7 +2103,6 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .rules-card .rule-label button { min-height: 36px; } .rules-card .rule-controls { align-self: center; }
 @media (max-width: 360px) { .rule-card { grid-template-columns: 20px minmax(0, 1fr) auto; gap: 6px; } .rule-card > .icon { width: 20px; } .rule-controls .switch { width: 40px; } }
 
-.income-grid > .skeleton { grid-column: 1/-1; }
 @media (max-width: 640px) {
   main, main.pool-page { padding-top: 16px; } .page-heading { margin-bottom: 12px; }
   .payment-content > .primary { width: 100%; }
@@ -2164,6 +2135,7 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .appearance-menu select { width: 100%; min-height: 44px; font-size: var(--font-14); }
 .account-entry { min-height: 36px; padding: 8px 12px; font-size: var(--font-12); white-space: nowrap; }
 .account-entry .icon { width: 18px; height: 18px; }
+.account-entry .account-entry-name, .sidebar-actions .account-entry > .account-entry-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
 .sidebar-foot { margin-top: auto; }
 .settings-dialog { max-width: 640px; }
 .payment-dialog { max-width: 560px; max-height: calc(100dvh - 24px); overflow: hidden; }
@@ -2192,7 +2164,7 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .settings-dialog select { width: 100%; min-height: 44px; font-size: var(--font-14); }
 .settings-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: var(--font-14); min-height: 44px; }
 .settings-group { border-top: 1px solid var(--line); }
-.display-options { margin-top: 20px; }
+.appearance-settings .currency-rate { margin-top: -12px; }
 .settings-group summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; min-height: 52px; padding: 16px 0; font-size: var(--font-14); font-weight: 550; }
 .settings-group summary::-webkit-details-marker { display: none; }
 .settings-group summary::marker { content: ""; }
@@ -2253,14 +2225,15 @@ main.pool-page { max-width: 1200px; padding-inline: 24px; }
 .pool-comparison .pool-table tr { display: table-row; position: relative; background: transparent; border: 0; }
 .pool-comparison .pool-table th, .pool-comparison .pool-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; overflow-wrap: normal; vertical-align: middle; position: static; }
 .pool-comparison .pool-table th { height: 38px; font-size: 12px; font-weight: 500; color: var(--muted); background: var(--soft); }
-.pool-comparison .pool-table th:first-child, .pool-comparison .pool-table .pool-cell { width: 20%; text-align: left; }
-.pool-comparison .pool-table th:nth-child(2) { width: 14%; }
-.pool-comparison .pool-table th:nth-child(3) { width: 11%; text-align: center; }
-.pool-comparison .pool-table th:nth-child(4) { width: 14%; }
-.pool-comparison .pool-table th:nth-child(5) { width: 11%; }
+.pool-comparison .pool-table th:first-child, .pool-comparison .pool-table .pool-cell { width: 18%; text-align: left; }
+.pool-comparison .pool-table th:nth-child(2) { width: 13%; }
+.pool-comparison .pool-table th:nth-child(3) { width: 10%; text-align: center; }
+.pool-comparison .pool-table th:nth-child(4) { width: 13%; }
+.pool-comparison .pool-table th:nth-child(5) { width: 10%; }
 .pool-comparison .pool-table th:nth-child(6) { width: 7%; }
 .pool-comparison .pool-table th:nth-child(7) { width: 10%; }
-.pool-comparison .pool-table th:nth-child(8) { width: 13%; }
+.pool-comparison .pool-table th:nth-child(8) { width: 8%; }
+.pool-comparison .pool-table th:nth-child(9) { width: 11%; }
 .pool-comparison .pool-table tbody tr { height: 64px; }
 .pool-comparison .pool-table tbody tr:last-child td { border-bottom: 0; }
 .pool-comparison .pool-table td:last-child { padding-left: 12px; padding-right: 12px; }
@@ -2273,6 +2246,10 @@ main.pool-page { max-width: 1200px; padding-inline: 24px; }
 .pool-comparison .pool-cost-help:hover, .pool-cost-help[aria-expanded="true"] { color: var(--blue-text); }
 .pool-cost-tooltip { position: fixed; z-index: 20; visibility: hidden; width: 340px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); box-shadow: 0 8px 28px rgb(0 0 0 / 16%); font-size: 12px; line-height: 1.5; text-align: left; }
 .pool-cost-tooltip > strong { font-size: 13px; font-weight: 650; }
+.pool-comparison .pool-api-dot { width: 16px; height: 20px; min-height: 20px; flex: 0 0 16px; padding: 0; border: 0; border-radius: 4px; background: transparent; }
+.pool-api-dot > span { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+:root .pool-comparison .pool-api-dot:hover, :root .pool-comparison .pool-api-dot[aria-expanded="true"] { background: transparent; }
+.pool-api-tooltip { width: 260px; }
 .pool-cost-tooltip p { margin: 6px 0 0; color: var(--muted); }
 .pool-cost-period { margin-top: 10px; }
 .pool-cost-period + .pool-cost-period { border-top: 1px solid var(--line); padding-top: 10px; }
@@ -2280,6 +2257,7 @@ main.pool-page { max-width: 1200px; padding-inline: 24px; }
 .pool-cost-tooltip dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 12px; margin: 0; }
 .pool-cost-tooltip dt { color: var(--muted); }
 .pool-cost-tooltip dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.pool-cost-tooltip .pool-cost-note { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .pool-table th[aria-sort="ascending"], .pool-table th[aria-sort="descending"] { color: var(--text); }
 .pool-row-share { position: absolute; inset: 0; width: 100%; height: 100%; fill: #009fc8; opacity: .07; pointer-events: none; z-index: 0; }
 :root[data-theme="dark"] .pool-row-share { opacity: .12; }
@@ -2313,12 +2291,36 @@ main.pool-page { max-width: 1200px; padding-inline: 24px; }
 .pool-sparkline .pool-spark-baseline { stroke: var(--line); stroke-width: 1; }
 .pool-chart-missing { display: block; text-align: center; color: var(--muted); }
 .pool-comparison .pool-mobile-list { display: none; }
-.pool-data-notes, .pool-network-reference, .pool-share-reference { padding: 12px; border-radius: 12px; margin-top: 10px; margin-bottom: 0; font-size: 12px; }
-.pool-data-notes > summary, .pool-network-reference > summary, .pool-share-reference > summary { cursor: pointer; font-weight: 500; }
+.pool-data-notes, .pool-share-reference { padding: 12px; border-radius: 12px; margin-top: 10px; margin-bottom: 0; font-size: 12px; }
+.pool-data-notes > summary, .pool-share-reference > summary { cursor: pointer; font-weight: 500; }
 .pool-data-notes p { font-size: 12px; color: var(--muted); margin: 12px 0 0; }
-.pool-network-reference .network-grid { margin: 16px 0 0; }
-.pool-network-reference .network-stat { margin: 0; }
 .pool-share-reference .pool-shares { margin: 16px 0 0; padding: 0; border: 0; background: transparent; }
+/* Payout scheme guide: one card per scheme, who carries luck and orphans, and the pools that use it. */
+.pool-scheme-guide { padding: 12px; border-radius: 12px; margin-top: 10px; margin-bottom: 0; font-size: 12px; }
+.pool-scheme-guide > summary { cursor: pointer; font-weight: 500; }
+.pool-scheme-intro { margin: 12px 0 0; color: var(--muted); }
+.pool-scheme-guide p { font-size: 12px; }
+.pool-scheme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; }
+.pool-scheme { display: grid; grid-template-rows: auto 1fr auto; align-content: start; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); min-width: 0; }
+.pool-scheme:has(.pool-scheme-note) { grid-template-rows: auto 1fr auto auto; }
+.pool-scheme > header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+.pool-scheme > header strong { font-size: 15px; font-weight: 700; color: var(--blue-text); }
+.pool-scheme > header span { color: var(--muted); }
+.pool-scheme dl { display: grid; align-content: start; gap: 3px; margin: 0; }
+.pool-scheme dt { margin-top: 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.pool-scheme dt:first-child { margin-top: 0; }
+.pool-scheme dd { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
+.pool-scheme-bearer { display: inline-block; padding: 0 6px; border-radius: 4px; font-weight: 600; color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.pool-scheme-bearer.pool { color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+.pool-scheme-note { margin: 0; color: var(--muted); line-height: 1.5; }
+.pool-scheme-pools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
+.pool-scheme-pools > small { margin-right: 2px; }
+.pool-scheme-chip { display: inline-flex; align-items: baseline; gap: 3px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 11px; line-height: 1.5; }
+.pool-comparison .pool-scheme-chip small { font-size: 10px; }
+.pool-scheme-chip.more, .pool-scheme-chip.none { color: var(--muted); }
+.pool-scheme-extra { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 20px; margin-top: 14px; }
+.pool-scheme-extra h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.pool-scheme-extra p { margin: 6px 0 0; color: var(--muted); line-height: 1.5; }
 @container (max-width: 1280px) {
   .pool-comparison .pool-metric strong { font-size: 15px; }
 }
@@ -2326,6 +2328,7 @@ main.pool-page { max-width: 1200px; padding-inline: 24px; }
   .pool-table-scroll { display: none; }
   .pool-comparison .pool-mobile-list { display: grid; gap: 8px; }
   .pool-comparison .pool-mobile .pool-cost-help { width: 36px; height: 36px; min-height: 36px; flex-basis: 36px; }
+  .pool-comparison .pool-mobile .pool-api-dot { width: 28px; height: 32px; min-height: 32px; flex-basis: 28px; margin: -7px -6px; }
   .pool-comparison .pool-comparison-heading { align-items: start; gap: 12px; }
   .pool-comparison .pool-comparison-controls { width: 100%; justify-content: space-between; gap: 8px; }
   .pool-comparison .sort-control > span { display: none; }
@@ -2452,8 +2455,6 @@ details.card[open] > summary::after { margin-top: 4px; transform: rotate(225deg)
   .market-metrics .network-stat { display: grid; grid-template-rows: subgrid; grid-row: span 4; row-gap: 4px; }
   .market-metrics .network-stat > small:nth-of-type(2) { margin-top: 0; }
 }
-/* Both charts keep their range selector in the heading and name their source below the plot. */
-.network-history .card-heading { flex-wrap: wrap; gap: 12px; } .network-history .segments { margin: 0; }
 
 .list-toolbar h2 { color: var(--text); }
 @media (max-width: 900px) { .fleet-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -2481,14 +2482,6 @@ details.card[open] > summary::after { margin-top: 4px; transform: rotate(225deg)
   --line-strong: #3a4660; --track: #232e43; --seg-selected: #3b4967; --switch-off: #56627b;
   --seg-shadow: none; --shadow-pop: 0 12px 32px rgb(0 0 0 / 45%);
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2395a2ba' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
-}
-:root[data-palette="mono"] {
-  --line-strong: #cfcac2; --track: #e6e3de; --seg-selected: #fbfaf8; --switch-off: #aaa6a0;
-  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23707070' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
-}
-:root[data-palette="mono"][data-theme="dark"] {
-  --line-strong: #4d4d4d; --track: #2e2e2e; --seg-selected: #4a4a4a; --switch-off: #666;
-  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23bebbb6' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
 }
 
 /* Shell: the navigation rail is its own surface and every page shares one content column,
@@ -2560,6 +2553,9 @@ input.switch::before { background: var(--switch-off); transition: background 0.1
 .online-badge { color: var(--green); border-color: color-mix(in srgb, var(--green) 28%, var(--line)); background: color-mix(in srgb, var(--green) 9%, var(--surface)); }
 .status { padding: 3px 8px; font-weight: 550; line-height: 1.4; background: color-mix(in srgb, var(--green) 10%, var(--surface)); }
 .status.warn { padding: 8px 12px; border-radius: 8px; font-weight: 500; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+.status-link { justify-content: flex-start; gap: 8px; min-height: 0; text-align: start; }
+.status-link .icon { width: 16px; height: 16px; }
+.status-link:hover, :root[data-theme="dark"] .status-link:hover, :root[data-palette="mono"] .status-link:hover { background: var(--warning-bg); text-decoration: underline; }
 .empty { padding: 56px 24px; }
 .empty > span { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 18px; background: var(--selected); }
 .empty > span .icon { width: 30px; height: 30px; }
@@ -2587,22 +2583,7 @@ input.switch::before { background: var(--switch-off); transition: background 0.1
 .fleet-strip > div { gap: 6px; }
 @media (min-width: 901px) { .fleet-strip > div + div { padding-left: 20px; border-left: 1px solid var(--line); } }
 .monitor-title { gap: 8px; }
-.monitor-stats { margin: 20px 0 16px; }
-.monitor-card .money-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0; border-top: 0; }
-.monitor-card .money-grid > div, .income-grid > div:not(.skeleton) { padding: 12px 14px; border-radius: 10px; background: var(--soft); }
-.monitor-card .money-grid > div > small { margin-bottom: 4px; }
-.monitor-card .money-grid strong { font-size: var(--font-16); }
-.worker-list { margin-top: 12px; padding-top: 0; border-top: 0; }
-.income-grid { gap: 8px; padding: 16px 0 0; border-top: 0; }
-.income-grid h3 { margin-bottom: 2px; }
-.income-grid strong { font-size: var(--font-16); }
 .monitor-paused { margin-top: 8px; }
-/* Four tiles need about 160px each; below that two columns keep every figure on one line. */
-@media (max-width: 1023px) { .income-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 640px) {
-  .monitor-card .money-grid > div, .income-grid > div:not(.skeleton) { padding: 10px 12px; }
-  .monitor-card .money-grid strong, .income-grid strong { font-size: var(--font-14); }
-}
 
 /* Wallet: copy is a quiet affordance next to each address. */
 .wallet-balance { gap: 4px; margin: 16px 0 8px; }
@@ -2655,3 +2636,540 @@ main.narrow-page { max-width: 904px; }
 /* Wallet: both sides of a transaction start on the same line, and the counterparty sits close under it. */
 .wallet-transactions .wallet-transaction { align-items: start; }
 .transaction-peer { margin-top: -8px; }
+
+/* Wallet: one watched address at a time, laid out like the wallet extension and the app's wallet tab. */
+/* The balance banner is the app's PearlHero in each palette and appearance (Dashboard.swift):
+   Classic Blue is the vivid pearl-blue banner with its two glows (brandVivid, one step deeper so white text keeps 4.5:1)
+   and a gold price; at night it is ClassicNightBackground. Modern Silver is the pale pearl banner, graphite at night.
+   The price chip is dark glass on the blue banners, where the app's white chip left the gold price unreadable. */
+.wallet-hero {
+  --hero-text: #fff; --hero-secondary: #eef2ff; --hero-price: #ffc747;
+  --hero-chip: rgb(11 18 48 / .24); --hero-chip-label: #dfe5ff; --hero-skeleton: rgb(255 255 255 / .22);
+  --hero-edge: rgb(255 255 255 / .15); --hero-shadow: 0 5px 20px rgb(82 122 242 / .22);
+  --hero-gradient: radial-gradient(170px 130px at 8% -30%, rgb(255 255 255 / .18), transparent 70%),
+    radial-gradient(160px 130px at 104% 125%, rgb(92 184 235 / .30), transparent 70%),
+    linear-gradient(135deg, #3462d8, #4a5fde 52%, #5d58dc);
+}
+:root[data-theme="dark"] .wallet-hero {
+  --hero-price: #f2d186; --hero-shadow: 0 5px 20px rgb(0 0 0 / .3);
+  --hero-gradient: radial-gradient(170px 130px at 8% -30%, rgb(255 255 255 / .16), transparent 70%),
+    radial-gradient(160px 130px at 104% 125%, rgb(92 184 235 / .30), transparent 70%),
+    linear-gradient(135deg, #355c8d, #3c5b90, #445991);
+}
+:root[data-palette="mono"] .wallet-hero {
+  --hero-text: #21384f; --hero-secondary: #536c87; --hero-price: #355f93;
+  --hero-chip: rgb(255 255 255 / .9); --hero-chip-label: #536c87; --hero-skeleton: var(--skeleton);
+  --hero-edge: rgb(218 230 242 / .75); --hero-shadow: 0 5px 20px rgb(90 114 141 / .08);
+  --hero-gradient: linear-gradient(135deg, #fcfeff, #f0f8fb, #e4effb);
+}
+:root[data-palette="mono"][data-theme="dark"] .wallet-hero {
+  --hero-text: #f3f7fc; --hero-secondary: #bcd0e5; --hero-price: #d4e5f7;
+  --hero-chip: rgb(215 220 227 / .1); --hero-chip-label: #bcd0e5; --hero-skeleton: var(--skeleton);
+  --hero-edge: rgb(81 86 94 / .7); --hero-shadow: 0 5px 20px rgb(0 0 0 / .25);
+  --hero-gradient: linear-gradient(135deg, #2c2f35, #292c31, #26282e);
+}
+.wallet-bar { flex-wrap: wrap; gap: 12px; }
+.wallet-bar-name { display: flex; align-items: center; gap: 4px; flex: 1 1 160px; min-width: 0; }
+.wallet-bar-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-left: auto; }
+.wallet-switcher { position: relative; min-width: 0; }
+.wallet-switcher > summary { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 6px 4px 0; list-style: none; cursor: pointer; border-radius: 8px; color: var(--text); font-size: var(--font-20); font-weight: 650; letter-spacing: -.3px; }
+.wallet-switcher > summary::-webkit-details-marker { display: none; }
+.wallet-switcher > summary > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wallet-switcher > summary .icon { flex-shrink: 0; width: 16px; height: 16px; color: var(--muted); transition: transform .16s; }
+.wallet-switcher[open] > summary .icon { transform: rotate(180deg); }
+.wallet-switcher > summary:hover { color: var(--blue-text); }
+.wallet-switcher-menu { position: absolute; top: 42px; left: 0; z-index: 5; width: min(380px, calc(100vw - 32px)); padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-pop); }
+.wallet-switcher-menu button { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left; }
+.wallet-switcher-menu button:hover, .wallet-switcher-menu button[aria-current] { background: var(--hover); }
+.wallet-switcher-label { display: grid; gap: 2px; min-width: 0; }
+.wallet-switcher-label strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-14); font-weight: 600; }
+.wallet-switcher-label code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--font-12); color: var(--muted); }
+.wallet-switcher-balance { color: var(--muted); font-size: var(--font-13); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wallet-switcher-check { width: 16px; height: 16px; color: var(--blue-text); visibility: hidden; }
+.wallet-switcher-menu [aria-current] > .wallet-switcher-check { visibility: visible; }
+.wallet-hero { padding: 20px; border: 1px solid var(--hero-edge); border-radius: 26px; background: var(--hero-gradient); color: var(--hero-text); box-shadow: var(--hero-shadow); }
+.wallet-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 32px; color: var(--hero-secondary); font-size: var(--font-13); font-weight: 500; }
+.price-chip { display: flex; align-items: baseline; flex-shrink: 0; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--hero-chip); color: var(--hero-chip-label); font-variant-numeric: tabular-nums; line-height: 1.4; }
+.price-chip span { font-size: 11px; font-weight: 700; }
+.price-chip strong { color: var(--hero-price); font-size: var(--font-14); font-weight: 700; }
+.wallet-hero-balance { display: flex; align-items: baseline; justify-content: center; gap: 6px; margin: 12px 0 6px; font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: clamp(30px, 8.7vw, 44px); font-weight: 700; letter-spacing: -1px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.wallet-hero-balance > span[aria-hidden] { min-width: 0; white-space: nowrap; }
+.wallet-hero .balance-tail { color: var(--hero-secondary); font-size: 15px; font-weight: 650; letter-spacing: 0; }
+.wallet-hero-balance small { color: var(--hero-secondary); font-size: var(--font-14); font-weight: 600; letter-spacing: 0; }
+.wallet-hero-balance[data-long="true"] { font-size: clamp(20px, 6vw, 32px); letter-spacing: -.5px; }
+.wallet-hero-fiat { margin: 0; color: var(--hero-secondary); font-size: var(--font-14); font-weight: 500; font-variant-numeric: tabular-nums; text-align: center; overflow-wrap: anywhere; }
+.wallet-hero-status { margin: 12px 0 0; color: var(--hero-secondary); font-size: var(--font-12); text-align: center; }
+.wallet-hero .skeleton { margin-top: 12px; }
+.wallet-actions { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 12px; margin: 16px 0; }
+.wallet-actions > button, .wallet-actions > a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-width: 0; min-height: 0; padding: 16px 8px 12px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--text); font-size: var(--font-13); font-weight: 500; line-height: 1.4; text-align: center; text-decoration: none; overflow-wrap: anywhere; }
+.wallet-actions > button:hover, .wallet-actions > a:hover { background: var(--hover); }
+.wallet-actions .action-icon { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--badge-rim); border-radius: 12px; background: var(--wallet-badge-fill, var(--badge-fill)); color: var(--badge-glyph); box-shadow: var(--badge-shadow); }
+.wallet-actions .action-icon .icon { width: 19px; height: 19px; }
+.wallet-address-card { margin: 0 0 16px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.wallet-address-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; color: var(--muted); font-size: var(--font-13); }
+.wallet-address-head button { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 10px; border: 0; border-radius: 8px; background: var(--soft); color: var(--blue-text); font-size: var(--font-12); font-weight: 600; }
+.wallet-address-head button .icon { width: 15px; height: 15px; }
+.wallet-address-card .watch-address { display: block; padding: 10px 12px; border-radius: 10px; background: var(--soft); color: var(--text); overflow-wrap: anywhere; }
+.wallet-address-card p { margin: 10px 0 0; color: var(--muted); font-size: var(--font-12); line-height: 1.5; }
+.wallet-card > h2 { margin: 0 0 8px; }
+.transaction-info small { font-size: var(--font-12); }
+.transaction-meta > * { white-space: nowrap; }
+.wallet-qr { display: grid; justify-items: center; gap: 14px; }
+.wallet-qr > strong { max-width: 100%; font-size: var(--font-16); overflow-wrap: anywhere; }
+.wallet-qr .pay-address { margin: 0; }
+.wallet-qr p { margin: 0; }
+@media (max-width: 640px) {
+  .wallet-hero { padding: 16px; }
+  .wallet-switcher > summary { font-size: var(--font-16); }
+}
+
+/* SafeTrade K-line (KLine.tsx) in the PRL Price card: the native CandleChart's colours, volume band and OHLC crosshair. */
+:root { --candle-up: #0fb575; --candle-down: #f23d54; }
+:root[data-theme="dark"] { --candle-up: #26de96; --candle-down: #ff5469; }
+/* The card's title is its view switch: K-line (default) or the price line. */
+.chart-views { display: flex; flex-wrap: wrap; gap: 0 18px; margin: 0; }
+.chart-views button { min-height: 32px; padding: 2px 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); font-weight: 650; box-shadow: inset 0 -2px 0 transparent; }
+.chart-views button:hover { color: var(--text); background: transparent; }
+.chart-views .selected, .chart-views .selected:hover { color: var(--text); box-shadow: inset 0 -2px 0 var(--blue); }
+/* Zoom buttons above the price axis, like the native Mac chart; the wheel, a trackpad pinch and +/− zoom too. */
+.kline-zoom { display: flex; justify-content: flex-end; gap: 4px; margin: 12px 0 0; }
+.kline-zoom .icon-button { width: 28px; height: 28px; min-height: 28px; padding: 4px; border-radius: 8px; }
+.kline-zoom .icon-button .icon { width: 18px; height: 18px; }
+.kline-zoom .icon-button:disabled { opacity: .35; cursor: default; }
+.kline-frame { display: grid; grid-template-columns: minmax(0, 1fr) max-content; row-gap: 8px; margin: 4px 0 12px; }
+.kline-plot { position: relative; height: 280px; min-width: 0; touch-action: pan-y; cursor: crosshair; }
+.kline-chart { display: block; width: 100%; height: 100%; overflow: visible; }
+.kline-up { fill: var(--candle-up); stroke: var(--candle-up); color: var(--candle-up); }
+.kline-down { fill: var(--candle-down); stroke: var(--candle-down); color: var(--candle-down); }
+.kline-body { stroke: none; shape-rendering: crispEdges; } .kline-wick { stroke-width: 1; }
+.kline-volume { stroke: none; fill-opacity: .45; shape-rendering: crispEdges; }
+.kline-cursor { stroke-dasharray: 4 3; }
+.kline-axis { position: relative; padding-left: 8px; font-size: var(--font-12); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kline-axis-sizer { display: block; height: 0; overflow: hidden; visibility: hidden; }
+.kline-axis-labels { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.kline-axis-labels text { fill: var(--muted); font-size: var(--font-12); dominant-baseline: middle; }
+.kline-frame .chart-ticks { grid-column: 1; }
+.kline-volume-caption { fill: var(--muted); stroke: none; font-size: var(--font-12); dominant-baseline: hanging; pointer-events: none; }
+.kline-tooltip { min-width: 150px; } .kline-tooltip-right { left: auto; right: 8px; }
+.kline-tooltip dl { display: grid; grid-template-columns: auto auto; gap: 2px 12px; margin: 6px 0 0; }
+.kline-tooltip dt { color: var(--muted); } .kline-tooltip dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kline-tooltip dd:not(.kline-up):not(.kline-down) { color: var(--text); }
+.kline-panel > .chart-empty, .kline-panel > .skeleton-chart { height: 280px; margin: 20px 0 12px; }
+.kline-panel > .skeleton-chart { margin-top: 44px; }
+@media (max-width: 640px) {
+  .kline-plot, .kline-panel > .chart-empty, .kline-panel > .skeleton-chart { height: 220px; }
+}
+
+/* Wallet page: the extension leads, with its download and the full guide one click away. */
+.extension-banner { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px 20px; margin-bottom: 20px; }
+/* The banner can be hidden (remembered on this device); the page subtitle then links it back. */
+.extension-banner-hide { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; min-height: 28px; padding: 4px; border-radius: 8px; }
+.extension-banner-hide .icon { width: 16px; height: 16px; }
+.extension-banner-show { font-size: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.extension-banner img { width: 48px; height: 48px; }
+.extension-banner h2 { margin: 0 0 4px; font-size: var(--font-16); }
+.extension-banner h2 small { display: block; margin-top: 2px; font-size: var(--font-12); font-weight: 500; color: var(--muted); }
+.extension-banner p { margin: 0; color: var(--muted); font-size: var(--font-14); }
+.extension-banner-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.extension-banner-actions > * { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; text-decoration: none; }
+.extension-banner-store { min-height: 36px; padding: 8px 16px; border: 1px solid transparent; border-radius: var(--radius-control); }
+.extension-banner-store .icon { width: 18px; height: 18px; }
+@media (max-width: 760px) {
+  .extension-banner { grid-template-columns: auto minmax(0, 1fr); }
+  .extension-banner-text { padding-right: 24px; }
+  .extension-banner-actions { grid-column: 1 / -1; justify-content: stretch; }
+  .extension-banner-actions > * { flex: 1 1 auto; }
+}
+/* Extensions install only on desktop Chrome: touch devices get the guide, which says so. */
+@media (hover: none) and (pointer: coarse) { .extension-banner-store { display: none !important; } }
+
+/* ============================================================
+   Native finish: the app's two palettes (PearlTones, DesignSystem.swift) in both appearances,
+   and the small things its screens do — a faint page wash, gradient buttons and icon badges,
+   illustrated empty states, pill badges, a white switch knob and a floating tab bar on phones.
+   The palette is stored as "mono", like the app's, whose monochrome choice became Modern Silver.
+   ============================================================ */
+
+/* Modern Silver: pearl-white surfaces, a restrained blue accent and softly tinted icons; graphite at night.
+   Pool identities (the donut slices) keep the classic colours, as in the app. */
+:root[data-palette="mono"] {
+  --page-bg: #fafbfd; --surface: #fff; --soft: #f3f6fa; --line: #e5ebf2; --line-strong: #d3dbe6;
+  --text: #1d2129; --muted: #636b78;
+  --blue: #3f6eba; --blue-text: #3f6eba; --blue-strong: #386bd3; --on-blue: #fff;
+  --hover: #eef2f7; --selected: #e8eff9; --track: #eceff3; --seg-selected: #fff; --switch-off: #aab2be;
+  --skeleton: #e8ecf1; --purple: #657eb4; --purple-bg: #eef1f8; --cyan: #1685a0; --cyan-bg: #e6f4f7;
+  --warning-bg: #fff6d9; --warning-line: #efd998;
+  --seg-shadow: 0 0 0 1px var(--line), 0 1px 2px rgb(90 114 141 / 10%);
+  --shadow-pop: 0 12px 32px rgb(90 114 141 / 16%);
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23636b78' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  color: var(--text);
+}
+:root[data-palette="mono"][data-theme="dark"] {
+  --page-bg: #18191d; --surface: #24262b; --soft: #2c2f35; --line: #3a3d44; --line-strong: #4a4e56;
+  --text: #f3f5f8; --muted: #a3a8b2;
+  --blue: #adc8ef; --blue-text: #adc8ef; --blue-strong: #416ed0; --on-blue: #fff;
+  --hover: #30333a; --selected: #31363f; --track: #2e3036; --seg-selected: #4b4e56; --switch-off: #5a5e66;
+  --skeleton: #33363d; --purple: #b5c6e5; --purple-bg: #2f333c; --cyan: #68c4d8; --cyan-bg: #23343a;
+  --warning-bg: #393224; --warning-line: #665434;
+  --seg-shadow: none; --shadow-pop: 0 12px 32px rgb(0 0 0 / 50%);
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a3a8b2' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  color: var(--text);
+}
+:root[data-palette="mono"][data-theme="dark"] .pool-page { --pool-muted: #b0b5bf; --pool-link: #adc8ef; --pool-expected-bg: #2c323d; }
+
+/* What the palettes hand to components. Classic Blue keeps one look in both appearances, as the app does:
+   its buttons and badges carry the app's own pearl blue → violet brand gradient (#527AF2 → #8775F2). */
+:root {
+  --page-bg: #f4f6fc; --wash: linear-gradient(135deg, rgb(82 122 242 / 5%), rgb(92 184 235 / 4%));
+  --accent-fill: linear-gradient(135deg, #527af2, #8775f2); --accent-shadow: rgb(82 122 242 / 24%); --primary-radius: 999px;
+  --badge-fill: linear-gradient(135deg, #527af2, #8775f2); --badge-glyph: #fff; --badge-rim: rgb(255 255 255 / 25%);
+  --badge-shadow: 0 2px 5px rgb(82 122 242 / 18%);
+  --empty-fill: linear-gradient(135deg, rgb(82 122 242 / 12%), rgb(135 117 242 / 12%)); --empty-ring: rgb(105 118 242 / 22%);
+  --gold: #ffc747; --switch-on: #5478ed; --live: #34c759;
+  --tabbar-edge: rgb(31 42 68 / 8%); --tabbar-active: rgb(118 118 128 / 12%);
+  --tabbar-shadow: 0 8px 24px rgb(31 42 68 / 12%), 0 1px 3px rgb(31 42 68 / 6%);
+}
+:root[data-theme="dark"] {
+  --page-bg: #101724; --accent-shadow: rgb(0 0 0 / 30%);
+  --badge-shadow: 0 2px 5px rgb(0 0 0 / 25%); --empty-fill: linear-gradient(135deg, rgb(82 122 242 / 18%), rgb(135 117 242 / 18%));
+  --empty-ring: rgb(143 170 255 / 24%); --live: #30d158;
+  --tabbar-edge: rgb(255 255 255 / 8%); --tabbar-active: rgb(255 255 255 / 10%);
+  --tabbar-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+}
+/* The wallet's action badges share the night banner's blue, as in the app. */
+:root[data-theme="dark"] .wallet-actions { --wallet-badge-fill: linear-gradient(135deg, #355c8d, #3c5b90, #445991); }
+:root[data-palette="mono"] {
+  --wash: linear-gradient(135deg, rgb(225 239 250 / 35%), transparent 60%);
+  --accent-fill: linear-gradient(135deg, #386bd3, #3260be); --accent-shadow: rgb(90 114 141 / 22%); --primary-radius: var(--radius-control);
+  --badge-fill: linear-gradient(135deg, #f0f6fd, #eaf2fc); --badge-glyph: #4372ae; --badge-rim: rgb(224 231 240 / 75%); --badge-shadow: none;
+  --empty-fill: linear-gradient(135deg, rgb(56 107 211 / 8%), rgb(50 96 190 / 8%)); --empty-ring: rgb(56 107 211 / 18%);
+  --gold: #b77914; --switch-on: #386bd3; --live: #34c759;
+  --tabbar-edge: rgb(224 231 240 / 90%); --tabbar-active: rgb(118 118 128 / 12%);
+  --tabbar-shadow: 0 8px 24px rgb(90 114 141 / 14%), 0 1px 3px rgb(90 114 141 / 8%);
+}
+:root[data-palette="mono"][data-theme="dark"] {
+  --wash: linear-gradient(135deg, rgb(139 143 152 / 4%), transparent 60%);
+  --accent-fill: linear-gradient(135deg, #416ed0, #3863bd); --accent-shadow: rgb(0 0 0 / 35%);
+  --badge-fill: linear-gradient(135deg, #30343c, #2c3037); --badge-glyph: #b5cfee; --badge-rim: rgb(67 71 78 / 70%); --badge-shadow: none;
+  --empty-fill: linear-gradient(135deg, rgb(65 110 208 / 16%), rgb(56 99 189 / 16%)); --empty-ring: rgb(173 200 239 / 20%);
+  --gold: #f5ce72; --switch-on: #416ed0; --live: #30d158;
+  --tabbar-edge: rgb(255 255 255 / 8%); --tabbar-active: rgb(255 255 255 / 10%);
+  --tabbar-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+:root[data-palette="mono"][data-theme="dark"] .wallet-actions { --wallet-badge-fill: var(--badge-fill); }
+
+/* A barely-there diagonal tint behind every page (PearlBackground). */
+:root { background: var(--page-bg) var(--wash) fixed; }
+
+/* The wordmark in the accent, rounded, like the app's Settings header. */
+.brand-name { color: var(--blue-text); font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+/* Prominent buttons (PearlButtonStyle): the brand gradient with a faint light rim and a soft tinted shadow;
+   a capsule in Classic Blue, a rounded rectangle in Modern Silver. They dip slightly when pressed. */
+.primary { border-color: transparent; border-radius: var(--primary-radius); color: #fff; background: var(--blue-strong) var(--accent-fill); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%), 0 3px 8px var(--accent-shadow); }
+/* :root[data-theme] outranks the dark theme's grey button hover, which used to repaint a hovered primary button. */
+:root[data-theme] .primary:hover { background: var(--blue-strong) var(--accent-fill); color: #fff; filter: brightness(1.06); }
+.primary:disabled { box-shadow: none; }
+:is(.primary, .wallet-actions > *, .shortcut, .market-metrics .network-stat) { transition: background .16s, color .16s, border-color .16s, filter .16s, box-shadow .18s, transform .18s cubic-bezier(.2, .8, .2, 1); }
+:is(.primary, .wallet-actions > *, .shortcut, .market-metrics .network-stat):active:not(:disabled) { transform: scale(.98); }
+.primary:active:not(:disabled) { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%), 0 1px 4px var(--accent-shadow); }
+
+/* Icon badges (PearlIconBadge): a squircle in the palette's badge fill. */
+.shortcut-icon, .shortcut-icon.purple, .shortcut-icon.cyan { width: 40px; height: 40px; border: 1px solid var(--badge-rim); border-radius: 13px; background: var(--badge-fill); color: var(--badge-glyph); box-shadow: var(--badge-shadow); }
+.shortcut-icon .icon { width: 20px; height: 20px; }
+
+/* Empty states (PearlEmptyState): the symbol in a softly tinted disc with a hairline ring and a gold sparkle. */
+.empty > span { position: relative; width: 104px; height: 104px; margin: 0 auto 20px; border-radius: 50%; background: var(--empty-fill); box-shadow: inset 0 0 0 1px var(--empty-ring); }
+.empty > span::after { content: ""; position: absolute; top: 11px; right: 4px; width: 12px; height: 12px; background: var(--gold); opacity: .9; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.empty > span .icon { width: 42px; height: 42px; color: var(--blue-text); }
+.empty h2 { color: var(--text); font-size: var(--font-16); font-weight: 600; }
+
+/* Pill badges (PearlBadge): a tinted capsule, no outline. */
+.badge { border-color: transparent; border-radius: 999px; background: var(--soft); }
+
+/* Switches: the palette's own "on" colour and a white knob with a soft shadow, as on iOS. */
+input.switch:checked::before { background: var(--switch-on); }
+input.switch::after, input.switch:checked::after { background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 22%), 0 0 0 .5px rgb(0 0 0 / 6%); }
+
+/* Live market data (the app's green dot beside 行情): shown on the price card while auto-refresh is on. */
+.live-dot { display: inline-block; width: 7px; height: 7px; margin-inline-start: 6px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 18%, transparent); vertical-align: 1px; }
+
+/* Rounded figures for the headline numbers, as the app's stat cards and balance use. */
+.market-metrics strong, .earning strong, .fleet-key-metrics strong, .fleet-net { font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+/* The app's corner radii: 20 for cards (Radius.md), 14 for stat cards (Radius.sm), 12 for tiles inside a card. */
+:root { --radius-card: 20px; }
+.card, .wallet-address-card { border-radius: var(--radius-card); }
+.device-card { border-radius: 14px; }
+.earning, .fleet-key-metrics > div, .fleet-resource-metrics > div { border-radius: 12px; }
+
+/* Toolbar buttons are round, filled and faintly lifted, with an accent glyph, like the app's navigation-bar buttons. */
+.appearance-button, .sidebar-actions .settings-button { border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--blue-text); box-shadow: 0 1px 3px rgb(31 42 68 / 8%); }
+:root[data-theme="dark"] :is(.appearance-button, .sidebar-actions .settings-button) { box-shadow: none; }
+:root[data-theme] .sidebar-actions .settings-button:hover { background: var(--hover); color: var(--blue-text); }
+
+/* Phones: the tab bar floats above the page as a capsule, the selected tab in its own pill. It stays opaque:
+   no frosted glass on this site (PLAN-web.md 4.2), as the app keeps its bars free of the system glass. */
+@media (max-width: 640px) {
+  .sidebar nav { left: 10px; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom)); padding: 5px; border: 1px solid var(--tabbar-edge); border-radius: 30px; background: var(--surface); box-shadow: var(--tabbar-shadow); }
+  .sidebar nav .nav-item { border-radius: 24px; }
+  .sidebar nav .nav-item.active { background: var(--tabbar-active); color: var(--blue-text); }
+}
+@media (max-width: 380px) { .sidebar nav { left: 6px; right: 6px; padding: 4px; } }
+/* The narrowest phones need the full width for seven labels ("Mercado", "Havuzlar" at 10px): the bar docks to the bottom edge. */
+@media (max-width: 340px) { .sidebar nav { left: 0; right: 0; bottom: 0; padding: 4px 0 calc(4px + env(safe-area-inset-bottom)); border-width: 1px 0 0; border-radius: 22px 22px 0 0; } }
+
+/* Monitor card: hashrate, then one earnings grid (pool balances beside on-chain income), then the
+   workers as compact chips. Tiles share the grid's columns, so both groups line up at every width:
+   two columns on phones, four once a tile gets ~160px, six (both groups on one row) when wide. */
+.monitor-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin: 20px 0; }
+.monitor-card .status-link { display: flex; width: 100%; }
+.monitor-earnings { container-type: inline-size; }
+.earnings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.earnings-group { display: contents; }
+.earnings-grid h3, .monitor-section-head h3 { margin: 0; font-size: var(--font-13); font-weight: 600; color: var(--muted); }
+.earnings-grid h3 { grid-column: 1 / -1; }
+.earnings-group + .earnings-group h3 { margin-top: 12px; }
+.earnings-grid > .earnings-group > .skeleton { grid-column: 1 / -1; }
+.earning { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 10px 12px; border-radius: 12px; background: var(--soft); }
+.earning small { font-size: var(--font-12); color: var(--muted); }
+.earning strong { font-size: var(--font-14); overflow-wrap: anywhere; }
+@container (min-width: 600px) {
+  .earnings-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .earning { padding: 12px 14px; }
+  .earning strong { font-size: var(--font-16); }
+}
+@container (min-width: 1000px) {
+  .earnings-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .earnings-grid h3 { grid-row: 1; grid-column: span 2; }
+  .earnings-chain h3 { grid-column: span 4; }
+  .earnings-group + .earnings-group h3 { margin-top: 0; }
+  .earning, .earnings-grid > .earnings-group > .skeleton { grid-row: 2; }
+  .earnings-chain > .skeleton { grid-column: span 4; }
+}
+.monitor-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 24px; }
+.monitor-section-head span { font-size: var(--font-12); color: var(--muted); }
+.worker-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 8px; margin-top: 8px; padding: 0; border: 0; }
+.worker-row, .worker-row:last-child { min-height: 0; padding: 8px 12px; gap: 8px; border: 0; border-radius: 10px; background: var(--soft); font-size: var(--font-12); }
+.worker-expand { margin: 12px 0 0; }
+@media (max-width: 640px) { .monitor-stats { margin: 16px 0; } }
+/* Desktop: two monitors per row, each card at least ~400px inside; cards in a row share its height. */
+.monitor-grid { display: grid; gap: 16px; margin-bottom: 16px; }
+.monitor-grid > .card { margin: 0; }
+.monitor-title { min-height: 36px; } /* a one-line title centres on the 36px menu button beside it */
+@media (min-width: 1200px) { .monitor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ============================================================
+   我的监控 → 一览 (MonitorCompact.tsx; the app's PoolCompactList.swift): a 卡片 / 一览 switch left of
+   添加, the total hashrate in big type, then one small tile per monitor — two across on a phone, as
+   many as fit from 150px each — and paused monitors folded into one line. A tile opens its full card.
+   ============================================================ */
+/* The pills' tones are the app's: quiet while every rig is up, the palette's hard-hat gold when some are
+   down, rose when none are. The inks are a step darker in the light appearance than the app's so the
+   12px pill text reaches 4.5:1 on its tint; the quiet fills are a touch lighter for the same reason. */
+:root { --indigo: #527af2; --rose: #ff739e; --gold-ink: #8f5e0a; --rose-ink: #b8385a; }
+:root[data-theme="dark"] { --gold-ink: #f5ce72; --rose-ink: #ff8ca7; }
+:root[data-palette="mono"] { --indigo: #3f6eba; --rose: #df5274; }
+:root[data-palette="mono"][data-theme="dark"] { --indigo: #adc8ef; --rose: #ff8ca7; }
+.rigs-pill { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 44px; padding: 3px 8px; border-radius: 999px; font-size: var(--font-12); font-weight: 600; line-height: 1.35; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+.rigs-pill-ok { background: color-mix(in srgb, var(--indigo) 7%, transparent); }
+.rigs-pill-idle { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.rigs-pill-partial { color: var(--gold-ink); background: color-mix(in srgb, var(--gold) 18%, transparent); }
+.rigs-pill-down { color: var(--rose-ink); background: color-mix(in srgb, var(--rose) 14%, transparent); }
+
+/* The switch, and where it sits: left of 添加, after "online only" in the card layout. */
+.layout-switch { flex-wrap: nowrap; flex-shrink: 0; margin: 0; }
+.layout-switch button { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 4px 10px; }
+.layout-switch .icon { width: 18px; height: 18px; }
+@media (min-width: 641px) { .workers-toolbar > .layout-switch { margin-left: auto; } .workers-toolbar > .compact-check + .layout-switch { margin-left: 0; } }
+@media (max-width: 640px) {
+  .workers-toolbar:has(> .layout-switch) { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .workers-toolbar > .layout-switch { grid-column: 2; grid-row: 1; }
+  .workers-toolbar:has(> .layout-switch) > .primary { grid-column: 3; }
+}
+
+/* The pool's logo on a rounded plate, a hairline round it as in the app. */
+.pool-icon { display: inline-block; flex-shrink: 0; width: 26px; height: 26px; border-radius: 27%; background: #fff center / cover no-repeat; box-shadow: inset 0 0 0 .5px color-mix(in srgb, var(--text) 12%, transparent); }
+.pool-icon-alphapool { background-image: url(/pools/alphapool.png); }
+.pool-icon-luckypool { background-image: url(/pools/luckypool.png); }
+.pool-icon-herominers { background-image: url(/pools/herominers.png); }
+.pool-icon-pearlfortune { background-image: url(/pools/pearlfortune.png); }
+.pool-icon-pearlhash { background-image: url(/pools/pearlhash.png); }
+.pool-icon-kryptex { background-image: url(/pools/kryptex.png); }
+.pool-icon-jetski { background-image: url(/pools/jetski.png); }
+.pool-icon-f2pool { background-image: url(/pools/f2pool.png); }
+/* The same logos on a dark plate; Lucky Pool's and Jetski's tiles serve both appearances. */
+:root[data-theme="dark"] .pool-icon { background-color: #1c1c1e; }
+:root[data-theme="dark"] .pool-icon-alphapool { background-image: url(/pools/alphapool-dark.png); }
+:root[data-theme="dark"] .pool-icon-herominers { background-image: url(/pools/herominers-dark.png); }
+:root[data-theme="dark"] .pool-icon-pearlfortune { background-image: url(/pools/pearlfortune-dark.png); }
+:root[data-theme="dark"] .pool-icon-pearlhash { background-image: url(/pools/pearlhash-dark.png); }
+:root[data-theme="dark"] .pool-icon-kryptex { background-image: url(/pools/kryptex-dark.png); }
+:root[data-theme="dark"] .pool-icon-f2pool { background-image: url(/pools/f2pool-dark.png); }
+
+.compact-monitors { display: grid; gap: 12px; margin-bottom: 16px; }
+.compact-monitors > .card { margin: 0; }
+.compact-total { padding: 18px 20px; }
+.compact-total-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px; }
+.compact-total-head h2 { margin: 0; font-size: var(--font-14); font-weight: 550; letter-spacing: 0; color: var(--muted); }
+.compact-total-rate { display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 34px/1.2 ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+.compact-unit { font-size: 26px; font-weight: 600; color: var(--muted); }
+/* "24h +2.00 PRL ≈ $1.60 · Excl. F2Pool" on one line where it fits. When it doesn't, the note starts the
+   next line and its "·" falls in the clipped margin to the left, so no line begins or ends with a dot. */
+.compact-income { margin: 4px 0 0; overflow: hidden; font-size: var(--font-13); color: var(--muted); }
+.compact-income-line { display: flex; flex-wrap: wrap; margin-left: -1.25em; }
+.compact-income-line > span { position: relative; padding-left: 1.25em; }
+.compact-income-note::before { content: "·"; position: absolute; left: 0; width: 1.25em; text-align: center; }
+.compact-income .money { display: inline; } .compact-income .money-primary { font: inherit; color: inherit; }
+
+.monitor-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+@media (max-width: 480px) { .monitor-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.compact-entry { position: relative; min-width: 0; }
+.compact-entry.menu-open { z-index: 6; }
+.monitor-tile { display: grid; align-content: start; gap: 2px; height: 100%; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); cursor: pointer; transition: background-color .12s; }
+.monitor-tile, .paused-line { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.monitor-tile:hover { background: color-mix(in srgb, var(--text) 3.5%, var(--surface)); }
+.monitor-tile:active { background: color-mix(in srgb, var(--text) 7%, var(--surface)); }
+.monitor-tile:focus-visible, .paused-line:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.tile-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 26px; margin-bottom: 10px; }
+.tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-14); color: var(--muted); }
+.tile-rate { display: flex; align-items: center; height: 26px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 20px/1.2 ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
+.tile-rate-none { color: var(--muted); }
+.tile-loading { width: 60%; height: 16px; border-radius: 6px; background: var(--skeleton); animation: skeleton-pulse 1.8s ease-in-out infinite; }
+@media (max-width: 380px) { .monitor-tile { padding: 14px; } .tile-rate { font-size: 17px; } }
+
+.paused-fold { padding: 0; overflow: visible; }
+.paused-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; padding: 12px 18px; border: 0; border-radius: var(--radius-card); background: transparent; font-size: var(--font-14); font-weight: 400; color: var(--muted); }
+.paused-toggle[aria-expanded="true"] { border-radius: var(--radius-card) var(--radius-card) 0 0; }
+:root[data-theme] .paused-toggle:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.paused-toggle .icon { width: 14px; height: 14px; opacity: .7; transition: transform .15s; }
+.paused-toggle .icon.open { transform: rotate(180deg); }
+.paused-fold .compact-entry::before { content: ""; position: absolute; top: 0; left: 58px; right: 0; border-top: 1px solid var(--line); }
+.paused-line { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 12px 18px; cursor: pointer; }
+.paused-fold .compact-entry:last-child .paused-line { border-radius: 0 0 var(--radius-card) var(--radius-card); }
+.paused-line:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.paused-line:active { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.paused-line .pool-icon { width: 28px; height: 28px; opacity: .45; }
+.paused-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-14); color: var(--muted); }
+
+/* A tile's or a line's actions (right click, long press, the context-menu key), over its top-right corner. */
+.tile-menu { position: absolute; top: 8px; right: 8px; z-index: 5; display: grid; min-width: 168px; max-width: min(280px, 80vw); padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-pop); }
+.tile-menu button { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-height: 36px; padding: 6px 10px; border: 0; border-radius: 8px; background: transparent; font-size: var(--font-13); text-align: left; white-space: nowrap; }
+.tile-menu button:hover, .tile-menu button:focus-visible { background: var(--hover); outline-offset: -2px; }
+.tile-menu button > .icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* A monitor opened from 一览: its full card under a way back to the list. */
+.monitor-open-toolbar { display: flex; align-items: center; justify-content: space-between; }
+.monitor-back { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 4px 10px 4px 4px; border: 0; background: transparent; color: var(--blue-text); font-size: var(--font-14); font-weight: 550; }
+:root[data-theme] .monitor-back:hover { background: var(--hover); }
+.monitor-back .icon { width: 16px; height: 16px; transform: rotate(90deg); }
+.monitor-opened { max-width: 760px; margin-bottom: 16px; }
+.monitor-opened > .card { margin: 0; }
+
+/* Transaction lookup by txid (TxLookup.tsx): a dialog opened from the Wallet page's actions and the
+   Market page's shortcuts, which now hold three cards and wrap instead of leaving one half-width. */
+.summary-grid { display: flex; flex-wrap: wrap; }
+.summary-grid > .shortcut { flex: 1 1 220px; min-width: 0; }
+/* Four wallet actions in one row leave a phone's labels about 45-65 px (76 px at 641 px beside the
+   sidebar), which splits words such as "Обозреватель" or "エクスプローラー"; two rows of two keep every
+   label whole from 320 px, and from 768 px one row has room. */
+@media (max-width: 767px) { .wallet-actions[data-count="4"] { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tx-dialog { max-width: 640px; }
+.tx-dialog .dialog-heading { position: sticky; top: 0; z-index: 2; margin-bottom: 16px; padding-bottom: 12px; background: var(--surface); }
+.tx-lookup-form { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+.tx-lookup-form input { flex: 1 1 280px; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--font-13); }
+.tx-lookup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tx-lookup > .status.warn { display: block; margin: 12px 0 0; }
+.tx-result { margin-top: 16px; }
+.tx-result-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.tx-result-head .status { align-items: center; gap: 6px; margin: 0; padding: 4px 10px; border-radius: 8px; }
+.tx-result-head .status .icon { width: 15px; height: 15px; }
+.tx-explorer { display: inline-flex; align-items: center; gap: 4px; color: var(--blue-text); font-size: var(--font-13); font-weight: 550; text-decoration: none; }
+.tx-explorer:hover { text-decoration: underline; }
+.tx-explorer .icon { width: 15px; height: 15px; }
+.tx-id { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; padding: 6px 4px 6px 12px; border-radius: 10px; background: var(--soft); }
+.tx-id .watch-address { flex: 1 1 auto; color: var(--text); overflow-wrap: anywhere; }
+.tx-id .icon-button .icon { width: 18px; height: 18px; }
+.tx-facts dd { font-variant-numeric: tabular-nums; }
+.tx-net dt { color: var(--text); font-weight: 600; }
+.tx-side h3 { display: flex; align-items: baseline; gap: 8px; margin: 20px 0 4px; font-size: var(--font-14); }
+.tx-side h3 .muted { font-size: var(--font-12); font-weight: 500; }
+.tx-rows { margin: 0; padding: 0; list-style: none; }
+.tx-rows li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: var(--font-13); }
+.tx-rows li.mine { margin: 0 -10px; padding: 10px; border-top-color: transparent; border-radius: 8px; background: var(--soft); }
+.tx-rows li.mine + li { border-top-color: transparent; }
+.tx-row-address { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.tx-row-address .watch-address { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-row-address .badge { max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-row-value { flex-shrink: 0; font-variant-numeric: tabular-nums; text-align: right; }
+.tx-coinbase { margin: 0; padding: 10px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--font-13); }
+.tx-show-all { margin-top: 8px; }
+.tx-truncated { margin: 16px 0 0; font-size: var(--font-12); }
+.tx-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; margin: 0 0 16px; padding: 3px; border-radius: 12px; background: var(--track); }
+.tx-tabs button { min-height: 36px; padding: 6px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: var(--font-14); font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.tx-tabs button:hover { background: transparent; color: var(--text); }
+.tx-tabs button[aria-selected="true"], .tx-tabs button[aria-selected="true"]:hover { background: var(--seg-selected); color: var(--text); box-shadow: var(--seg-shadow); }
+.tx-broadcast textarea { display: block; box-sizing: border-box; width: 100%; min-height: 96px; margin-bottom: 8px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--font-13); overflow-wrap: anywhere; word-break: break-all; }
+.tx-broadcast-note { margin: 10px 0 0; font-size: var(--font-12); line-height: 1.5; }
+.tx-broadcast > .status.warn { display: block; margin: 12px 0 0; }
+.tx-broadcast-outcome { display: grid; gap: 12px; margin-top: 20px; }
+.tx-rebroadcast { display: grid; justify-items: start; gap: 10px; margin-top: 14px; }
+.tx-rebroadcast > .status { justify-self: stretch; }
+.tx-broadcast-outcome .status, .tx-rebroadcast .status { margin: 0; }
+:is(.tx-broadcast-outcome, .tx-rebroadcast) .status.warn { display: block; }
+:is(.tx-broadcast, .tx-broadcast-outcome, .tx-rebroadcast) .status.warn p { margin: 0; }
+.tx-broadcast > .status.warn button { margin-top: 8px; }
+:is(.tx-broadcast-outcome, .tx-rebroadcast) .status.warn code { display: block; margin-top: 6px; font-size: var(--font-12); overflow-wrap: anywhere; white-space: normal; }
+.tx-sent { display: grid; gap: 10px; }
+:is(.tx-sent, .tx-rebroadcast) .status:not(.warn) { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; white-space: normal; }
+:is(.tx-sent, .tx-rebroadcast) .status .icon { flex-shrink: 0; width: 16px; height: 16px; }
+:is(.tx-broadcast, .tx-rebroadcast) button .icon { width: 16px; height: 16px; }
+
+/* Network hashrate card: the mixed view (HashChart.tsx). The rolling estimate in the accent, filled to
+   the axis, on the left scale; difficulty as a dotted line in the text colour on the right scale. */
+.hash-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; margin-top: 16px; }
+.hash-value { display: flex; align-items: baseline; gap: 6px; margin: 0; color: var(--blue-text); line-height: 1.05; }
+.hash-value strong { font-size: 46px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.hash-value span { font-size: var(--font-28); font-weight: 500; }
+.hash-change { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--text); font-size: var(--font-16); font-weight: 600; font-variant-numeric: tabular-nums; }
+.hash-change svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.hash-change-span { color: var(--muted); font-weight: 400; }
+.hash-basis { margin: 0 0 0 auto; color: var(--muted); font-size: var(--font-14); }
+.hash-frame { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; row-gap: 8px; margin: 22px 0 12px; }
+.hash-axis-titles { grid-area: 1 / 2; display: flex; justify-content: space-between; gap: 12px; font-size: var(--font-13); line-height: 1.2; }
+.hash-axis-title-hash { color: var(--blue-text); } .hash-axis-title-difficulty { color: var(--text); }
+.hash-axis { position: relative; font-size: var(--font-12); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hash-axis-left { grid-area: 2 / 1; padding-right: 10px; } .hash-axis-right { grid-area: 2 / 3; padding-left: 10px; }
+.hash-axis-sizer { display: block; height: 0; overflow: hidden; visibility: hidden; }
+.hash-axis-labels { position: absolute; top: 0; width: calc(100% - 10px); height: 100%; overflow: visible; }
+.hash-axis-left .hash-axis-labels, .hash-axis-block .hash-axis-labels { left: 0; } .hash-axis-right .hash-axis-labels { right: 0; }
+.hash-axis-labels text, .hash-ticks text { fill: var(--muted); font-size: var(--font-12); font-variant-numeric: tabular-nums; }
+.hash-axis-labels text { dominant-baseline: middle; }
+.hash-plot { grid-area: 2 / 2; position: relative; height: 240px; min-width: 0; touch-action: pan-y; cursor: crosshair; }
+.hash-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.hash-grid { stroke: var(--line); stroke-width: 1; }
+.hash-fill-top { stop-color: var(--blue); stop-opacity: .26; } .hash-fill-bottom { stop-color: var(--blue); stop-opacity: 0; }
+.hash-line { fill: none; stroke: var(--blue); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.hash-difficulty { fill: none; stroke: var(--text); stroke-width: 2; stroke-dasharray: 0 5; stroke-linecap: round; opacity: .8; }
+.hash-dot { fill: var(--blue); stroke: var(--surface); stroke-width: 2; } .hash-halo { fill: var(--blue); opacity: .2; }
+.hash-difficulty-dot { fill: var(--surface); stroke: var(--text); stroke-width: 1.5; }
+.hash-plot .chart-cursor { stroke: var(--muted); stroke-width: 1; }
+.hash-ticks { grid-area: 5 / 2; display: block; width: 100%; height: 18px; overflow: visible; }
+.hash-tooltip-right { left: auto; right: 8px; }
+.hash-tooltip dl { display: grid; grid-template-columns: auto auto; gap: 2px 12px; margin: 4px 0 0; }
+.hash-tooltip dt { display: flex; align-items: center; gap: 6px; color: var(--muted); } .hash-tooltip dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.hash-tooltip i { width: 12px; border-top: 2px solid var(--blue); } .hash-tooltip .hash-key-difficulty { border-top: 2px dotted var(--text); } .hash-tooltip .hash-key-block { border-top-color: var(--muted); }
+/* Block time over the same 200-block window, under the main plot on the same time axis. */
+.hash-block-title { grid-area: 3 / 2; margin: 14px 0 0; color: var(--text); font-size: var(--font-13); line-height: 1.2; } .hash-block-title span { color: var(--muted); }
+.hash-axis-block { grid-area: 4 / 1; padding-right: 10px; }
+.hash-block-plot { grid-area: 4 / 2; position: relative; height: 84px; min-width: 0; touch-action: pan-y; cursor: crosshair; }
+.hash-block-line { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.hash-block-dot { fill: var(--muted); stroke: var(--surface); stroke-width: 2; }
+.market-chart .hash-view + .chart-source { margin-top: 0; }
+@media (max-width: 640px) {
+  .hash-value strong { font-size: 36px; } .hash-value span { font-size: var(--font-20); }
+  .hash-basis { flex-basis: 100%; margin-left: 0; font-size: var(--font-13); }
+  .hash-plot { height: 200px; } .hash-block-plot { height: 70px; }
+  .hash-axis-left, .hash-axis-block { padding-right: 6px; } .hash-axis-right { padding-left: 6px; }
+  .hash-axis-labels { width: calc(100% - 6px); }
+}

@@ -38,6 +38,7 @@ import type {
   Lang,
   Rule,
   Income,
+  Wallet,
 } from "./types.ts";
 import "./style.css";
 import { MarketData, PoolDonut } from "./MarketData.tsx";
@@ -49,15 +50,17 @@ import { calculatorWithPoolFee } from "./calculator.ts";
 import { quoteExpired } from "./orders.ts";
 import { dual, rateLine, secondaryCode, currencies, type FX } from "./currency.ts";
 import { applyingEdit, reconcileRule, relativeTime } from "./alertRules.ts";
-import { enabledMonitors, alertMonitors, cleanAddress, moveIds, ownAddresses, targetKey, duplicateMonitor, hashrate24h, dailyAverage, nearestWindow } from "./monitors.ts";
+import { enabledMonitors, alertMonitors, cleanAddress, moveIds, ownAddresses, targetKey, duplicateMonitor, hashrate24h, dailyAverage, nearestWindow, ALERT_AFTER, ALERT_AGAIN } from "./monitors.ts";
 import { Icon, type IconName } from "./Icons.tsx";
 import { Money, PRLAmount } from "./Money.tsx";
 import { PaymentHead, PaymentAddress } from "./Payment.tsx";
 import { Skeleton } from "./Skeleton.tsx";
 import { PasteButton } from "./NativeControls.tsx";
+import { TxTools, type TxTab } from "./TxLookup.tsx";
 import { WorkerList } from "./Workers.tsx";
+import { LayoutSwitch, MonitorCompactList, monitorLayout } from "./MonitorCompact.tsx";
 import { WatchWallet } from "./WatchWallet.tsx";
-import { WalletExtension } from "./WalletExtension.tsx";
+import { ExtensionBanner, WalletExtension } from "./WalletExtension.tsx";
 import { pushTimeout, subscribePush } from "./push.ts";
 import type { Overview } from "./types.ts";
 import { appClient } from "./app-client.ts";
@@ -76,8 +79,9 @@ const navShortKeys = {
   alerts: "navAlertsShort",
   app: "navAppShort",
 } as const;
-type Panel = "settings" | "security" | "account" | "restore" | "monitor" | "rule" | "pro" | "payment" | "wallet" | "appqr" | null;
-type Snapshot<T> = { data?: T; failed?: boolean; target?: string };
+type Panel = "settings" | "security" | "account" | "restore" | "monitor" | "rule" | "pro" | "payment" | "wallet" | "walletqr" | "extension" | "appqr" | "txlookup" | null;
+/// `at` is when `data` last arrived; a failed refresh keeps the previous data.
+type Snapshot<T> = { data?: T; failed?: boolean; target?: string; at?: number };
 // ?account=manage|delete|restore opens a panel once, when the page loads; keeping it in the address bar
 // reopened that panel on every reload. The device-connect flow keeps its parameters.
 function keptSearch() {
@@ -95,11 +99,11 @@ const hasPush = () =>
   "serviceWorker" in navigator &&
   "PushManager" in window &&
   "Notification" in window;
-const QR = ({ value, cell = 5, margin = 12 }: { value: string; cell?: number; margin?: number }) => {
+const QR = ({ value, cell = 5, margin = 12, alt = "QR" }: { value: string; cell?: number; margin?: number; alt?: string }) => {
   const q = qrcode(0, "M");
   q.addData(value);
   q.make();
-  return <img className="qr" src={q.createDataURL(cell, margin)} alt="QR" />;
+  return <img className="qr" src={q.createDataURL(cell, margin)} alt={alt} />;
 };
 const initialState = readStore();
 applyAppearance(initialState.theme, initialState.palette);
@@ -110,9 +114,14 @@ function App() {
   const [page, setPage] = useState<Page>(pageFromHash),
     [panel, setPanel] = useState<Panel>(() => { const d = deepLink(location.hash), account = new URLSearchParams(location.search).get("account"); return connectingDevice || ["manage", "delete"].includes(account || "") ? "account" : account === "restore" ? "restore" : d ? d.page === "wallet" ? "wallet" : "monitor" : null; });
   const [draftAddress, setDraftAddress] = useState(() => deepLink(location.hash)?.addr || "");
+  const [walletId, setWalletId] = useState(""), [qrWallet, setQrWallet] = useState<Wallet | null>(null);
   const [refreshEpoch, setRefreshEpoch] = useState(0);
+  const [txTab, setTxTab] = useState<TxTab>("lookup");
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [editingMonitor, setEditingMonitor] = useState<Monitor | null>(null);
+  /// The monitor opened from 一览, shown as its full card in place of the list; null = none.
+  /// `listScroll` is where the list was, to return to it.
+  const [openMonitor, setOpenMonitor] = useState<string | null>(null), listScroll = useRef(0);
   const [deliveries, setDeliveries] = useState<Record<string, { kind: Rule["kind"]; value: number; window: number; deferred?: boolean }>>({});
   const [incomes, setIncomes] = useState<Record<string, Snapshot<Income>>>({});
   const [price, setPrice] = useState<Snapshot<Price>>({}),
@@ -122,12 +131,16 @@ function App() {
   const [fx, setFX] = useState<FX>();
   const [overview, setOverview] = useState<Snapshot<Overview>>({});
   const [stats, setStats] = useState<Record<string, Snapshot<Stats>>>({});
+  // refresh() is created once, so it reads the latest snapshots through these.
+  const statsRef = useRef(stats), incomesRef = useRef(incomes), readAt = useRef<Record<string, number>>({});
+  statsRef.current = stats; incomesRef.current = incomes;
   const [availability, setAvailability] = useState<Availability>({
     pay: { enabled: false, usd: 4.99 },
     vapid_key: null,
   });
   const [me, setMe] = useState<Me | null>(null),
-    [order, setOrder] = useState<Order | null>(null);
+    [order, setOrder] = useState<Order | null>(null),
+    [accountEmail, setAccountEmail] = useState("");
   const canSync = !!(state.accountId && me?.pro && me.pro_scope !== "device");
   const canSyncRef = useRef(canSync);
   canSyncRef.current = canSync;
@@ -180,7 +193,10 @@ function App() {
   useEffect(() => {
     window.history.replaceState(null, "", `/${keptSearch()}#${page}`);
     window.scrollTo(0, 0);
+    listScroll.current = 0; setOpenMonitor(null);   // a page opens on its list, not on a monitor left open there
   }, [page]);
+  // An opened monitor starts at the top; going back returns to where the list was.
+  useEffect(() => { window.scrollTo(0, openMonitor ? 0 : listScroll.current); }, [openMonitor]);
   useEffect(() => {
     if (!hasPush()) return;
     let status: PermissionStatus | undefined, disposed = false;
@@ -251,7 +267,7 @@ function App() {
     pushGeneration.current++;
     const guest = {...readGuest(),token:localPurchase()?.token || readGuest().token};
     stateRef.current = guest; setState(guest); writeStore(guest);
-    setMe(null); setOrder(null); setDeliveries({}); setPushState("idle"); setAccountReady(true);
+    setMe(null); setOrder(null); setDeliveries({}); setPushState("idle"); setAccountEmail(""); setAccountReady(true);
     if (hasPush() && !localPurchase()) {
       try { const reg = await pushTimeout(navigator.serviceWorker.ready); const sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch { /* Local features remain available. */ }
     }
@@ -259,7 +275,8 @@ function App() {
   const adoptAccount = useCallback(async (account: Account, askImport = true, generation = ++accountGeneration.current) => {
     const id = account.user_id;
     const association=localPurchase()?await associatePurchase(id):null;
-    const profile = await api<Me>("/v1/me", "GET", undefined, id);
+    // Email sign-in returns only the ids; the account button is labelled from the email.
+    const [profile, email] = await Promise.all([api<Me>("/v1/me", "GET", undefined, id), account.email || api<Account>("/v1/account", "GET", undefined, id).then((a) => a.email, () => "")]);
     const paid = profile.pro && profile.pro_scope !== "device";
     const server = paid ? await api<{ schema_version: number; data: import("./types.ts").Config | null }>("/v1/account/config", "GET", undefined, id) : { schema_version: 1, data: null };
     if (generation !== accountGeneration.current) return;
@@ -274,7 +291,7 @@ function App() {
     const followBrowserLanguage = cached?.followBrowserLanguage ?? stateRef.current.followBrowserLanguage;
     const next: State = { ...(cached || (paid ? defaults() : guest)), ...config, followBrowserLanguage, lang: followBrowserLanguage ? browserLanguage() : config.lang, accountId: id, purchaseId:localPurchase()?.id||"", token: localPurchase()?.token || cached?.token || "", sync: cached?.sync ?? true };
     pushGeneration.current++; stateRef.current = next; setState(next); writeStore(next);
-    setMe(profile); setOrder(profile.order); setDeliveries({}); setAccountReady(true);
+    setMe(profile); setOrder(profile.order); setDeliveries({}); setAccountEmail(email); setAccountReady(true);
   }, []);
   useEffect(() => {
     let disposed = false;
@@ -297,33 +314,39 @@ function App() {
       return;
     }
     refreshingRef.current = true;
-    const s = stateRef.current;
+    const s = stateRef.current, t = Date.now(), reads = readAt.current;
+    // Every read below except /v1/price shares the Worker's limit of 120 a minute per IP, and the
+    // Worker caches them for 15 s to 12 h. Asking every 5 s spent the limit for a few monitors, and
+    // the income reads, sent last, got 429. Ask again once the server copy can have changed; a
+    // target without data, or whose last read failed, is asked on every refresh.
+    const due = (at: number | undefined, ms: number) => !at || t - at >= ms;
+    const own = ownAddresses(s.monitors), target = JSON.stringify(own.slice().sort());
     await Promise.allSettled([
-      api<FX>("/v1/fx").then(setFX).catch(() => setFX((old) => old ? { ...old, stale: true } : undefined)),
+      due(reads.fx, 600_000) && api<FX>("/v1/fx").then((v) => { reads.fx = Date.now(); setFX(v); }).catch(() => setFX((old) => old ? { ...old, stale: true } : undefined)),
       api<Price>("/v1/price")
         .then((data) => setPrice({ data }))
         .catch(() => setPrice((prev) => ({ ...prev, failed: true }))),
-      api<Overview>("/v1/pools")
-        .then((data) => setOverview({ data }))
+      due(reads.pools, 15_000) && api<Overview>("/v1/pools")
+        .then((data) => { reads.pools = Date.now(); setOverview({ data }); })
         .catch(() => setOverview((prev) => ({ ...prev, failed: true }))),
-      api<{ source: string; points: number[][] }>("/v1/price/history")
-        .then((data) => setHistory({ data }))
+      due(reads.history, 60_000) && api<{ source: string; points: number[][] }>("/v1/price/history")
+        .then((data) => { reads.history = Date.now(); setHistory({ data }); })
         .catch(() => setHistory((prev) => ({ ...prev, failed: true }))),
-      ...enabledMonitors(s.monitors).map((m) =>
+      ...enabledMonitors(s.monitors).filter((m) => { const old = statsRef.current[m.id]; return old?.target !== targetKey(m) || old.failed || due(old.at, 30_000); }).map((m) =>
         api<Stats>("/v1/pool/stats", "POST", {
           pool: m.pool,
           addr: m.addr,
           acct: m.acct,
         })
-          .then((data) => { if (enabledMonitors(stateRef.current.monitors).some((x) => x.id === m.id && targetKey(x) === targetKey(m))) setStats((prev) => ({ ...prev, [m.id]: { data, target: targetKey(m) } })); })
+          .then((data) => { if (enabledMonitors(stateRef.current.monitors).some((x) => x.id === m.id && targetKey(x) === targetKey(m))) setStats((prev) => ({ ...prev, [m.id]: { data, target: targetKey(m), at: Date.now() } })); })
           .catch(() => { if (enabledMonitors(stateRef.current.monitors).some((x) => x.id === m.id && targetKey(x) === targetKey(m))) setStats((prev) => ({ ...prev, [m.id]: { ...(prev[m.id]?.target === targetKey(m) ? prev[m.id] : {}), target: targetKey(m), failed: true } })); }),
       ),
-      ...ownAddresses(s.monitors).map((addr) => {
-        const own = ownAddresses(s.monitors), target = JSON.stringify(own.slice().sort());
-        return api<Income>("/v1/address/income", "POST", { addr, own })
-          .then((data) => { if (JSON.stringify(ownAddresses(stateRef.current.monitors).sort()) === target) setIncomes((v) => ({ ...v, [addr]: { data, target } })); })
-          .catch(() => { if (JSON.stringify(ownAddresses(stateRef.current.monitors).sort()) === target) setIncomes((v) => ({ ...v, [addr]: { failed: true, target } })); });
-      }),
+      ...own.filter((addr) => { const old = incomesRef.current[addr]; return old?.target !== target || old.failed || due(old.at, 60_000); }).map((addr) =>
+        api<Income>("/v1/address/income", "POST", { addr, own })
+          .then((data) => { if (JSON.stringify(ownAddresses(stateRef.current.monitors).sort()) === target) setIncomes((v) => ({ ...v, [addr]: { data, target, at: Date.now() } })); })
+          // Keep the last figures; a refused read used to blank the card until the next one succeeded.
+          .catch(() => { if (JSON.stringify(ownAddresses(stateRef.current.monitors).sort()) === target) setIncomes((v) => ({ ...v, [addr]: { ...(v[addr]?.target === target ? v[addr] : {}), failed: true, target } })); }),
+      ),
     ]);
     refreshingRef.current = false;
     setRefreshEpoch((n) => n + 1);
@@ -530,6 +553,7 @@ function App() {
               acct: m.acct,
               label: m.label,
               after: m.after,
+              again: m.again || undefined,
             })),
         },
         buyerId(s),
@@ -665,6 +689,21 @@ function App() {
       }));
     });
   };
+  /// One monitor's 掉线提醒 settings: `after` and its reminder `again` (seconds).
+  const setMonitorAlert = (m: Monitor, patch: Pick<Monitor, "after"> | Pick<Monitor, "again">) =>
+    gated(() =>
+      update((st) => ({
+        ...st,
+        monitors: st.monitors.map((x) =>
+          x.id === m.id ? { ...x, ...patch, updated: Math.max(fresh(), x.updated + 1) } : x,
+        ),
+      })),
+    );
+  /// "10 min", "2 h": whole hours read as hours.
+  const duration = (seconds: number) =>
+    seconds % 3600 === 0
+      ? t("durationHours").replace("%@", String(seconds / 3600))
+      : t("durationMinutes").replace("%@", String(seconds / 60));
   const setMonitorPaused = (m: Monitor, paused: boolean) => update((s) => ({
     ...s,
     monitors: s.monitors.map((x) => x.id === m.id ? { ...x, paused, updated: Math.max(fresh(), x.updated + 1) } : x),
@@ -682,13 +721,24 @@ function App() {
   const selected = (state.hashWindow as WindowName) || "day";
   const activeMonitors = orderedMonitors(configOf(state)),
     activeRules = alive(state.rules);
+  /// 卡片 or 一览 (MonitorCompact.tsx), this browser's choice.
+  const layout = monitorLayout(state.monitorLayout);
+  const openedMonitor = openMonitor ? activeMonitors.find((m) => m.id === openMonitor) : undefined;
+  const editMonitor = (m: Monitor) => { setEditingMonitor(m); setDraftAddress(m.pool === "F2Pool" ? `https://www.f2pool.com/mining-user/${m.addr}?user_name=${encodeURIComponent(m.acct || "")}` : m.addr); setPanel("monitor"); };
+  // The opened monitor was deleted (here, or on another device): back to the list.
+  useEffect(() => { if (openMonitor && !openedMonitor) setOpenMonitor(null); }, [openMonitor, !!openedMonitor]);
+  const onlineOnlySwitch = <label className="compact-check"><input type="checkbox" className="switch" checked={state.onlineOnly === true} onChange={(e) => update((s) => ({ ...s, onlineOnly: e.target.checked }))} />{t("onlineOnly")}</label>;
   const moveMonitor = (id: string, destination: number) => {
     const oldIds = activeMonitors.map((m) => m.id), ids = moveIds(oldIds, id, destination);
     if (ids === oldIds) return;
     update((s) => ({ ...s, monitorOrder: { ids, updated: Math.max(fresh(), (s.monitorOrder?.updated || 0) + 1) } }));
   };
   const incomeTarget = JSON.stringify(ownAddresses(state.monitors).sort());
-  const incomeFor = (addr: string) => incomes[addr]?.target === incomeTarget && !incomes[addr]?.failed ? incomes[addr]?.data : undefined;
+  // A failed read keeps showing the last figures, marked as possibly out of date.
+  const incomeFor = (addr: string) => incomes[addr]?.target === incomeTarget ? incomes[addr]?.data : undefined;
+  const incomeStale = (addr: string) => !!incomeFor(addr) && !!incomes[addr]?.failed;
+  // Addresses the user already follows, by name, so a looked-up transaction lists them first.
+  const knownAddresses = new Map([...alive(state.monitors).filter((m) => m.addr.startsWith("prl1")).map((m) => [m.addr, m.label] as const), ...alive(state.wallets).map((w) => [w.addr, w.label] as const)]);
   const addressHash = (addr: string) => enabledMonitors(state.monitors).filter((m) => m.addr === addr && stats[m.id]?.target === targetKey(m)).reduce((n, m) => n + hashrate24h(stats[m.id]?.data), 0);
   const fleetSnapshots = enabledMonitors(state.monitors).map((m) => stats[m.id]?.target === targetKey(m) ? stats[m.id] : undefined);
   const fleetStats = fleetSnapshots.flatMap((snap) => snap?.data && !snap.data.missing ? [snap.data] : []);
@@ -696,6 +746,116 @@ function App() {
   const fleetHash = fleetStats.reduce((n, s) => n + rate(s, nearestWindow(selected, s.windows)), 0);
   const fleetOnline = fleetStats.reduce((n, s) => n + s.workers.filter((w) => w.online).length, 0), fleetTotal = fleetStats.reduce((n, s) => n + s.workers.length, 0);
   const summaryWaiting = fleetSnapshots.some((s) => !s?.data && !s?.failed) || incomeAddresses.some((a) => !incomes[a] || incomes[a].target !== incomeTarget);
+  /// One monitor's full card: in the card grid, and on its own when opened from 一览.
+  const monitorCard = (m: Monitor) => {
+    const snap = stats[m.id]?.target === targetKey(m) ? stats[m.id] : undefined,
+      s = snap?.data,
+      w = nearestWindow(selected, s?.windows);
+    return (
+      <section className="card monitor-card" key={m.id} draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", m.id)} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); moveMonitor(e.dataTransfer.getData("text/plain"), activeMonitors.findIndex((x) => x.id === m.id)); }}>
+        <div className="card-heading">
+          <div className="card-name">
+            <div className="monitor-title"><h2>{m.label}</h2><small>{m.pool}</small>{m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : "online-badge"}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
+          </div>
+          <div className="inline-controls"><div className="alert-controls">
+            {availability.vapid_key && !m.paused && (
+              <>
+                <label
+                  className="compact-check"
+                  title={t("offlineAlert")}
+                >
+                  <input
+                    type="checkbox" className="switch"
+                    checked={m.alert}
+                    onChange={() => toggleMonitorAlert(m)}
+                  />
+                  {t("offlineAlert")}
+                </label>
+                {m.alert && (
+                  <>
+                    <select
+                      aria-label={t("minutes")}
+                      value={m.after}
+                      onChange={(e) => setMonitorAlert(m, { after: Number(e.target.value) })}
+                    >
+                      {ALERT_AFTER.map((n) => (
+                        <option key={n} value={n}>
+                          {duration(n)}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label={t("remindAgain")}
+                      title={t("remindAgain")}
+                      value={m.again || 0}
+                      onChange={(e) => setMonitorAlert(m, { again: Number(e.target.value) || undefined })}
+                    >
+                      <option value={0}>{t("remindOnce")}</option>
+                      {ALERT_AGAIN.map((n) => (
+                        <option key={n} value={n}>
+                          {t("remindAfter").replace("%@", duration(n))}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
+              </>
+            )}
+            </div><details className="menu"><summary aria-label={t("manage")}><Icon name="more" /></summary><div>
+              <button onClick={(e) => { e.currentTarget.closest("details")?.removeAttribute("open"); setMonitorPaused(m, !m.paused); }}><Icon name={m.paused ? "play" : "pause"} />{t(m.paused ? "resume" : "pause")}</button>
+              <button onClick={() => editMonitor(m)}><Icon name="edit" />{t("edit")}</button>
+              <button onClick={() => rename("monitors", m.id, m.label)}><Icon name="rename" />{t("rename")}</button>
+              <button disabled={activeMonitors[0].id === m.id} onClick={() => moveMonitor(m.id, activeMonitors.findIndex((x) => x.id === m.id) - 1)}><Icon name="up" />{t("moveUp")}</button>
+              <button disabled={activeMonitors.at(-1)!.id === m.id} onClick={() => moveMonitor(m.id, activeMonitors.findIndex((x) => x.id === m.id) + 1)}><Icon name="down" />{t("moveDown")}</button>
+              <button className="danger" onClick={() => remove("monitors", m.id)}><Icon name="delete" />{t("delete")}</button>
+            </div></details>
+          </div>
+        </div>
+        {!m.paused && stale(snap?.failed || (m.pool !== "F2Pool" && incomeStale(m.addr)))}
+        {!m.paused && m.alert && (pushState === "error" || !state.token) && <button className="status warn status-link" onClick={() => setPage("alerts")}><span>{t("pushNeedsConnection")}</span><Icon name="right" /></button>}
+        {m.paused ? <div className="monitor-paused"><p className="muted">{t("pausedNote")}</p><button onClick={() => setMonitorPaused(m, false)}>{t("resume")}</button></div> : <>
+          {!s ? (
+            snap?.failed ? <p className="muted">{t("error")}</p> : <Skeleton label={t("loading")} />
+          ) : s.missing ? (
+            <p className="muted">{t("missing")}</p>
+          ) : (
+            <div className="monitor-stats">
+              <div className="rate-value">
+                {hashrate(rate(s, w), state.lang)}
+              </div>
+              <div className="segments">
+                {s.windows.map((win) => (
+                  <button
+                    key={win}
+                    className={win === w ? "selected" : ""}
+                    onClick={() =>
+                      update((old) => ({ ...old, hashWindow: win }))
+                    }
+                  >
+                    {t(win)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Pool balances and on-chain income share one grid, so every tile lines up. */}
+          {(s && !s.missing || m.pool !== "F2Pool") && <div className="monitor-earnings"><div className="earnings-grid">
+            {s && !s.missing && <div className="earnings-group">
+              <h3>{t("pool")}</h3>
+              <div className="earning"><small>{t(s.pendingKind)}</small><strong><PRLAmount lang={state.lang} value={s.pending} /></strong><small><Money amount={price.data ? money(s.pending * price.data.usd) : "—"} /></small></div>
+              <div className="earning"><small>{t("paid")}</small><strong><PRLAmount lang={state.lang} value={s.paid} /></strong><small><Money amount={price.data ? money(s.paid * price.data.usd) : "—"} /></small></div>
+            </div>}
+            {m.pool !== "F2Pool" && <div className="earnings-group earnings-chain"><h3>{t("chainIncome")}</h3>{!incomeFor(m.addr) && (!incomes[m.addr] || incomes[m.addr]?.target !== incomeTarget) ? <Skeleton label={t("loading")} /> : <>{(["h24", "d7", "total"] as const).map((key) => <div className="earning" key={key}><small>{key === "h24" ? t("recent24h") : key === "d7" ? t("recent7d") : t("totalIncome")}</small><strong><PRLAmount lang={state.lang} value={incomeFor(m.addr)?.[key]} /></strong><small><Money amount={incomeFor(m.addr) && price.data ? money(incomeFor(m.addr)![key] * price.data.usd) : "—"} /></small></div>)}<div className="earning"><small>{t("tested")} · {t("perPHDay")}</small><strong><PRLAmount lang={state.lang} value={incomeFor(m.addr) && addressHash(m.addr) > 0 ? dailyAverage(incomeFor(m.addr)!.h24, incomeFor(m.addr)!.d7) / (addressHash(m.addr) / 1e15) : null} /></strong></div></>}</div>}
+          </div></div>}
+          {s && !s.missing && <>
+            <div className="monitor-section-head"><h3>{t("workers")}</h3><span>{s.workers.filter((x) => x.online).length} / {s.workers.length} {t("online")}</span></div>
+            <WorkerList workers={s.workers} window={w} lang={state.lang} t={t} onlineOnly={state.onlineOnly === true} />
+            {s.partial && <p className="muted">{t("partial")}</p>}
+          </>}
+        </>}
+      </section>
+    );
+  };
   const restoreLink = <a className="pro-restore" href="/?account=restore#alerts" onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) { e.preventDefault(); setPanel("restore"); } }}>{t("restorePurchase")}</a>;
   const pendingOrderLink = order && order.status !== "paid" && <button onClick={() => setPanel("payment")}>{t("order")} · {order.id.slice(0, 8)}</button>;
   const proOffer = <div className="pro-intro">
@@ -755,8 +915,8 @@ function App() {
         <div className="sidebar-foot">
           <div className="sidebar-actions">
             <button className="settings-button" aria-label={t("settings")} title={t("settings")} onClick={() => setPanel("settings")}><Icon name="settings" /></button>
-            <button className={`account-entry ${accountReady && state.accountId ? "" : "primary"}`} onClick={() => setPanel("account")} aria-label={accountReady && state.accountId ? accountCopy(state.lang).account : t("signIn")} aria-haspopup="dialog">
-              <Icon name="account" /><span>{accountReady && state.accountId ? accountCopy(state.lang).account : t("signIn")}</span>
+            <button className={`account-entry ${accountReady && state.accountId ? "" : "primary"}`} onClick={() => setPanel("account")} title={accountReady && state.accountId ? accountEmail || undefined : undefined} aria-label={accountReady && state.accountId ? accountEmail ? `${accountCopy(state.lang).account}: ${accountEmail}` : accountCopy(state.lang).account : t("signIn")} aria-haspopup="dialog">
+              <Icon name="account" /><span className={accountReady && state.accountId && accountEmail ? "account-entry-name" : undefined}>{accountReady && state.accountId ? accountEmail.split("@")[0] || accountCopy(state.lang).account : t("signIn")}</span>
             </button>
           </div>
         </div>
@@ -780,6 +940,7 @@ function App() {
                     } as const
                   )[page],
                 )}
+                {page === "wallet" && state.hideExtensionBanner === true && <> <button className="text-button extension-banner-show" onClick={() => update((s) => ({ ...s, hideExtensionBanner: false }))}>Pearl Hub Wallet</button></>}
               </p>
             )}
           </div>
@@ -809,7 +970,7 @@ function App() {
         )}
         {page === "market" && (
           <>
-            <MarketData price={price.data} overview={overview.data} history={history.data} failed={price.failed || overview.failed || history.failed} t={t} lang={state.lang} money={money} refresh={refreshEpoch} />
+            <MarketData price={price.data} overview={overview.data} history={history.data} failed={price.failed || overview.failed || history.failed} t={t} lang={state.lang} money={money} refresh={refreshEpoch} live={state.autoRefresh !== false} />
             <div className="summary-grid">
               <button
                 className="card shortcut"
@@ -832,6 +993,17 @@ function App() {
                   <small>
                     {t("extensionShortcut")}
                   </small>
+                </span>
+                <Icon name="right" />
+              </button>
+              <button
+                className="card shortcut"
+                onClick={() => { setTxTab("lookup"); setPanel("txlookup"); }}
+              >
+                <span className="shortcut-icon"><Icon name="search" /></span>
+                <span>
+                  {t("txLookup")}
+                  <small>{t("txLookupNote")}</small>
                 </span>
                 <Icon name="right" />
               </button>
@@ -860,19 +1032,28 @@ function App() {
             incomes={Object.fromEntries(ownAddresses(state.monitors).map((addr) => [addr, incomeFor(addr)]))}
             failed={price.failed || overview.failed} t={t} />
         )}
-        {page === "workers" && (
+        {page === "workers" && openedMonitor && <>
+          <div className="list-toolbar monitor-open-toolbar">
+            <button className="monitor-back" onClick={() => setOpenMonitor(null)}><Icon name="chevron" />{t("workers")}</button>
+            {onlineOnlySwitch}
+          </div>
+          <div className="monitor-opened">{monitorCard(openedMonitor)}</div>
+        </>}
+        {page === "workers" && !openedMonitor && (
           <>
             <div className="list-toolbar workers-toolbar">
               <span>{t("monitors")} {activeMonitors.length} / 20</span>
-              <label className="compact-check"><input type="checkbox" className="switch" checked={state.onlineOnly === true} onChange={(e) => update((s) => ({ ...s, onlineOnly: e.target.checked }))} />{t("onlineOnly")}</label>
+              {/* 一览 lists no workers, so "online only" has nothing to filter there. */}
+              {layout === "cards" && onlineOnlySwitch}
+              {activeMonitors.length > 0 && <LayoutSwitch layout={layout} onChange={(v) => update((s) => ({ ...s, monitorLayout: v }))} t={t} />}
               {addButton("monitor", activeMonitors.length, 20)}
             </div>
-            {enabledMonitors(state.monitors).length > 0 && <section className="card monitor-summary" aria-label={t("overview")}>{summaryWaiting ? <Skeleton label={t("loading")} /> : <div className="fleet-strip">
+            {layout === "cards" && enabledMonitors(state.monitors).length > 0 && <section className="card monitor-summary" aria-label={t("overview")}>{summaryWaiting ? <Skeleton label={t("loading")} /> : <div className="fleet-strip">
               <div><small>{t("fleetHash")} · {t(selected)}</small><strong>{fleetStats.length ? hashrate(fleetHash, state.lang) : "—"}</strong></div>
               <div><small>{t("onlineWorkers")}</small><strong>{fleetStats.length ? `${fleetOnline.toLocaleString(state.lang)} / ${fleetTotal.toLocaleString(state.lang)}` : "—"}</strong></div>
               <div><small>{t("recent24h")}</small><strong><PRLAmount lang={state.lang} value={fleetIncomes.length ? fleetIncomes.reduce((n, i) => n + i.h24, 0) : null} /></strong></div>
               <div><small>{t("recent7d")}</small><strong><PRLAmount lang={state.lang} value={fleetIncomes.length ? fleetIncomes.reduce((n, i) => n + i.d7, 0) : null} /></strong></div>
-            </div>}{(fleetSnapshots.some((s) => s?.failed || s?.data?.partial) || fleetIncomes.length < incomeAddresses.length) && !summaryWaiting && <p className="status warn">{t("partial")}</p>}</section>}
+            </div>}{(fleetSnapshots.some((s) => s?.failed || s?.data?.partial) || fleetIncomes.length < incomeAddresses.length || incomeAddresses.some(incomeStale)) && !summaryWaiting && <p className="status warn">{t("partial")}</p>}</section>}
             {!activeMonitors.length && (
               <Empty
                 symbol="workers"
@@ -881,126 +1062,20 @@ function App() {
                 button={t("add")}
               />
             )}
-            {activeMonitors.map((m) => {
-              const snap = stats[m.id]?.target === targetKey(m) ? stats[m.id] : undefined,
-                s = snap?.data,
-                w = nearestWindow(selected, s?.windows);
-              return (
-                <section className="card monitor-card" key={m.id} draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", m.id)} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); moveMonitor(e.dataTransfer.getData("text/plain"), activeMonitors.findIndex((x) => x.id === m.id)); }}>
-                  <div className="card-heading">
-                    <div className="card-name">
-                      <div className="monitor-title"><h2>{m.label}</h2><small>{m.pool}</small>{m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : "online-badge"}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
-                    </div>
-                    <div className="inline-controls"><div className="alert-controls">
-                      {availability.vapid_key && !m.paused && (
-                        <>
-                          <label
-                            className="compact-check"
-                            title={t("offlineAlert")}
-                          >
-                            <input
-                              type="checkbox" className="switch"
-                              checked={m.alert}
-                              onChange={() => toggleMonitorAlert(m)}
-                            />
-                            {t("offlineAlert")}
-                          </label>
-                          {m.alert && (
-                            <select
-                              aria-label={t("minutes")}
-                              value={m.after}
-                              onChange={(e) => {
-                                const after = Number(e.target.value);
-                                gated(() =>
-                                  update((st) => ({
-                                    ...st,
-                                    monitors: st.monitors.map((x) =>
-                                      x.id === m.id
-                                        ? { ...x, after, updated: Math.max(fresh(), x.updated + 1) }
-                                        : x,
-                                    ),
-                                  })),
-                                );
-                              }}
-                            >
-                              {[600, 900, 1800, 3600].map((n) => (
-                                <option key={n} value={n}>
-                                  {n / 60} {t("minutes")}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </>
-                      )}
-                      </div><details className="menu"><summary aria-label={t("manage")}><Icon name="more" /></summary><div>
-                        <button onClick={(e) => { e.currentTarget.closest("details")?.removeAttribute("open"); setMonitorPaused(m, !m.paused); }}><Icon name={m.paused ? "play" : "pause"} />{t(m.paused ? "resume" : "pause")}</button>
-                        <button onClick={() => { setEditingMonitor(m); setDraftAddress(m.pool === "F2Pool" ? `https://www.f2pool.com/mining-user/${m.addr}?user_name=${encodeURIComponent(m.acct || "")}` : m.addr); setPanel("monitor"); }}><Icon name="edit" />{t("edit")}</button>
-                        <button onClick={() => rename("monitors", m.id, m.label)}><Icon name="rename" />{t("rename")}</button>
-                        <button disabled={activeMonitors[0].id === m.id} onClick={() => moveMonitor(m.id, activeMonitors.findIndex((x) => x.id === m.id) - 1)}><Icon name="up" />{t("moveUp")}</button>
-                        <button disabled={activeMonitors.at(-1)!.id === m.id} onClick={() => moveMonitor(m.id, activeMonitors.findIndex((x) => x.id === m.id) + 1)}><Icon name="down" />{t("moveDown")}</button>
-                        <button className="danger" onClick={() => remove("monitors", m.id)}><Icon name="delete" />{t("delete")}</button>
-                      </div></details>
-                    </div>
-                  </div>
-                  {!m.paused && stale(snap?.failed)}
-                  {!m.paused && m.alert && (pushState === "error" || !state.token) && <p className="status warn">{t("pushNeedsConnection")}</p>}
-                  {m.paused ? <div className="monitor-paused"><p className="muted">{t("pausedNote")}</p><button onClick={() => setMonitorPaused(m, false)}>{t("resume")}</button></div> : !s ? (
-                    snap?.failed ? <p className="muted">{t("error")}</p> : <Skeleton label={t("loading")} />
-                  ) : s.missing ? (
-                    <p className="muted">{t("missing")}</p>
-                  ) : (
-                    <>
-                      <div className="monitor-stats">
-                        <div>
-                          <div className="rate-value">
-                            {hashrate(rate(s, w), state.lang)}
-                          </div>
-                          <div className="segments">
-                            {s.windows.map((win) => (
-                              <button
-                                key={win}
-                                className={win === w ? "selected" : ""}
-                                onClick={() =>
-                                  update((old) => ({ ...old, hashWindow: win }))
-                                }
-                              >
-                                {t(win)}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <span className="status">{s.workers.filter((x) => x.online).length} / {s.workers.length} {t("online")}</span>
-                      </div>
-                      <div className="money-grid">
-                        <div>
-                          <small>{t(s.pendingKind)}</small>
-                          <strong>
-                            <PRLAmount lang={state.lang} value={s.pending} />
-                          </strong>
-                        </div>
-                        <div>
-                          <small>{t("paid")}</small>
-                          <strong>
-                            <PRLAmount lang={state.lang} value={s.paid} />
-                          </strong>
-                        </div>
-                      </div>
-
-                      <WorkerList workers={s.workers} window={w} lang={state.lang} t={t} onlineOnly={state.onlineOnly === true} />
-                      {s.partial && <p className="muted">{t("partial")}</p>}
-                    </>
-                  )}
-                      {!m.paused && m.pool !== "F2Pool" && <div className="income-grid"><h3>{t("chainIncome")}</h3>{!incomeFor(m.addr) && (!incomes[m.addr] || incomes[m.addr]?.target !== incomeTarget) ? <Skeleton label={t("loading")} /> : <>{(["h24", "d7", "total"] as const).map((key) => <div key={key}><small>{key === "h24" ? t("recent24h") : key === "d7" ? t("recent7d") : t("totalIncome")}</small><strong><PRLAmount lang={state.lang} value={incomeFor(m.addr)?.[key]} /></strong><small><Money amount={incomeFor(m.addr) && price.data ? money(incomeFor(m.addr)![key] * price.data.usd) : "—"} /></small></div>)}<div><small>{t("tested")} · {t("perPHDay")}</small><strong><PRLAmount lang={state.lang} value={incomeFor(m.addr) && addressHash(m.addr) > 0 ? dailyAverage(incomeFor(m.addr)!.h24, incomeFor(m.addr)!.d7) / (addressHash(m.addr) / 1e15) : null} /></strong></div></>}</div>}
-                </section>
-              );
-            })}
+            {layout === "compact" && activeMonitors.length > 0 && <MonitorCompactList monitors={activeMonitors} selected={selected} lang={state.lang} t={t}
+              snapshot={(m) => stats[m.id]?.target === targetKey(m) ? stats[m.id] : undefined}
+              h24={(addr) => incomeFor(addr)?.h24 ?? (incomes[addr]?.target === incomeTarget && incomes[addr]?.failed ? null : undefined)}
+              usd={price.data?.usd} money={money}
+              onOpen={(m) => { listScroll.current = window.scrollY; setOpenMonitor(m.id); }}
+              onPause={setMonitorPaused} onEdit={editMonitor} onDelete={(m) => remove("monitors", m.id)} onMove={moveMonitor} />}
+            {layout === "cards" && activeMonitors.length > 0 && <div className="monitor-grid">{activeMonitors.map(monitorCard)}</div>}
           </>
         )}
         {page === "wallet" && <>
-          <WatchWallet lang={state.lang} wallets={alive(state.wallets)} price={price.data} refresh={refreshEpoch} t={t} money={money} onCopy={copy}
-            onAdd={() => { setDraftAddress(""); setPanel("wallet"); }}
-            onRename={(w) => rename("wallets", w.id, w.label)} onRemove={(w) => remove("wallets", w.id)} />
-          <details className="card extension-fold"><summary>{t("extensionBadge")}</summary><WalletExtension t={t} copy={copy} lang={state.lang} /></details>
+          {state.hideExtensionBanner !== true && <ExtensionBanner t={t} onGuide={() => setPanel("extension")} onHide={() => update((s) => ({ ...s, hideExtensionBanner: true }))} />}
+          <WatchWallet lang={state.lang} wallets={alive(state.wallets)} selected={walletId} onSelect={setWalletId} price={price.data} refresh={refreshEpoch} t={t} money={money} onCopy={copy}
+            onAdd={() => { setDraftAddress(""); setPanel("wallet"); }} onReceive={(w) => { setQrWallet(w); setPanel("walletqr"); }} onSend={() => setPanel("extension")}
+            onLookup={() => { setTxTab("lookup"); setPanel("txlookup"); }} onRename={(w) => rename("wallets", w.id, w.label)} onRemove={(w) => remove("wallets", w.id)} />
         </>}
         {page === "alerts" && (
           <>
@@ -1173,9 +1248,9 @@ function App() {
         <footer className="main-foot">
           <span>Pearl Hub</span>
           <div className="main-foot-links">
-            <a href="https://github.com/terryops/prl-hub-web" target="_blank" rel="noreferrer">
-              {t("webSource")} <Icon name="external" />
-            </a>
+            <button className="main-foot-link" onClick={() => setPanel("security")}>
+              <Icon name="shield" /> {securityCopy(state.lang).title}
+            </button>
             <a href="https://t.me/prl_hub" target="_blank" rel="noreferrer">
               {t("support")} <Icon name="external" />
             </a>
@@ -1192,7 +1267,7 @@ function App() {
       )}
       <dialog
         ref={dialog}
-        className={panel === "appqr" ? "app-qr-dialog" : panel === "settings" || panel === "security" ? "settings-dialog" : panel === "account" || panel === "restore" ? "account-dialog" : panel === "payment" ? "payment-dialog" : undefined}
+        className={panel === "txlookup" ? "tx-dialog" : panel === "appqr" || panel === "walletqr" ? "app-qr-dialog" : panel === "settings" || panel === "security" || panel === "extension" ? "settings-dialog" : panel === "account" || panel === "restore" ? "account-dialog" : panel === "payment" ? "payment-dialog" : undefined}
         onCancel={() => setPanel(null)}
         onClick={(e) => {
           if (e.target === dialog.current) setPanel(null);
@@ -1201,7 +1276,7 @@ function App() {
         <div className={`dialog-content ${panel === "payment" ? "payment-content" : ""}`}>
           <div className="dialog-heading">
             <h2>
-              {panel === "appqr" ? t("appShowQR") : panel === "payment" || panel === "pro"
+              {panel === "txlookup" ? t(txTab === "broadcast" ? "txBroadcast" : "txLookup") : panel === "appqr" ? t("appShowQR") : panel === "walletqr" ? t("receive") : panel === "extension" ? t("extensionBadge") : panel === "payment" || panel === "pro"
                 ? t("pro")
                 : panel === "monitor"
                   ? t(editingMonitor ? "editMonitor" : "addMonitor")
@@ -1215,6 +1290,9 @@ function App() {
           </div>
           {panel === "pro" && proOffer}
           {panel === "appqr" && <div className="app-qr-content"><QR value={appStoreURL} /><p>{t("appScanDownload")}</p></div>}
+          {panel === "extension" && <WalletExtension t={t} copy={copy} lang={state.lang} />}
+          {panel === "txlookup" && <TxTools tab={txTab} onTab={setTxTab} known={knownAddresses} refresh={refreshEpoch} onCopy={copy} t={t} lang={state.lang} />}
+          {panel === "walletqr" && qrWallet && <div className="app-qr-content wallet-qr"><strong>{qrWallet.label}</strong><QR value={qrWallet.addr} alt={t("receiveQR")} /><PaymentAddress address={qrWallet.addr} t={t} onCopy={(value) => void copy(value)} /><p>{t("receiveMainnetOnly")}</p></div>}
           {panel === "settings" && (
             <>
               <div className="setting-section appearance-settings">
@@ -1241,15 +1319,10 @@ function App() {
                     ))}
                   </select>
                 </label>
+                <label className="form-field">{t("secondaryCurrency")}<select aria-label={t("secondaryCurrency")} value={state.secondary || (state.secondary === "" ? "" : "__auto__")} onChange={(e) => update((s) => ({ ...s, secondary: e.target.value, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))}><option value="__auto__">{t("followLanguage")}</option><option value="">{t("hideCurrency")}</option>{currencies.map(([code, symbol]) => <option key={code} value={code}>{code} · {symbol}</option>)}</select></label>
+                {secondaryCode(state.secondary, state.lang) && <p className="muted currency-rate">{fx?.rates[secondaryCode(state.secondary, state.lang)] ? rateLine(secondaryCode(state.secondary, state.lang), fx.rates[secondaryCode(state.secondary, state.lang)], state.lang) : "—"}<br />{t("updated")} · {fx ? new Date(fx.ts * 1000).toLocaleString(state.lang) : "—"}{fx?.stale && <> · {t("stale")}</>}</p>}
                 <label className="settings-toggle"><span>{t("autoRefresh")}</span><input type="checkbox" className="switch" checked={state.autoRefresh !== false} onChange={(e) => update((s) => ({ ...s, autoRefresh: e.target.checked, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))} /></label>
               </div>
-              <details className="settings-group display-options">
-                <summary>{t("moreDisplayOptions")}<Icon name="chevron" /></summary>
-                <div className="settings-group-body">
-                <label className="form-field">{t("secondaryCurrency")}<select aria-label={t("secondaryCurrency")} value={state.secondary || (state.secondary === "" ? "" : "__auto__")} onChange={(e) => update((s) => ({ ...s, secondary: e.target.value, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))}><option value="__auto__">{t("followLanguage")}</option><option value="">{t("hideCurrency")}</option>{currencies.map(([code, symbol]) => <option key={code} value={code}>{code} · {symbol}</option>)}</select></label>
-                <p className="muted">{fx?.rates[secondaryCode(state.secondary, state.lang)] ? rateLine(secondaryCode(state.secondary, state.lang), fx.rates[secondaryCode(state.secondary, state.lang)], state.lang) : "—"}<br />{t("updated")} · {fx ? new Date(fx.ts * 1000).toLocaleString(state.lang) : "—"}{fx?.stale && <> · {t("stale")}</>}</p>
-                </div>
-              </details>
               <p className="settings-saved muted">{t("settingsSaved")}</p>
               <button className="security-entry" onClick={() => { dialog.current?.scrollTo({ top: 0 }); setPanel("security"); }}><Icon name="shield" /><span>{securityCopy(state.lang).title}</span><Icon name="chevron" className="security-entry-chevron" /></button>
               <div className="settings-links">
@@ -1263,7 +1336,7 @@ function App() {
             <SecurityOverview lang={state.lang} sections={webSecurity} />
           </>}
           {(panel === "account" || panel === "restore") && (
-            <AccountPanel restore={panel === "restore" && !canSync} accountId={accountReady ? state.accountId : ""} lang={state.lang} auth={availability.auth} onLogin={(a) => adoptAccount(a)} onLogout={leaveAccount} purchases={(
+            <AccountPanel restore={panel === "restore" && !canSync} accountId={accountReady ? state.accountId : ""} lang={state.lang} auth={availability.auth} onLogin={(a) => adoptAccount(a)} onLogout={leaveAccount} onEmail={setAccountEmail} purchases={(
                 <div className="setting-section">
                   <div className="card-heading">
                     <div>
@@ -1320,8 +1393,9 @@ function App() {
           {panel === "wallet" && <WatchAddressForm t={t} lang={state.lang} initial={draftAddress} onSave={(label, addr) => {
             if (!/^prl1[0-9a-z]{20,100}$/.test(addr)) { setMessage(t("invalid")); return; }
             if (alive(state.wallets).length >= 10) { setMessage(t("limit")); return; }
-            update((s) => ({ ...s, wallets: [...s.wallets, { id: uid(), updated: fresh(), label: label || addr.slice(0, 12), addr }] }));
-            setPanel(null);
+            const id = uid();
+            update((s) => ({ ...s, wallets: [...s.wallets, { id, updated: fresh(), label: label || addr.slice(0, 12), addr }] }));
+            setWalletId(id); setPanel(null);
           }} />}
           {panel === "monitor" && (
             <TargetForm

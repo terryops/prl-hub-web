@@ -27,15 +27,16 @@ test("security overview: every section names existing copy and icons", () => {
       for (const repo of section.repos || []) assert.ok(repo.title in locales.en, repo.title);
     }
   }
-  assert.deepEqual(webSecurity.at(-1)?.repos?.map((r) => r.url), [repositories.app, repositories.web, repositories.server]);
+  assert.equal(webSecurity[0].title, "openSource");
+  assert.deepEqual(webSecurity[0].repos?.map((r) => r.url), [repositories.app, repositories.web, repositories.server]);
 });
 
-test("security overview: the Web CSP still allows only pearlhub.net and Cloudflare Turnstile", () => {
-  // webOthers / webTurnstile describe this policy; change the copy with it.
+test("security overview: the Web CSP still allows only pearlhub.net, Cloudflare Turnstile and SafeTrade", () => {
+  // webOthers / webTurnstile / webSafeTrade describe this policy; change the copy with it.
   const headers = readFileSync(new URL("../public/_headers", import.meta.url), "utf8");
   const csp = headers.match(/Content-Security-Policy: (.*)/)?.[1] || "";
   const directive = (name: string) => csp.split(";").map((part) => part.trim()).find((part) => part.startsWith(name + " "));
-  assert.equal(directive("connect-src"), "connect-src 'self' https://challenges.cloudflare.com");
+  assert.equal(directive("connect-src"), "connect-src 'self' https://challenges.cloudflare.com https://safetrade.com");
   assert.equal(directive("script-src"), "script-src 'self' https://challenges.cloudflare.com");
   assert.equal(directive("default-src"), "default-src 'self'");
 });

@@ -21,7 +21,13 @@ export const repositories = {
   server: "https://github.com/terryops/prl-hub-server",
 };
 
+// Open source leads on the Web: the page footer links here instead of to the repository.
 export const webSecurity: SecuritySection[] = [
+  { title: "openSource", rows: [{ icon: "code", title: "allPublicTitle", text: "allPublic" }], repos: [
+    { title: "repoApp", url: repositories.app },
+    { title: "repoWeb", url: repositories.web },
+    { title: "repoServer", url: repositories.server },
+  ] },
   { rows: [{ icon: "shield", title: "webHeadTitle", text: "webHead" }] },
   { title: "neverReceive", rows: [
     { icon: "key", title: "keys", text: "webKeys" },
@@ -38,14 +44,10 @@ export const webSecurity: SecuritySection[] = [
   ] },
   { title: "webDirect", rows: [
     { icon: "globe", title: "turnstileTitle", text: "webTurnstile" },
+    { icon: "market", title: "safetradeTitle", text: "webSafeTrade" },
     { icon: "server", title: "webOthersTitle", text: "webOthers" },
   ] },
   { title: "inBrowser", rows: [{ icon: "mac", title: "thisBrowser", text: "webLocal" }] },
-  { title: "openSource", rows: [{ icon: "code", title: "allPublicTitle", text: "allPublic" }], repos: [
-    { title: "repoApp", url: repositories.app },
-    { title: "repoWeb", url: repositories.web },
-    { title: "repoServer", url: repositories.server },
-  ] },
 ];
 
 export const extensionSecurity: SecuritySection[] = [

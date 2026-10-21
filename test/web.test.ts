@@ -14,7 +14,7 @@ import {
   writeStore,
 } from "../src/store.ts";
 import { prl, hashrate, f2ref } from "../src/format.ts";
-import { syncConfig } from "../src/api.ts";
+import { api, ApiError, syncConfig } from "../src/api.ts";
 import { quoteExpired } from "../src/orders.ts";
 const accountId = "u_test-account-1";
 test("payment UI: quote expiry never offers another order after payment is seen", () => {
@@ -235,5 +235,17 @@ test("sync aborts after an account change during either download or upload", asy
       await assert.rejects(syncConfig(state, () => current), /identity_changed/);
       assert.equal(puts, stage === "GET" ? 0 : 1);
     }
+  } finally { globalThis.fetch = original; }
+});
+
+test("api: an error reply that is not JSON keeps its status; a broken success reply still throws", async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response("<html>Too many requests</html>", { status: 429 });
+    await assert.rejects(api("/v1/tx", "POST", { txid: "0".repeat(64) }), (e) => e instanceof ApiError && e.status === 429 && e.message === "upstream");
+    globalThis.fetch = async () => Response.json({ ok: false, error: "busy", retry_after: 30 }, { status: 429 });
+    await assert.rejects(api("/v1/tx", "POST", {}), (e) => e instanceof ApiError && e.status === 429 && e.message === "busy" && e.data.retry_after === 30);
+    globalThis.fetch = async () => new Response("<html>", { status: 200 });
+    await assert.rejects(api("/v1/pools"), (e) => !(e instanceof ApiError));
   } finally { globalThis.fetch = original; }
 });

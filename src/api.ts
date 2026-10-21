@@ -3,9 +3,12 @@ import type { Config, State } from "./types.ts";
 import { purchaseHeaders } from "./purchase-key.ts";
 export class ApiError extends Error {
   status: number;
-  constructor(error: string, status: number) {
+  // The error reply's body, e.g. /v1/tx/send's `reason`.
+  data: Record<string, unknown>;
+  constructor(error: string, status: number, data: Record<string, unknown> = {}) {
     super(error);
     this.status = status;
+    this.data = data;
   }
 }
 export async function api<T>(
@@ -26,9 +29,12 @@ export async function api<T>(
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const data = await response.json();
+  // An error reply need not be JSON (a Cloudflare error page): its status still decides what is shown.
+  let data;
+  try { data = await response.json(); }
+  catch (error) { if (response.ok) throw error; data = {}; }
   if (!response.ok)
-    throw new ApiError(data.error || "upstream", response.status);
+    throw new ApiError(data?.error || "upstream", response.status, data ?? {});
   return data;
 }
 export async function syncConfig(

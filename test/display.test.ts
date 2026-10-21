@@ -42,15 +42,17 @@ const ts = 1791590400;
 const price = { usd: 1.3883, ts, source: "fixture", change5m: 1, change1h: 2, change24h: 3 };
 const points = [[ts - 86400, 1.36], [ts, 1.3883]];
 
-test("market: the initial view expands PRL price, keeps short-term changes, source and localized update/chart dates", () => {
+test("market: the initial view expands PRL price on SafeTrade candles, keeps short-term changes and localized chart dates", () => {
   for (const lang of Object.keys(dictionaries)) {
     const t = (key: string) => dictionaries[lang][key];
     const html = renderToStaticMarkup(React.createElement(MarketData, { price, history: { source: "fixture", points }, lang, t, refresh: 0, money: (v: number) => usd(v) }));
     assert.equal((html.match(/aria-expanded="true"/g) || []).length, 1);
     assert.match(html, /metric-selected/);
-    assert.ok(html.includes(`<h2>${t("prlPrice")}</h2>`));
-    assert.ok(html.includes(`${t("source")} · fixture`));
-    assert.ok(html.includes(new Date(ts * 1000).toLocaleString(lang)));
+    // The PRL Price card's title is its view switch, K-line first and selected; candles load in the browser.
+    assert.ok(html.includes(`<h2 class="chart-views" aria-label="${t("prlPrice")}"><button class="selected" aria-pressed="true">${t("kline")}</button><button class="" aria-pressed="false">${t("priceView")}</button></h2>`), lang);
+    for (const period of ["5m", "15m", "1h", "4h", "1d"]) assert.ok(html.includes(`>${period}</button>`), period);
+    assert.ok(html.includes(`${t("source")} · SafeTrade · PEARL/USDT`));
+    assert.ok(!html.includes("chart-plot") && html.includes("skeleton-chart"));
     for (const delta of ["+1.00%", "+2.00%", "+3.00%"]) assert.ok(html.includes(delta));
     const chart = renderToStaticMarkup(React.createElement(LineChart, { points, lang, label: "History", empty: "Empty" }));
     for (const [time] of points) {
@@ -190,8 +192,18 @@ test("polish: six languages share network formats, mobile pool details and compa
 });
 
 test("polish: wallet first render uses skeletons instead of missing balance or an empty transaction heading", () => {
-  const html = renderToStaticMarkup(React.createElement(WatchWallet, { wallets: [{ id: "w", label: "Watch", addr: "prl1" + "a".repeat(38) }], lang: "en", refresh: 0, t: (k: string) => dictionaries.en[k], onAdd: () => {}, onRename: () => {}, onRemove: () => {} }));
-  assert.match(html, /skeleton-balance/); assert.ok(!html.includes("Recent transactions")); assert.ok(!html.includes("— PRL")); assert.match(html, /address-short/);
+  const addr = "prl1" + "a".repeat(38);
+  const html = renderToStaticMarkup(React.createElement(WatchWallet, { wallets: [{ id: "w", label: "Watch", addr }], lang: "en", refresh: 0, t: (k: string) => dictionaries.en[k], onAdd: () => {}, onRename: () => {}, onRemove: () => {} }));
+  // The transactions card keeps its place while loading: its heading always has a skeleton under it.
+  assert.match(html, /skeleton-balance/); assert.match(html, /<h2>Recent transactions<\/h2><div class="skeleton skeleton-card"/); assert.ok(!html.includes("— PRL"));
+  assert.ok(html.includes(`<code class="watch-address">${addr}</code>`)); assert.match(html, /aria-label="Select wallet: Watch"/);
+});
+test("wallet shows the selected watch address, falling back to the first", () => {
+  const wallets = [{ id: "a", label: "First", addr: "prl1" + "a".repeat(38) }, { id: "b", label: "Second", addr: "prl1" + "b".repeat(38) }];
+  const render = (selected?: string) => renderToStaticMarkup(React.createElement(WatchWallet, { wallets, selected, lang: "en", refresh: 0, t: (k: string) => dictionaries.en[k], onAdd: () => {}, onRename: () => {}, onRemove: () => {} }));
+  assert.ok(render("b").includes(`<code class="watch-address">${wallets[1].addr}</code>`));
+  for (const html of [render(), render("gone")]) assert.ok(html.includes(`<code class="watch-address">${wallets[0].addr}</code>`));
+  assert.equal((render("b").match(/aria-current="true"/g) || []).length, 1);
 });
 
 test("pool comparison renders PPLNS real cost estimates and separate Fortune schemes on desktop and phones", () => {
@@ -213,6 +225,27 @@ test("pool comparison renders PPLNS real cost estimates and separate Fortune sch
     }
     assert.ok(html.includes(t("poolContractNotes")), lang);
   }
+});
+
+test("pool comparison shows take-home yield: PPS pools quoted alike differ by Real Cost, PPLNS loses its fee", () => {
+  const t = (key: string) => dictionaries.en[key];
+  const pps = (id: string, scheme: string, fee: number, realFeePercent: number | null) => ({ id, name: id, hashrate: 1e15, pps: true, trustworthy: false,
+    payouts: [{ scheme, fee, grossPerPH: 100, realFeePercent, realFeeEstimated: true, estimated: true, solo: false }] });
+  const shared = (id: string, fee: number, grossPerPH: number) => ({ id, name: id, hashrate: 1e14, pps: false, trustworthy: true,
+    payouts: [{ scheme: "PPLNS", fee, grossPerPH, realFeePercent: null, estimated: false, solo: false }] });
+  const data = { ts, rows: [pps("Kryptex", "PPS+", 3, 6), pps("F2Pool", "PPS", 1, 3.5), pps("Tariff", "PPS", 4, null),
+    shared("Hero", 0, 96.3), shared("Pearl", 1, 97)] };
+  const html = renderToStaticMarkup(React.createElement(PoolComparison, { data, t, lang: "en", onUse: () => {} }));
+  const table = html.slice(html.indexOf("<tbody"), html.indexOf("</tbody>"));
+  for (const value of ["≈94 PRL", "≈96.5 PRL", "≈96 PRL", ">96.3 PRL<", ">96 PRL<"]) assert.ok(table.includes(value), value);
+  assert.ok(!table.includes(">≈100 PRL<"));
+  // The hover title shows how the figure was reached.
+  assert.ok(table.includes('title="100 × (1 − 6%) = 94 PRL/PH·day"'));
+  assert.ok(table.includes('title="97 × (1 − 1%) = 96.03 PRL/PH·day"'));
+  // The green mark goes to the best measured take-home yield: Hero's 0% fee beats Pearl's higher gross.
+  assert.equal((table.match(/pool-top-yield/g) || []).length, 1);
+  assert.match(table, /class=" pool-top-yield" title="96.3 × \(1 − 0%\) = 96.3 PRL\/PH·day">96.3 PRL</);
+  for (const k of ["poolYieldBasis", "comparisonExplanation", "ppsExplanation"]) assert.ok(html.includes(t(k).replace(/'/g, "&#x27;")), k);
 });
 
 test("review: a single-axis chart uses no right slot; only a network companion can reserve shared bounds", () => {
