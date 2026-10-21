@@ -38,6 +38,8 @@
   "above": "Above",
   "below": "Below",
   "move": "Change",
+  "reach": "Reaches target",
+  "reachNote": "You'll be notified when the price crosses the target, up or down.",
   "copy": "Copy",
   "close": "Close",
   "subtitle": "Your Pearl, at a glance",

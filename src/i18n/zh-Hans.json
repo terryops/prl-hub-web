@@ -38,6 +38,8 @@
   "above": "高于",
   "below": "低于",
   "move": "涨跌幅",
+  "reach": "到达目标价",
+  "reachNote": "价格涨破或跌破目标价时都会通知你。",
   "copy": "复制",
   "close": "关闭",
   "subtitle": "你的 Pearl，一目了然",

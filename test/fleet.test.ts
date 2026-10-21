@@ -109,3 +109,10 @@ test("cabinet power defaults off for new and existing calculators and preserves 
   }
   for (const powerBudgetEnabled of [1, "true", null]) assert.throws(() => normalizeFleet({ powerBudgetEnabled }), /invalid_config/);
 });
+test("到达目标价: a reach rule is a valid alert, with no window", () => {
+  const rule = { id: "UUID-REACH", updated: 100, kind: "reach" as const, value: 0.6, window: 0, enabled: true, seen_fired: 0, repeat: true };
+  const cfg = normalizeConfig({ ...configOf(defaults()), rules: [rule] });
+  assert.equal(cfg.rules[0].kind, "reach");
+  assert.throws(() => normalizeConfig({ ...configOf(defaults()), rules: [{ ...rule, window: 3600 }] }), /invalid_config/);
+  assert.throws(() => normalizeConfig({ ...configOf(defaults()), rules: [{ ...rule, kind: "nope" as "reach" }] }), /invalid_config/);
+});

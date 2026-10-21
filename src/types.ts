@@ -14,7 +14,8 @@ export type Monitor = Item & {
 };
 export type Wallet = Item & { addr: string; label: string };
 export type Rule = Item & {
-  kind: "above" | "below" | "move";
+  /// reach = 到达目标价: the price gets to `value` from either side.
+  kind: "above" | "below" | "reach" | "move";
   value: number;
   window: number;
   enabled: boolean;

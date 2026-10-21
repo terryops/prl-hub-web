@@ -38,6 +38,8 @@
   "above": "Acima",
   "below": "Abaixo",
   "move": "Variação",
+  "reach": "Chega ao alvo",
+  "reachNote": "Você receberá uma notificação quando o preço cruzar o alvo, subindo ou caindo.",
   "copy": "Copiar",
   "close": "Fechar",
   "subtitle": "Seu Pearl, em resumo",

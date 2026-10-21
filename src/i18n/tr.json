@@ -38,6 +38,8 @@
   "above": "Üstünde",
   "below": "Altında",
   "move": "Değişim",
+  "reach": "Hedefe ulaşınca",
+  "reachNote": "Fiyat hedefi yukarı ya da aşağı geçtiğinde bildirim alırsınız.",
   "copy": "Kopyala",
   "close": "Kapat",
   "subtitle": "Pearl'ünüz bir bakışta",

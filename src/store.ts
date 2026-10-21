@@ -57,7 +57,7 @@ const walletOK = (o: Wallet) =>
 const ruleOK = (o: Rule) =>
   idOK(o) &&
   (o.deleted ||
-    (["above", "below", "move"].includes(o.kind) &&
+    (["above", "below", "reach", "move"].includes(o.kind) &&
       Number.isFinite(o.value) &&
       o.value >= (o.kind === "move" ? 0.5 : 0.01) &&
       o.value < (o.kind === "move" ? 1000.01 : 1e6) &&

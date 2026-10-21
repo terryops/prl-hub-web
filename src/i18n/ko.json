@@ -38,6 +38,8 @@
   "above": "이상",
   "below": "이하",
   "move": "변동률",
+  "reach": "목표가 도달",
+  "reachNote": "가격이 목표가를 상향 또는 하향 돌파하면 알려 드립니다.",
   "copy": "복사",
   "close": "닫기",
   "subtitle": "내 Pearl을 한눈에",

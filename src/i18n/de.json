@@ -38,6 +38,8 @@
   "above": "Über",
   "below": "Unter",
   "move": "Änderung",
+  "reach": "Zielpreis erreicht",
+  "reachNote": "Sie werden benachrichtigt, wenn der Preis das Ziel über- oder unterschreitet.",
   "copy": "Kopieren",
   "close": "Schließen",
   "subtitle": "Ihr Pearl auf einen Blick",

@@ -38,6 +38,8 @@
   "above": "以上",
   "below": "以下",
   "move": "変動率",
+  "reach": "目標価格に到達",
+  "reachNote": "価格が目標を上抜けても下抜けても通知します。",
   "copy": "コピー",
   "close": "閉じる",
   "subtitle": "あなたの Pearl をひと目で",

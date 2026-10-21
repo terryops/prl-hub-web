@@ -1173,7 +1173,7 @@ function App() {
                 </div>
                 {!activeRules.length ? <Empty symbol="alerts" text={t("noRules")} button={t("addPriceAlert")} onClick={() => gated(() => { setEditingRule(null); setPanel("rule"); })} /> : <section className="card rules-card" aria-label={t("alerts")}>{activeRules.map((r) => (
                   <div className="rule-card" key={r.id}>
-                    <Icon name={r.kind === "above" ? "up" : r.kind === "below" ? "down" : "change"} />
+                    <Icon name={r.kind === "above" ? "up" : r.kind === "below" ? "down" : r.kind === "reach" ? "reach" : "change"} />
                     <div className="rule-label"><button className="text-button" onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><strong>{t(r.kind)} {r.kind === "move" ? `${r.value}% · ${r.window === 300 ? "5m" : r.window === 3600 ? "1h" : "24h"}` : <Money amount={money(r.value)} />}</strong></button>
                       {deliveries[r.id]?.deferred && deliveries[r.id].kind === r.kind && deliveries[r.id].value === r.value && deliveries[r.id].window === r.window && <small className="status warn">{t("deferredAlert").replace("%@", state.window ? `${String(Math.floor(state.window.start / 60)).padStart(2, "0")}:${String(state.window.start % 60).padStart(2, "0")} · ${state.window.tz}` : t("start"))}</small>}
                       <small><span>{t(r.repeat ? "repeatingAlert" : "oneShotAlert")}</span>{r.seen_fired > 0 && <span title={new Date(r.seen_fired * 1000).toLocaleString(state.lang)}>{t("lastAlert").replace("%@", relativeTime(r.seen_fired, state.lang))}</span>}</small>
@@ -1662,7 +1662,7 @@ function RuleForm({
           value={kind}
           onChange={(e) => setKind(e.target.value as Rule["kind"])}
         >
-          {(["above", "below", "move"] as const).map((k) => (
+          {(["above", "below", "reach", "move"] as const).map((k) => (
             <option key={k} value={k}>
               {t(k)}
             </option>
@@ -1681,6 +1681,7 @@ function RuleForm({
           required
         />
       </label>
+      {kind === "reach" && <p className="muted">{t("reachNote")}</p>}
       {kind === "move" && (
         <label className="form-field">
           {t("move")}

@@ -1,6 +1,6 @@
 # Web interface icons
 
-All 49 functional icon names use the original selected SVG drawings from
+All 50 functional icon names use the original selected SVG drawings from
 [Ionicons 8.1.0](https://www.npmjs.com/package/ionicons/v/8.1.0),
 [upstream repository](https://github.com/ionic-team/ionicons). The outlined family
 provides a consistent iOS-style appearance for the cross-platform website.
@@ -56,6 +56,7 @@ and `options` (`options-outline.svg`). The extension ships the license as
 | `close` | `close-outline.svg` |
 | `warning` | `warning-outline.svg` |
 | `change` | `swap-vertical-outline.svg` |
+| `reach` | `chevron-expand-outline.svg` |
 | `right` | `arrow-forward-outline.svg` |
 | `lock` | `lock-closed-outline.svg` |
 | `account` | `person-circle-outline.svg` |
