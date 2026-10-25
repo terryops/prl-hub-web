@@ -60,8 +60,10 @@ test("A6: thirty/ninety day projections match independent daily summation and na
     let expected = 0; for (let day = 0; day < days; day++) expected += 5 * (1 + growth / 100) ** (-day / 30) - 2;
     close(projection(5, 2, growth, days), expected);
   }
-  const c = ctx(), n = { difficulty: 2, difficulty7d: 1 } as Network;
+  const c = ctx(), n = { difficulty: 2, difficulty7d: 1.5 } as Network;
   assert.equal(effectiveGrowth(c.settings, c.input, n), 200);
+  // difficulty7d is the 7-day mean: 41.58M against 45.92M now starts near 37.24M, so +23.3% a week, ×30/7.
+  close(effectiveGrowth(c.settings, c.input, { difficulty: 45.92e6, difficulty7d: 41.58e6 } as Network), (45.92 / 37.24 - 1) * 30 / 7 * 100);
   c.settings.growthMode = "manual"; c.input.growth = -20;
   assert.equal(effectiveGrowth(c.settings, c.input, n), -20);
 });

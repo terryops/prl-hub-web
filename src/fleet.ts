@@ -1,6 +1,7 @@
 import type { Device, FleetSettings, CalculatorInput, Network, Monitor, Stats, RentSetting } from "./types.ts";
 import { fresh } from "./store.ts";
 import { hashrate24h, enabledMonitors } from "./monitors.ts";
+import { difficultyAgo } from "./market.ts";
 
 export type GPU = { name: string; th: number; watts: number; price: number; rentDefault: number };
 export const fleetDefaults = (): FleetSettings => ({ powerBudgetW: 3000, powerBudgetEnabled: false, syncWPerTH: 1.8, selfDilution: false, fxManual: false, manualFX: 7.2, rentEnabled: true, growthMode: "auto", rents: {} });
@@ -30,8 +31,11 @@ export function projection(revenue: number | null, cost: number, growth: number,
   const r = growth / 100 <= -.99 ? 1 : (1 + growth / 100) ** (-1 / 30);
   return revenue * (Math.abs(r - 1) < 1e-12 ? days : (1 - r ** days) / (1 - r)) - cost * days;
 }
+/// Auto growth: the last 7 days' difficulty change, as a monthly rate. difficulty7d is the window's mean,
+/// so it goes through difficultyAgo to the difficulty 7 days back (see market.ts).
 export function effectiveGrowth(settings: FleetSettings, c: CalculatorInput, n?: Network | null) {
-  return settings.growthMode === "auto" && c.price == null && c.yield == null && c.networkHash == null && n?.difficulty && n.difficulty7d ? Math.min(200, Math.max(-20, (n.difficulty / n.difficulty7d - 1) * 30 / 7 * 100)) : c.growth;
+  const ago = settings.growthMode === "auto" && c.price == null && c.yield == null && c.networkHash == null ? difficultyAgo(n, "7d") : null;
+  return ago && n?.difficulty ? Math.min(200, Math.max(-20, (n.difficulty / ago - 1) * 30 / 7 * 100)) : c.growth;
 }
 export type EconomicsContext = { input: CalculatorInput; settings: FleetSettings; price: number | null; unit: number | null; networkHash: number | null; code: string; rate: number; rates: Record<string, number> };
 export const rentalRate = (r: RentSetting, ctx: EconomicsContext) => r.currency === "USD" ? 1 : r.currency === ctx.code ? ctx.rate : ctx.rates[r.currency] || r.fx || ctx.rate;

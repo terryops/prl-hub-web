@@ -5,7 +5,7 @@ import { duplicateMonitor, enabledMonitors, alertMonitors, cleanAddress, moveIds
 import type { Stats } from "../src/types.ts";
 import { applyingEdit, reconcileRule, relativeTime } from "../src/alertRules.ts";
 import { currencies, dual, secondaryCode } from "../src/currency.ts";
-import { diffChange, difficultyPoints, poolShares } from "../src/market.ts";
+import { diffChange, difficultyAgo, difficultyPoints, poolShares, type NetworkPoint } from "../src/market.ts";
 import type { PoolOverview } from "../src/types.ts";
 const addr = "prl1" + "a".repeat(38);
 const monitor = (id: string) => ({ id, updated: 1, addr, pool: "AlphaPool", label: id, alert: true, after: 600 });
@@ -126,8 +126,9 @@ test("A4: all seventeen currencies retain native symbols/decimals; palette stays
 });
 test("A5: difficulty/output change directions and native donut thresholds", () => {
   assert.equal(diffChange(20, 10), 100); assert.equal(diffChange(20, 10, true), -50);
-  const n = { ts: 1000000, difficulty: 20, difficulty7d: 10, difficulty3d: null, difficulty24h: 15, prlPerTHDay: .02 } as Network;
-  assert.equal(difficultyPoints(n, true)[0][1], 40);
+  // Means only: each window's start is 2 × mean − now (7d: 2×15−20 = 10); 3d has none.
+  const n = { ts: 1000000, difficulty: 20, difficulty7d: 15, difficulty3d: null, difficulty24h: 18, prlPerTHDay: .02 } as Network;
+  assert.deepEqual(difficultyPoints(n, true), [[1000000 - 7 * 86400, 40], [1000000 - 86400, 25], [1000000, 20]]);
   const rows = [80, .5, .5].map((hashrate, i) => ({ id: String(i), name: String(i), hashrate })) as PoolOverview[];
   const { total, slices } = poolShares(rows, 100);
   assert.equal(total, 100); assert.deepEqual(slices.map((s) => s.id), ["0", "_tail", "_other"]);
@@ -160,4 +161,23 @@ test("complete fleet preferences survive account config serialization, merge and
   assert.equal(normalizeConfig(old).fleetSettings?.sortKey, undefined);
   assert.throws(() => normalizeConfig({ ...config, fleetSettings: { ...state.fleetSettings, sortKey: "invalid" as never } }), /invalid_config/);
   assert.throws(() => normalizeConfig({ ...config, fleetSettings: { ...state.fleetSettings, selectedGPU: "x".repeat(65) } }), /invalid_config/);
+});
+
+test("A5: difficulty change is against the difficulty that long ago, not the window mean", () => {
+  const day = 86400, now = 10 * day;
+  // Climbing 1 per day from 10 (7 days back) to 17 now: the 7-day mean is 13.5, the 24h mean 16.5.
+  const points: NetworkPoint[] = Array.from({ length: 8 }, (_, i) => ({ height: i, ts: now - (7 - i) * day, difficulty: 10 + i, hashrate: null, blockTime: null }));
+  const n = { ts: now, difficulty: 17, difficulty7d: 13.5, difficulty3d: 15.5, difficulty24h: 16.5, prlPerTHDay: .02 } as Network;
+  assert.equal(difficultyAgo(n, "7d", points), 10);
+  assert.equal(difficultyAgo(n, "24h", points), 16);
+  assert.equal(Math.round(diffChange(n.difficulty, difficultyAgo(n, "7d", points))! * 1e6) / 1e6, 70);
+  // Without history the steady-trend start matches on a straight line: 2 × 13.5 − 17 = 10.
+  assert.equal(difficultyAgo(n, "7d"), 10); assert.equal(difficultyAgo(n, "3d"), 14);
+  // A sample further than a twentieth of the window from the target is not used.
+  assert.equal(difficultyAgo(n, "7d", points.slice(1)), 10);
+  assert.equal(difficultyAgo(n, "7d", [{ ...points[0], difficulty: 9 }]), 9);
+  assert.equal(difficultyAgo({ ...n, difficulty7d: 8 }, "7d"), null);
+  // The chart draws the history's samples, then the overview's current value.
+  const chart = difficultyPoints(n, false, points);
+  assert.equal(chart.length, 8); assert.deepEqual(chart[0], [now - 7 * day, 10]); assert.deepEqual(chart.at(-1), [now, 17]);
 });
