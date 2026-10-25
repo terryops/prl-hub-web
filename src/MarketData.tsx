@@ -10,7 +10,7 @@ import { HashChart } from "./HashChart.tsx";
 import { HASH_SPANS, ROLLING_BLOCKS, changeSince, historySeries, type HashSpan } from "./hashview.ts";
 import { KLINE_PERIODS, klinePeriodLabel, type KlinePeriod } from "./kline.ts";
 import { change, hashrate, difficulty, unitYield, prlNumber } from "./format.ts";
-import { difficultyPoints, diffChange, poolShares, type NetworkHistory } from "./market.ts";
+import { difficultyAgo, difficultyPoints, diffChange, poolShares, type DiffWindow, type NetworkHistory } from "./market.ts";
 
 export function LineChart({ points, second, label, lang, format = (v) => v.toLocaleString(lang, { maximumFractionDigits: 2 }), secondFormat = format, axisFormat = format, empty, mini = false, loading = false, timeDomain, help, alignAxes = false }: {
   points: number[][]; second?: number[][]; label: string; lang: Lang; format?: (v: number) => string; secondFormat?: (v: number) => string; axisFormat?: (v: number) => string; empty: string; mini?: boolean; loading?: boolean; timeDomain?: [number, number]; help?: string; alignAxes?: boolean;
@@ -88,15 +88,17 @@ export function MarketData({ price, overview, history, failed, t, lang, money, r
   // Until the history arrives the card waits; if it cannot be read, the overview's figure stands in.
   const hashReady = settled("7d"), latest = series["7d"].at(-1)?.[1], blocks = (r: HashSpan) => network[r]?.data?.window ?? ROLLING_BLOCKS;
   const hashDelta = (days: number) => changeSince(series["7d"], days * 86400);
+  // Difficulty and output change against the difficulty that long ago (the history's 7d samples), not the window mean.
+  const diffPoints = network["7d"]?.data?.points, diffDelta = (w: DiffWindow, inverse = false) => diffChange(n?.difficulty, difficultyAgo(n, w, diffPoints), inverse);
   const cards = [
     ["price", t("prlPrice"), price ? <Money amount={money(price.usd)} block /> : "—", price?.change24h],
     ["hash", t("network"), latest != null ? hashrate(latest, lang) : n?.hashrate ? hashrate(n.hashrate, lang) : "—", hashDelta(7)],
-    ["unit", t("unitDaily"), n?.prlPerTHDay ? unitYield(n.prlPerTHDay, lang, t("perDay")) : "—", diffChange(n?.difficulty, n?.difficulty7d, true)],
-    ["diff", t("difficulty"), n?.difficulty ? difficulty(n.difficulty, lang) : "—", diffChange(n?.difficulty, n?.difficulty7d)],
+    ["unit", t("unitDaily"), n?.prlPerTHDay ? unitYield(n.prlPerTHDay, lang, t("perDay")) : "—", diffDelta("7d", true)],
+    ["diff", t("difficulty"), n?.difficulty ? difficulty(n.difficulty, lang) : "—", diffDelta("7d")],
   ] as const;
   const priceData = priceSpan === "24h" ? (history?.source === price?.source ? history?.points || [] : []) : prices[priceSpan]?.data?.points || [];
   const priceUpdated = priceSpan === "24h" ? price?.ts : prices[priceSpan]?.data?.ts;
-  const trendPoints = metric === "price" ? priceData : difficultyPoints(n || undefined, metric === "unit");
+  const trendPoints = metric === "price" ? priceData : difficultyPoints(n || undefined, metric === "unit", diffPoints);
   const priceLoading = priceSpan === "24h" ? !history && !failed : !prices[priceSpan]?.data && !prices[priceSpan]?.failed;
   const ranges = metric === "price" ? ["24h", "7d", "30d", "90d"] : [];
   return <>
@@ -104,7 +106,7 @@ export function MarketData({ price, overview, history, failed, t, lang, money, r
       {/* The app's green dot beside 行情: the price is refreshing on its own (auto-refresh on, data current). */}
       <small>{title}{id === "price" && live && price && !price.stale && !failed && <span className="live-dot" aria-hidden="true" />}</small>{(id === "price" ? !price && !failed : id === "hash" ? !hashReady : !overview && !failed) ? <Skeleton label={t("loading")} kind="balance" /> : <strong title={id === "unit" && n?.prlPerTHDay != null ? prlNumber(n.prlPerTHDay * 1000, lang, 8, 8) + ` PRL/PH·${t("perDay")}` : id === "hash" && latest != null ? t("hashRollingEstimate").replace("%@", blocks("7d").toLocaleString(lang)) : undefined}>{value}</strong>}
       <small className={delta == null ? "" : delta >= 0 ? "positive" : "negative"}>{id === "price" ? "24h" : "7d"} · {change(delta)}</small>
-      <div className="metric-secondary">{id !== "price" ? <><small>24h {change(id === "hash" ? hashDelta(1) : diffChange(n?.difficulty, n?.difficulty24h, id === "unit"))}</small><small>3d {change(id === "hash" ? hashDelta(3) : diffChange(n?.difficulty, n?.difficulty3d, id === "unit"))}</small></> : <><small>5m {change(price?.change5m)}</small><small>1h {change(price?.change1h)}</small></>}</div>
+      <div className="metric-secondary">{id !== "price" ? <><small>24h {change(id === "hash" ? hashDelta(1) : diffDelta("24h", id === "unit"))}</small><small>3d {change(id === "hash" ? hashDelta(3) : diffDelta("3d", id === "unit"))}</small></> : <><small>5m {change(price?.change5m)}</small><small>1h {change(price?.change1h)}</small></>}</div>
     </button>)}</section>
     {(failed || price?.stale || overview?.stale) && <p className="status warn">{t("stale")}</p>}
     <section className="card market-chart"><div className="card-heading">{metric === "price" ? <h2 className="chart-views" aria-label={t("prlPrice")}>{(["kline", "line"] as const).map((v) => <button key={v} className={priceView === v ? "selected" : ""} aria-pressed={priceView === v} onClick={() => setPriceView(v)}>{t(v === "kline" ? "kline" : "priceView")}</button>)}</h2> : <h2>{cards.find((c) => c[0] === metric)![1]}</h2>}
