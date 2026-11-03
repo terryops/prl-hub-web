@@ -563,5 +563,9 @@
   "fleetGrowthManual": "Solo indicativo; la crescita mensile si imposta a mano in Parametri",
   "fleetSummaryLine": "%@ dispositivi · %@ schede in totale (di proprietà %@ · a noleggio %@) · Hashrate totale %@",
   "retry": "Riprova",
-  "poolsUnavailable": "Al momento non è possibile caricare i dati del pool"
+  "poolsUnavailable": "Al momento non è possibile caricare i dati del pool",
+  "chainLoadFailed": "Impossibile caricare i dati on-chain",
+  "liveDifficulty": "Difficoltà live: ora %@M · 7g %@ · 3g %@ · 24h %@",
+  "notSet": "Non impostato",
+  "noSecondaryNote": "Nessuna valuta secondaria: gli importi dei pool sono in USD. Scegli una valuta secondaria in Impostazioni → Valuta per convertirli qui."
 }

@@ -201,7 +201,7 @@
   "poolAPI": "풀 API",
   "poolSupplement": "추가 소스",
   "poolOwnApiMissing": "이 풀 자체 API가 현재 응답하지 않아 다른 출처의 수치를 표시합니다.",
-  "poolMergeBonus": "{coin} 추가 지급 약\u00a0{range}",
+  "poolMergeBonus": "{coin} 추가 지급 약 {range}",
   "poolMergeBonusHelp": "{pool}은(는) 같은 해시레이트로 {coin}도 지급하며, PRL 수익의 약 {range}에 해당합니다. 풀 계정에 {coin} 지급 주소를 등록해야 지급됩니다. 예상 수익과 실질 비용에는 포함되지 않습니다.",
   "poolMinerCostHelp": "{pool}이(가) 받는 해시레이트는 {app}에 표시되는 값보다 약 {gap} 적습니다. {app} 표시값 기준 실질 비용은 약 {cost}, {pool} 자체 마이너로는 약 {base}입니다.",
   "poolMissing": "—는 0이 아니라 데이터 없음을 뜻합니다.",
@@ -563,5 +563,9 @@
   "fleetGrowthManual": "참고용입니다. 월 증가율은 ‘파라미터’에서 수동으로 설정할 수 있습니다",
   "fleetSummaryLine": "기기 %@대 · 카드 총 %@장(보유 %@ · 임대 %@) · 총 해시레이트 %@",
   "retry": "다시 시도",
-  "poolsUnavailable": "지금은 풀 데이터를 불러올 수 없습니다"
+  "poolsUnavailable": "지금은 풀 데이터를 불러올 수 없습니다",
+  "chainLoadFailed": "체인 데이터를 불러오지 못했습니다",
+  "liveDifficulty": "실시간 난이도: 현재 %@M · 7일 %@ · 3일 %@ · 24시간 %@",
+  "notSet": "미설정",
+  "noSecondaryNote": "보조 통화 미선택: 풀 금액이 USD로 표시됩니다. ‘설정 → 통화’에서 보조 통화를 선택하면 여기에서 환산됩니다."
 }

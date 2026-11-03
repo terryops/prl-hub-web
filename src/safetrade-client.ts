@@ -4,13 +4,13 @@
 // The iOS counterpart is prl-hub Sources/Trade/SafeTradeClient.swift.
 import { BridgeError, nativeCall } from "./android-bridge.ts";
 import {
-  MARKET, TradeError, parseBalances, parseBeneficiaries, parseCurrency, parseDepositAddressReply, parseDeposits, parseDepth, parseJSON,
+  MARKET, TradeError, orderJSON, parseBalances, parseBeneficiaries, parseCurrency, parseDepositAddressReply, parseDeposits, parseDepth, parseJSON,
   parseKline, parseOrder, parseRules, parseTicker, parseWithdraws, rows, traceIP, authProblem, unknownKey, UNKNOWN_KEY, type AuthProblem, type Balance,
 } from "./safetrade.ts";
 
 type Auth = "none" | "stored" | { key: string; secret: string };
 type Request = {
-  method?: "GET" | "POST"; query?: Record<string, string>; form?: Record<string, string>; json?: string; auth?: Auth;
+  method?: "GET" | "POST"; query?: Record<string, string>; json?: string; auth?: Auth;
   // The withdrawal: the shell asks for the device check (fingerprint, face or screen lock) first.
   confirm?: { title: string; subtitle?: string };
 };
@@ -21,7 +21,6 @@ async function send(path: string, r: Request = {}): Promise<string> {
   const params: Record<string, unknown> = { method, path, auth: typeof auth === "string" ? auth : "explicit" };
   if (typeof auth === "object") { params.key = auth.key; params.secret = auth.secret; }
   if (r.query) params.query = r.query;
-  if (r.form) params.form = r.form;
   if (r.json) params.json = r.json;
   if (r.confirm) { params.title = r.confirm.title; if (r.confirm.subtitle) params.subtitle = r.confirm.subtitle; }
   let reply: { status: number; body: string };
@@ -163,11 +162,10 @@ export async function beneficiaries() {
 
 // MARK: actions
 
-export async function placeOrder(side: string, amount: string, price: string | null, type: "limit" | "market") {
-  const form: Record<string, string> = { market: MARKET, side, amount, type };
-  if (type === "limit" && price) form.price = price;
+/** `maxPrice` is a market order's price cap (see marketPriceCap). */
+export async function placeOrder(side: string, amount: string, price: string | null, type: "limit" | "market", maxPrice: string | null = null) {
   let body: string;
-  try { body = await send("/api/v2/trade/market/orders", { method: "POST", form, auth: "stored" }); }
+  try { body = await send("/api/v2/trade/market/orders", { method: "POST", json: orderJSON(side, amount, price, type, maxPrice), auth: "stored" }); }
   catch (e) { if (ambiguous(e)) throw new TradeError({ kind: "placedUnverified" }); throw e; }
   // Accepted (2xx). An unreadable reply means we can't tell what was booked: reconcile, never re-order.
   const o = json(body);

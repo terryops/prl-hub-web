@@ -92,14 +92,21 @@ export function installAndroid() {
   void import("./android.css");
 }
 
-// The wallet frame fills the space above the bottom tab bar.
+// The wallet frame fills the space above the bottom tab bar (--android-nav, the bar's height). The bar
+// floats a little above the screen's edge, so --android-nav-clear (screen bottom to the bar's top edge) is
+// what an overlay that must leave the bar tappable stops at.
 export function trackTabBar(nav: Element | null) {
   if (!nav) return () => {};
-  const measure = () => document.documentElement.style.setProperty("--android-nav", `${Math.ceil(nav.getBoundingClientRect().height)}px`);
+  const measure = () => {
+    const r = nav.getBoundingClientRect(), root = document.documentElement.style;
+    root.setProperty("--android-nav", `${Math.ceil(r.height)}px`);
+    root.setProperty("--android-nav-clear", r.height ? `${Math.ceil(window.innerHeight - r.top)}px` : "0px");
+  };
   const observer = new ResizeObserver(measure);
   observer.observe(nav);
+  window.addEventListener("resize", measure);
   measure();
-  return () => observer.disconnect();
+  return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
 }
 
 // System bars take the page's own background colour.

@@ -563,5 +563,9 @@
   "fleetGrowthManual": "Solo como referencia; el aumento mensual se puede fijar manualmente en Parámetros",
   "fleetSummaryLine": "%@ equipos · %@ tarjetas en total (propias %@ · alquiladas %@) · Hashrate total %@",
   "retry": "Reintentar",
-  "poolsUnavailable": "No se pueden cargar los datos del pool ahora"
+  "poolsUnavailable": "No se pueden cargar los datos del pool ahora",
+  "chainLoadFailed": "No se pudieron cargar los datos de la cadena",
+  "liveDifficulty": "Dificultad en vivo: ahora %@M · 7d %@ · 3d %@ · 24h %@",
+  "notSet": "Sin configurar",
+  "noSecondaryNote": "Sin moneda secundaria: los importes del pool se muestran en USD. Elige una moneda secundaria en Ajustes → Moneda para convertirlos aquí."
 }

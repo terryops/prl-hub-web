@@ -83,9 +83,10 @@ export function AlertDialog({ title, message, buttons, onClose }: { title: strin
   </dialog>;
 }
 
-/** Dims the page under a centred "处理中…" while an order or a withdrawal is in flight. */
-export function Processing({ shown, tr }: { shown: boolean; tr: Tr }) {
-  return shown ? <div className="trade-processing" role="status"><div><Spinner /><span>{tr("处理中…")}</span></div></div> : null;
+/** Dims the page under a centred "处理中…" while an order or a withdrawal is in flight. `tabs` leaves the
+ *  tab bar uncovered, as iOS's overlay on TradeView does, so a slow first read can't hold the user on Trade. */
+export function Processing({ shown, tr, tabs = false }: { shown: boolean; tr: Tr; tabs?: boolean }) {
+  return shown ? <div className={tabs ? "trade-processing trade-processing-tabs" : "trade-processing"} role="status"><div><Spinner /><span>{tr("处理中…")}</span></div></div> : null;
 }
 
 /** A second-level page of the tab: back to where it came from, then its title. */

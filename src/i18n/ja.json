@@ -563,5 +563,9 @@
   "fleetGrowthManual": "参考値です。月間上昇率は「パラメーター」で手動設定できます",
   "fleetSummaryLine": "デバイス %@台 · GPU 計%@枚（所有 %@ · レンタル %@）· 合計ハッシュレート %@",
   "retry": "再試行",
-  "poolsUnavailable": "現在プールデータを取得できません"
+  "poolsUnavailable": "現在プールデータを取得できません",
+  "chainLoadFailed": "チェーンデータの読み込みに失敗しました",
+  "liveDifficulty": "ライブ難易度：現在 %@M · 7日 %@ · 3日 %@ · 24h %@",
+  "notSet": "未設定",
+  "noSecondaryNote": "サブ通貨が未選択のため、プールの金額は米ドル（USD）で表示されます。「設定 → 通貨」でサブ通貨を選ぶと、ここで換算されます。"
 }

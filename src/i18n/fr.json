@@ -201,7 +201,7 @@
   "poolAPI": "API du pool",
   "poolSupplement": "Source supplémentaire",
   "poolOwnApiMissing": "L'API propre à ce pool ne répond pas pour le moment ; ses chiffres proviennent d'autres sources.",
-  "poolMergeBonus": "En plus\u00a0: {coin} ≈{range}",
+  "poolMergeBonus": "En plus : {coin} ≈{range}",
   "poolMergeBonusHelp": "{pool} verse aussi des {coin} pour le même hashrate, soit environ {range} des revenus en PRL. Ils ne sont versés qu'une fois une adresse de paiement {coin} ajoutée à votre compte du pool. Non inclus dans le Rendement estimé ni dans le Coût réel.",
   "poolMinerCostHelp": "{pool} reçoit environ {gap} de hashrate de moins que ce qu’affiche {app}. Rapporté à l’affichage de {app}, le coût réel est d’environ {cost} ; avec le mineur de {pool}, d’environ {base}.",
   "poolMissing": "— signifie indisponible, pas zéro.",
@@ -563,5 +563,9 @@
   "fleetGrowthManual": "À titre indicatif ; la hausse mensuelle se règle à la main dans Paramètres",
   "fleetSummaryLine": "%@ appareil(s) · %@ GPU au total (possédés %@ · loués %@) · Hashrate total %@",
   "retry": "Réessayer",
-  "poolsUnavailable": "Impossible de charger les données du pool pour l'instant"
+  "poolsUnavailable": "Impossible de charger les données du pool pour l'instant",
+  "chainLoadFailed": "Échec du chargement des données de la chaîne",
+  "liveDifficulty": "Difficulté en direct : actuelle %@M · 7j %@ · 3j %@ · 24h %@",
+  "notSet": "Non défini",
+  "noSecondaryNote": "Aucune devise secondaire : les montants des pools s'affichent en USD. Choisissez une devise secondaire dans Réglages → Devise pour les convertir ici."
 }

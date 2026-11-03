@@ -12,6 +12,7 @@ import type { Lang } from "./types.ts";
 import {
   BASE, BASE_TICKER, PAIR, affordableAmount, averagePrice, balanceValue, displayPrice, fixed, floorTo, isOpen, lockedValue, parseAmount,
   ruleMessage, ruleProblem, typed, type Order, type Tr,
+  clampSlippage, decNumber, parseSlippage, slippageNumber, worstPrice, SLIPPAGE_DEFAULT, SLIPPAGE_MAX, SLIPPAGE_MIN, SLIPPAGE_PRESETS,
 } from "./safetrade.ts";
 import { PERIODS, tradeStore, upsellAfterLimitOrder, upsellAfterRefresh, useTradeStore, type TradeStore } from "./trade-store.ts";
 import { tradeText } from "./trade-i18n.ts";
@@ -20,7 +21,7 @@ import { DepthSection } from "./TradeDepthChart.tsx";
 import { KeyGuide, KeySettings } from "./TradeKeys.tsx";
 import { DepositPage, WithdrawPage } from "./TradeFunds.tsx";
 import { setTradeBack } from "./trade-nav.ts";
-import { AlertDialog, CoinBadge, Processing, Spinner, StatusLines, SubPage, UnverifiedBanner, UntrustedIPCard, popBackLayer, type DialogButton } from "./TradeUI.tsx";
+import { AlertDialog, CoinBadge, InfoTip, Processing, Spinner, StatusLines, SubPage, UnverifiedBanner, UntrustedIPCard, popBackLayer, type DialogButton } from "./TradeUI.tsx";
 
 export type TradeHost = {
   lang: Lang; t: (key: TextKey) => string; pro: boolean;
@@ -72,7 +73,7 @@ export default function TradeTab(host: TradeHost) {
   useEffect(() => {
     if (!host.visible || !onMain) return;
     void store.refreshIfStale();
-    const timer = setInterval(() => { if (!document.hidden) void store.refreshTickerOnly(); }, 5000);
+    const timer = setInterval(() => { if (!document.hidden) void store.refreshTickerOnly().then(() => store.refreshAccountIfOrdersOpen()); }, 5000);
     const back = () => { if (!document.hidden) void store.refreshIfStale(); };
     document.addEventListener("visibilitychange", back);
     const off = onNative("resume", back);
@@ -178,7 +179,7 @@ export default function TradeTab(host: TradeHost) {
       <div className="trade-side-col">{orderSection}{status}{ordersCard}</div>
     </div>
     {fullScreen && <FullScreenChart store={store} tr={tr} host={host} zoom={zoom} setZoom={setZoom} onClose={() => setFullScreen(false)} />}
-    <Processing shown={s.placing || (s.refreshing && !s.balances.length && !s.ticker)} tr={tr} />
+    <Processing shown={s.placing || (s.refreshing && !s.balances.length && !s.ticker)} tr={tr} tabs />
     {alert && <AlertDialog title={alert.title} message={alert.message} buttons={alert.buttons} onClose={() => setAlert(null)} />}
   </div>;
 }
@@ -239,18 +240,35 @@ function FullScreenChart({ store, tr, host, zoom, setZoom, onClose }: { store: T
   </div>;
 }
 
+/** 最大滑点 for market orders (TradeSlippage in SafeTradeRules.swift), kept on this device. */
+const SLIPPAGE_KEY = "pearlhub.safetrade.slippage";
+function savedSlippage() {
+  try { const v = localStorage.getItem(SLIPPAGE_KEY); return v == null ? SLIPPAGE_DEFAULT : clampSlippage(Number(v)); } catch { return SLIPPAGE_DEFAULT; }
+}
+
 /** 下单. Owns the typed fields, so a keystroke re-renders only this card. */
 function OrderForm({ store, tr, onAsk, pro, onPro }: { store: TradeStore; tr: Tr; onAsk: (a: Alert) => void; pro: boolean; onPro: () => void }) {
   const s = useTradeStore(store);
   const [side, setSide] = useState<"buy" | "sell">("sell");
   const [type, setType] = useState<"limit" | "market">("limit");
   const [price, setPrice] = useState(""), [volume, setVolume] = useState("");
+  const [slippage, setSlippageState] = useState(savedSlippage);
+  /** Non-null while a custom slippage is being typed. */
+  const [customSlippage, setCustomSlippage] = useState<string | null>(null);
+  const setSlippage = (p: number) => { setSlippageState(p); try { localStorage.setItem(SLIPPAGE_KEY, String(p)); } catch { /* This run only. */ } };
+  const commitSlippage = () => { const p = parseSlippage(customSlippage ?? ""); if (p != null) setSlippage(p); setCustomSlippage(null); };
   useEffect(() => { store.setWantsDepth(type === "market"); }, [type]);
   useEffect(() => () => store.setWantsDepth(false), []);
   const usdt = store.balance("usdt"), pearl = store.balance(BASE), rules = s.rules;
   const volNum = typed(volume), priceNum = typed(price), total = priceNum * volNum, tick = 10 ** -rules.pricePrecision;
   const marketAvg = s.depth ? averagePrice(volNum, side === "buy" ? s.depth.asks : s.depth.bids) : null;
   const marketEstimate = (marketAvg ?? 0) * volNum;
+  // The market order's price cap: the last price ± the chosen slippage (a floor for a sell).
+  const cap = type === "market" ? store.marketCap(side, slippage) : null, capText = cap != null ? decNumber(cap).toFixed(rules.pricePrecision) : null;
+  const worst = s.depth ? worstPrice(volNum, side === "buy" ? s.depth.asks : s.depth.bids) : null;
+  /** The book would fill this amount past the cap, so the exchange would refuse the order. */
+  const capExceeded = cap != null && worst != null && (side === "buy" ? worst > decNumber(cap) + 1e-9 : worst < decNumber(cap) - 1e-9);
+  const slippageOptions = SLIPPAGE_PRESETS.includes(slippage) ? SLIPPAGE_PRESETS : [...SLIPPAGE_PRESETS, slippage].sort((a, b) => a - b);
   const maxAmount = (() => {
     if (side === "sell") return balanceValue(pearl);
     const quote = balanceValue(usdt);
@@ -263,17 +281,21 @@ function OrderForm({ store, tr, onAsk, pro, onPro }: { store: TradeStore; tr: Tr
   const insufficient = side === "sell" ? volNum > balanceValue(pearl) : (type === "limit" ? total : marketEstimate) > balanceValue(usdt);
   const parsed = parseAmount(volume) != null && (type === "market" || parseAmount(price) != null);
   const canOrder = s.hasKeys === true && !s.placing && !s.unverifiedOrder && parsed && volNum > 0 && (type === "market" || priceNum > 0)
-    && !problem && !insufficient && (type === "limit" || marketAvg != null);
+    && !problem && !insufficient && (type === "limit" || (marketAvg != null && cap != null && !capExceeded));
   const amt = (x: number) => x.toFixed(4);
   const confirmMessage = (side === "buy" ? tr("买入") : tr("卖出")) + tr(" {0} PEARL", volume)
-    + (type === "limit" ? tr(" @ {0} USDT（约 {1} USDT）", price, amt(total)) : tr("（市价，约 {0} USDT）", amt(marketEstimate)));
+    + (type === "limit" ? tr(" @ {0} USDT（约 {1} USDT）", price, amt(total))
+      : !capText ? tr("（市价，约 {0} USDT）", amt(marketEstimate))
+      : side === "buy" ? tr("（市价，约 {0} USDT，最高 {1} USDT）", amt(marketEstimate), capText)
+      : tr("（市价，约 {0} USDT，最低 {1} USDT）", amt(marketEstimate), capText));
   const note = volNum > 0 && (problem ? <p className="trade-note trade-down">{ruleMessage(problem, tr)}</p>
     : insufficient ? <p className="trade-note trade-down">{side === "sell" ? tr("PEARL 余额不足") : tr("USDT 余额不足")}</p>
     : type === "market" && !s.depth ? <p className="trade-note trade-warn-text">{tr("等待盘口数据后才能下市价单")}</p>
-    : type === "market" && marketAvg == null ? <p className="trade-note trade-warn-text">{tr("盘口深度不够，市价单成交不了这么多，请减少数量或改用限价单")}</p> : null);
+    : type === "market" && marketAvg == null ? <p className="trade-note trade-warn-text">{tr("盘口深度不够，市价单成交不了这么多，请减少数量或改用限价单")}</p>
+    : type === "market" && capExceeded ? <p className="trade-note trade-warn-text">{tr("成交价会超出最大滑点，请调大滑点或减少数量")}</p> : null);
   const submit = () => {
     const limitPrice = type === "limit" ? price : "";
-    void store.placeOrder(side, type, volume, type === "limit" ? price : null).then((result) => {
+    void store.placeOrder(side, type, volume, type === "limit" ? price : null, slippage).then((result) => {
       if (!result) return;
       setPrice(""); setVolume("");
       // Market orders fill at once: nothing to be told about. Nor is an order that may not exist.
@@ -302,6 +324,20 @@ function OrderForm({ store, tr, onAsk, pro, onPro }: { store: TradeStore; tr: Tr
       <input inputMode="decimal" autoComplete="off" placeholder="0.0" value={volume} onChange={(e) => setVolume(e.target.value)} aria-label={tr("数量 (PEARL)")} />
     </label>
     {(type === "limit" || marketAvg != null) && <div className="trade-row"><span>{tr("预计成交额")}</span><span>{type === "market" ? "≈ " : ""}{amt(type === "limit" ? total : marketEstimate)} USDT</span></div>}
+    {type === "market" && <div className="trade-row trade-slippage"><span className="label-tip">{tr("最大滑点")}<InfoTip label={tr("最大滑点")} text={tr("市价单按盘口逐档成交，数量越大，成交价离现价越远。最大滑点是允许偏离现价的上限：卖出不低于最低成交价，买入不高于最高成交价，超出时交易所会拒绝这笔订单。")} /></span>
+      {customSlippage == null
+        ? <select aria-label={tr("最大滑点")} value={String(slippage)}
+            onChange={(e) => e.target.value === "custom" ? setCustomSlippage(slippageNumber(slippage)) : setSlippage(Number(e.target.value))}>
+            {slippageOptions.map((p) => <option key={p} value={String(p)}>{slippageNumber(p)}%</option>)}
+            <option value="custom">{tr("自定义…")}</option>
+          </select>
+        : <span className="trade-slippage-input">
+            <input inputMode="decimal" autoComplete="off" autoFocus aria-label={tr("最大滑点")} placeholder={`${SLIPPAGE_MIN} – ${SLIPPAGE_MAX}`}
+              value={customSlippage} onChange={(e) => setCustomSlippage(e.target.value)} onBlur={commitSlippage}
+              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setCustomSlippage(null); }} />%
+          </span>}
+    </div>}
+    {capText && <div className="trade-row"><span>{side === "buy" ? tr("最高成交价") : tr("最低成交价")}</span><span>{capText} USDT</span></div>}
     {note}
     <button type="button" className={side === "buy" ? "primary wide trade-buy" : "primary wide trade-sell"} disabled={!canOrder}
       onClick={() => { (document.activeElement as HTMLElement | null)?.blur(); onAsk({

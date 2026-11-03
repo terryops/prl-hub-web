@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   affordableAmount, authProblem, averagePrice, base58Decode, cleanCredential, dec, decimalPlaces, decText, DEFAULT_RULES, depthCurve, displayPrice, eip55,
-  isCredential, lookForUnverified, parsePendingCheck, SETTLE_MS, settleLeft,
+  isCredential, isPending, isSettled, SETTLE_DELAYS, lookForUnverified, parsePendingCheck, SETTLE_MS, settleLeft,
   errorKeys, failureMessage, halfWidth, isNewOrder, isOpen, isPRLAddress, isValidChainAddress, isValidEVM, isValidSolana, isValidTron,
   keccak256, keyMessage, levelNear, memoOf, mergeOrders, parseAmount, parseBalances, parseBeneficiaries, parseCurrency, parseDeposits,
   parseDepth, parseDepositAddressReply, parseKline, parseOrder, parseRules, parseTicker, parseWithdraws, pickAddress, plainAddress,
-  rollingChange, ruleMessage, ruleProblem, sha256, signedPercent, timestamp, traceIP, unknownKey, UNKNOWN_KEY, withdrawFee, withdrawState, type Network, type Order, type Tr,
+  marketPriceCap, orderJSON, parseSlippage, slippageFraction, slippageNumber, worstPrice, rollingChange, ruleMessage, ruleProblem, sha256, signedPercent, timestamp, traceIP, unknownKey, UNKNOWN_KEY, withdrawFee, withdrawState, type Network, type Order, type Tr,
 } from "../src/safetrade.ts";
 import { segwitAddress } from "../src/rawtx.ts";
 
@@ -48,6 +48,46 @@ test("market rules: precision, minimum and range", () => {
   assert.equal(ruleProblem(r, "3", "0.550"), null);
   assert.equal(ruleProblem(r, "3", "200000")?.kind, "priceOutOfRange");
   assert.equal(ruleProblem(r, "", ""), null);
+});
+
+test("market orders carry SafeTrade's web-client cap: last ± 15%, rounded outward, inside the price range", () => {
+  const r = DEFAULT_RULES, txt = (d: bigint | null) => d == null ? null : decText(d, 18);
+  assert.equal(txt(marketPriceCap(r, "sell", dec("1.53")!)), "1.3");      // 1.3005 → down
+  assert.equal(txt(marketPriceCap(r, "buy", dec("1.53")!)), "1.76");      // 1.7595 → up
+  assert.equal(txt(marketPriceCap(r, "sell", dec("0.01")!)), "0.01");     // never below min_price
+  assert.equal(txt(marketPriceCap(r, "buy", dec("100000")!)), "100000");  // never above max_price
+  assert.equal(marketPriceCap(r, "sell", 0n), null);
+  assert.equal(txt(marketPriceCap(r, "sell", dec("1.53")!, slippageFraction(1))), "1.51");     // 1.5147 → down
+  assert.equal(txt(marketPriceCap(r, "buy", dec("1.53")!, slippageFraction(1))), "1.55");      // 1.5453 → up
+  assert.equal(txt(marketPriceCap(r, "sell", dec("1.53")!, slippageFraction(2.5))), "1.49");   // 1.49175
+  assert.notEqual(failureMessage({ kind: "http", status: 422, body: '{"errors":["market.order.market_price_exceeded"]}' }, tr), "HTTP 422");
+  assert.ok(!failureMessage({ kind: "http", status: 422, body: '{"errors":["market.order.market_price_exceeded"]}' }, tr).includes("HTTP"));
+});
+
+test("after an order the account is read again until the order is done AND the balances moved", () => {
+  const o = (state: string) => parseOrder({ id: 5, side: "sell", state });
+  const marketDone = (x: Order) => !isOpen(x), limitDone = (x: Order) => !isPending(x);
+  assert.equal(isSettled(o("done"), true, marketDone), true);
+  assert.equal(isSettled(o("done"), false, marketDone), false);     // balance lagging
+  assert.equal(isSettled(o("pending"), true, marketDone), false);
+  assert.equal(isSettled(o("wait"), true, marketDone), false);
+  assert.equal(isSettled(undefined, true, marketDone), false);      // not listed yet
+  assert.equal(isSettled(o("wait"), true, limitDone), true);        // a resting limit order has settled
+  assert.equal(isSettled(o("pending"), true, limitDone), false);
+  assert.ok(SETTLE_DELAYS.reduce((a, b) => a + b, 0) < 30);
+});
+
+test("orders go out as JSON with string values, like SafeTrade's web client (a form body loses max_price)", () => {
+  assert.deepEqual(JSON.parse(orderJSON("sell", "71.2606", "1.5", "market", "1.22")),
+    { market: "pearlusdt", side: "sell", amount: "71.2606", type: "market", max_price: "1.22" });
+  assert.deepEqual(JSON.parse(orderJSON("buy", "10", "1.43", "limit", "1.6")),
+    { market: "pearlusdt", side: "buy", amount: "10", type: "limit", price: "1.43" });
+  const fail = (key: string) => failureMessage({ kind: "http", status: 422, body: JSON.stringify({ errors: [key] }) }, tr);
+  // A field the exchange didn't get is not a price problem: the raw key stays visible.
+  assert.ok(fail("market.order.missing_max_price").includes("missing_max_price"));
+  // Not enough on the book (SafeTrade's current key) reads like the old liquidity one.
+  assert.equal(fail("market.order.market_insufficient"), fail("market.order.insufficient_market_liquidity"));
+  assert.equal(fail("market.account.insufficient_balance"), tr("SafeTrade 可用余额不足"));
 });
 
 test("ticker, balances, orders and candles decode leniently", () => {
@@ -220,4 +260,28 @@ test("pasted keys lose what copying adds; anything else is refused before the sh
   assert.equal(isCredential(""), false);
   assert.equal(isCredential("ключ"), false);
   assert.equal(isCredential("a".repeat(257)), false);
+});
+
+test("the slippage setting: one decimal, 0.1 – 50, commas and % allowed", () => {
+  assert.equal(parseSlippage("2.5"), 2.5);
+  assert.equal(parseSlippage("2,5%"), 2.5);
+  assert.equal(parseSlippage(" 3 "), 3);
+  assert.equal(parseSlippage("0"), 0.1);
+  assert.equal(parseSlippage("80"), 50);
+  assert.equal(parseSlippage("1.26"), 1.3);
+  assert.equal(parseSlippage("abc"), null);
+  assert.equal(parseSlippage(""), null);
+  assert.equal(decText(slippageFraction(15), 18), "0.15");
+  assert.equal(decText(slippageFraction(0.5), 18), "0.005");
+  assert.equal(slippageNumber(15), "15");
+  assert.equal(slippageNumber(0.5), "0.5");
+});
+
+test("worstPrice is the farthest level a market order reaches", () => {
+  const levels = [{ price: 1.48, amount: 5591.0758 }, { price: 1.49, amount: 20676.3443 }];
+  assert.equal(worstPrice(100, levels), 1.48);
+  assert.equal(worstPrice(5591.0758, levels), 1.48);
+  assert.equal(worstPrice(6000, levels), 1.49);
+  assert.equal(worstPrice(1_000_000, levels), null);
+  assert.equal(worstPrice(0, levels), null);
 });

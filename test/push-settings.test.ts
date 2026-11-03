@@ -5,6 +5,7 @@ import vm from "node:vm";
 import { createHash } from "node:crypto";
 import ts from "typescript";
 import { PushSettings, pushTargetKey } from "../src/push-settings.ts";
+import { incomeWire } from "../src/income-alert.ts";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -27,6 +28,7 @@ function appRegistration() {
   const context = vm.createContext({
     PushSettings, pushTargetKey: async () => "registered", stateRef, pushGeneration, accountGeneration, pushSettings: { current: null }, pushQueue: { current: Promise.resolve() },
     ANDROID: true, notificationStatus: async () => "granted", pushTimeout: <T>(p: Promise<T>) => p,
+    incomeRef: { current: null as { addr: string; label: string; on: boolean } | null }, incomeWire,
     pushToken: () => token.promise, setPermission() {}, buyerId: (s: { accountId: string; purchaseId: string }) => s.accountId || s.purchaseId,
     api: async (path: string, method: string, body: unknown) => { if (method === "PUT") puts.push(body); else if (method === "DELETE") deletes.push(path); return { token: "registered", rules: [] }; },
     setPushState: (s: string) => statuses.push(s), update: (fn: (s: typeof stateRef.current) => typeof stateRef.current) => { stateRef.current = fn(stateRef.current); },
@@ -49,7 +51,7 @@ function appRegistration() {
     return running;
   };
   const enable = () => { (context.enablePush as () => void)(); return running; };
-  return { token, stateRef, pushGeneration, accountGeneration, puts, statuses, deletes, send, withdraw, enable, transportDeletes: () => transportDeletes };
+  return { token, stateRef, pushGeneration, accountGeneration, puts, statuses, deletes, send, withdraw, enable, transportDeletes: () => transportDeletes, incomeRef: context.incomeRef as { current: { addr: string; label: string; on: boolean } | null } };
 }
 
 test("actual App registration cannot PUT after disabling while the FCM token is pending", async () => {
@@ -182,4 +184,19 @@ test("device keys match the Worker's FCM and Web Push hashing contract", async (
     [{ fcm: { token: "device-token" } }, "fcm:device-token"],
     [{ subscription: { endpoint: "https://push.example.test/subscription" } }, "https://push.example.test/subscription"],
   ] as const) assert.equal(await pushTargetKey(target), createHash("sha256").update(value).digest("hex"));
+});
+
+test("Android registration carries 到账提醒: the address while it is on, null to drop it (iOS registrationBody income)", async () => {
+  const f = appRegistration();
+  const addr = "prl1p8wznc8tkhlkjaq7v8ycugz93rgs8uezq6px7873934kh35nk9q2qlz0q9m";
+  f.token.resolve("device-token");
+  f.incomeRef.current = { addr, label: "Main", on: true };
+  await f.send();
+  f.incomeRef.current = { addr, label: "", on: true };
+  await f.send();
+  f.incomeRef.current = { addr, label: "Main", on: false };
+  await f.send();
+  f.incomeRef.current = null;
+  await f.send();
+  assert.deepEqual(f.puts.map((b) => (b as { income?: unknown }).income), [{ addr, label: "Main" }, { addr }, null, null]);
 });

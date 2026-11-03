@@ -563,5 +563,9 @@
   "fleetGrowthManual": "For reference only; set monthly growth manually in Parameters",
   "fleetSummaryLine": "%@ devices · %@ cards total (Owned %@ · Rented %@) · Total hashrate %@",
   "retry": "Retry",
-  "poolsUnavailable": "Can't load pool data right now"
+  "poolsUnavailable": "Can't load pool data right now",
+  "chainLoadFailed": "Failed to load chain data",
+  "liveDifficulty": "Live difficulty: now %@M · 7d %@ · 3d %@ · 24h %@",
+  "notSet": "Not set",
+  "noSecondaryNote": "No secondary currency: pool amounts show in USD. Pick a secondary currency in Settings → Currency to convert here."
 }

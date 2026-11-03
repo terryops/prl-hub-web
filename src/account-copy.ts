@@ -1,5 +1,6 @@
 import localized from "./account-locales.json" with { type: "json" };
 import type { Lang } from "./types.ts";
+import { ANDROID, androidCopy } from "./android.ts";
 const en = {
   guestCheckout: "No sign-in needed. Pro works in this browser; link an email to restore your purchase.",
   purchaseLinkedElsewhere: "This browser’s purchase is saved to another email. You can still use Pro here; sign in with that email to use it on other devices.",
@@ -40,4 +41,11 @@ const zh: AccountCopy = {
   authorize: "连接设备", authorizeNote: "将此设备连接到你的 Pearl Hub 账号？", connected: "已连接", expired: "登录已过期，请重新登录后继续同步。",
 };
 const hant: AccountCopy = { ...zh, guestCheckout: "無需登入，本瀏覽器可用；可選關聯電子郵件恢復購買。", purchaseLinkedElsewhere: "本瀏覽器的購買已關聯到另一個電子郵件。這裡仍可使用進階版；跨裝置使用請登入原電子郵件。", guestPurchaseNote: "無需登入即可購買，本瀏覽器可用。可選關聯電子郵件，跨裝置使用，並在清除網站資料後恢復購買。", guestPro: "目前瀏覽器已開通進階版", savePurchase: "可選：關聯電子郵件，儲存購買權益", security: "帳號安全", account: "帳號", email: "電子郵件", code: "6 位郵件驗證碼", send: "傳送驗證碼", resend: "重新傳送", login: "電子郵件登入", logout: "登出", intro: "使用電子郵件登入，可管理裝置及關聯購買權益，無需設定密碼。資料同步需開通 Pro；免費帳號的資料僅保存在本機。", syncRequiresPro: "資料同步是 Pro 專屬權益。免費帳號的資料僅保存在本機，不會同步到雲端或其他裝置。", privacy: "可同步公開地址、通訊錄、提醒及偏好設定。錢包助記詞、私鑰及密碼僅保存在裝置上。", human: "請完成人機驗證，隨後會自動傳送郵件驗證碼。", sent: "驗證碼已傳送，請檢查收件匣及垃圾郵件，5 分鐘內有效。", humanError: "人機驗證未完成，請檢查網路後重試。", unavailable: "電子郵件登入暫時無法使用，你仍可使用本機功能。", invalid: "驗證碼錯誤或已過期，請檢查或重新取得。", devices: "已登入裝置", current: "目前裝置", notifications: "已連接通知", rename: "重新命名", revoke: "登出此裝置", revokeConfirm: "登出此裝置並停止通知？", rights: "購買權益", noRights: "尚無關聯購買", proRights: "進階版", prl: "PRL 付款", admin: "已授予", revoked: "已撤銷", rightsNote: "App Store 或 PRL 付款均可開通進階版。在網頁與 App 中登入同一電子郵件，即可共享已驗證的購買權益。", change: "更換電子郵件", oldEmail: "驗證原電子郵件", newEmail: "驗證新電子郵件", saveEmail: "儲存新電子郵件", changed: "電子郵件已更新，其他裝置已登出。", export: "匯出設定", remove: "刪除帳號", deleteConfirm: "刪除帳號、雲端設定並登出全部裝置？付款記錄會移除電子郵件後保留，本機錢包仍保存在裝置上。", deleted: "帳號已刪除", loading: "載入中…", syncNote: "透過帳號同步設定。雲端資料加密儲存，伺服器會讀取設定來處理提醒。", import: "要將目前瀏覽器的本機設定加入此帳號嗎？取消後只使用帳號中的設定。", authorize: "連接裝置", authorizeNote: "將此裝置連接到你的 Pearl Hub 帳號？", expired: "登入已過期，請重新登入以繼續同步。" };
-export const accountCopy = (lang: Lang): AccountCopy => lang === "zh-Hans" ? zh : lang === "zh-Hant" ? hant : { ...en, ...(localized as Record<string, Partial<AccountCopy>>)[lang] };
+const webCopy = (lang: Lang): AccountCopy => lang === "zh-Hans" ? zh : lang === "zh-Hant" ? hant : { ...en, ...(localized as Record<string, Partial<AccountCopy>>)[lang] };
+// In the Android app a purchase made without signing in belongs to the phone, not to a browser.
+export const accountCopy = (lang: Lang): AccountCopy => {
+  const copy = webCopy(lang);
+  if (!ANDROID) return copy;
+  const a = androidCopy(lang);
+  return { ...copy, guestPro: a.devicePro, guestCheckout: a.deviceCheckout, purchaseLinkedElsewhere: a.deviceLinkedElsewhere, guestPurchaseNote: a.devicePurchaseNote };
+};

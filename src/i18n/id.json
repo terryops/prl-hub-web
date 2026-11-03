@@ -563,5 +563,9 @@
   "fleetGrowthManual": "Hanya referensi; pertumbuhan bulanan dapat diatur manual di Parameter",
   "fleetSummaryLine": "%@ perangkat · total %@ kartu (Milik sendiri %@ · Sewa %@) · Total hashrate %@",
   "retry": "Coba lagi",
-  "poolsUnavailable": "Tidak dapat memuat data pool saat ini"
+  "poolsUnavailable": "Tidak dapat memuat data pool saat ini",
+  "chainLoadFailed": "Gagal memuat data rantai",
+  "liveDifficulty": "Kesulitan langsung: kini %@M · 7h %@ · 3h %@ · 24j %@",
+  "notSet": "Belum disetel",
+  "noSecondaryNote": "Tanpa mata uang sekunder: jumlah penambangan ditampilkan dalam USD. Pilih mata uang sekunder di Pengaturan → Mata Uang untuk mengonversinya di sini."
 }

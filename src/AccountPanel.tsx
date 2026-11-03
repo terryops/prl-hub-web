@@ -89,15 +89,18 @@ export const connectingDevice = !!connection;
 let deleteRequested = new URLSearchParams(location.search).get("account") === "delete";
 type Device = { id: string; name: string; platform: string; seen_at: number; current: boolean; notifications: boolean };
 type Grant = { source: string; platform: string; granted_at: number; revoked_at: number | null };
-export function AccountPanel({ accountId, lang, auth, onLogin, onLogout, onEmail, children, purchases, restore = false }: { accountId: string; lang: Lang; auth?: Availability["auth"]; onLogin: (account: Account) => Promise<void>; onLogout: (expected?: string) => Promise<void>; onEmail?: (email: string) => void; children?: ReactNode; purchases?: ReactNode; restore?: boolean }) {
+export function AccountPanel({ accountId, lang, auth, onLogin, onLogout, onEmail, children, purchases, restore = false }: { accountId: string; lang: Lang; auth?: Availability["auth"]; onLogin: (account: Account, importLocal?: boolean) => Promise<void>; onLogout: (expected?: string) => Promise<void>; onEmail?: (email: string) => void; children?: ReactNode; purchases?: ReactNode; restore?: boolean }) {
   const c = accountCopy(lang), [account, setAccount] = useState<Account | null>(null), [devices, setDevices] = useState<Device[]>([]), [rights, setRights] = useState<Grant[]>([]), [mode, setMode] = useState<"normal" | "delete" | "change">("normal"), [old, setOld] = useState<Proof | null>(null), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const deleteLink = useRef(deleteRequested);
   const sensitive = useRef<HTMLDivElement>(null);
   const [reauth, setReauth] = useState(false);
+  // Android, as iOS WebLinkView: whether this device's settings join the account is chosen before
+  // signing in (true: 用邮箱登录; false: 登录后只用账号里的配置), not asked afterwards.
+  const [keepLocal, setKeepLocal] = useState<boolean | null>(null);
   const currentAccount = useRef(accountId); currentAccount.current = accountId;
   useEffect(() => { if (mode !== "normal") sensitive.current?.scrollIntoView({ block: "center" }); }, [mode, account]);
   useEffect(() => {
-    let disposed = false; setAccount(null); setDevices([]); setRights([]); setMode("normal"); setOld(null); setBusy(false); setMessage(""); setReauth(false);
+    let disposed = false; setAccount(null); setDevices([]); setRights([]); setMode("normal"); setOld(null); setBusy(false); setMessage(""); setReauth(false); setKeepLocal(null);
     if (accountId) void Promise.all([api<Account>("/v1/account", "GET", undefined, accountId), api<{ devices: Device[] }>("/v1/account/devices", "GET", undefined, accountId), api<{ entitlements: Grant[] }>("/v1/account/entitlements", "GET", undefined, accountId)]).then(([a, d, r]) => { if (!disposed) { setAccount(a); onEmail?.(a.email); setDevices(d.devices); setRights(r.entitlements); if (deleteLink.current) { deleteLink.current = deleteRequested = false; setMode("delete"); } } }).catch((e) => { if (!disposed) setMessage(accountError(e, lang)); });
     return () => { disposed = true; };
   }, [accountId, lang]);
@@ -113,7 +116,10 @@ export function AccountPanel({ accountId, lang, auth, onLogin, onLogout, onEmail
       {/* iOS WebLinkView.syncSummary: what the account is for and that it takes Pro; what syncs and what never leaves the device in the ⓘ. */}
       <Icon name="refresh" /><span>{dictionaries[lang].dataSync}</span><span className="badge">{dictionaries[lang].pro}</span>
       <InfoTip label={dictionaries[lang].dataSync} text={`${c.privacy}\n\n${c.syncRequiresPro}`} />
-    </div>}{auth?.enabled && auth.site_key ? <EmailProof key="login" purpose="login" lang={lang} siteKey={auth.site_key} onProof={async (proof) => { const a = await api<Account>("/v1/auth/email/verify", "POST", { ...proof, ...browserDevice() }); if (currentAccount.current === accountId) await onLogin(a); }} /> : <p role="status" className="muted">{c.unavailable}</p>}</> : !account ? <p>{c.loading}</p> : <>
+    </div>}{auth?.enabled && auth.site_key ? ANDROID && keepLocal === null ? <div className="account-login-choice">
+      <button className="primary" aria-description={androidCopy(lang).loginKeepLocalHint} onClick={() => setKeepLocal(true)}>{androidCopy(lang).loginWithEmail}</button>
+      <span className="label-tip"><button type="button" className="text-button" aria-description={androidCopy(lang).loginAccountOnlyNote} onClick={() => setKeepLocal(false)}>{androidCopy(lang).loginAccountOnly}</button><InfoTip label={androidCopy(lang).loginAccountOnly} text={androidCopy(lang).loginAccountOnlyNote} /></span>
+    </div> : <EmailProof key="login" purpose="login" lang={lang} siteKey={auth.site_key} onProof={async (proof) => { const a = await api<Account>("/v1/auth/email/verify", "POST", { ...proof, ...browserDevice() }); if (currentAccount.current === accountId) await onLogin(a, keepLocal ?? undefined); }} /> : <p role="status" className="muted">{c.unavailable}</p>}</> : !account ? <p>{c.loading}</p> : <>
       <div className="account-profile"><span className="account-avatar"><Icon name="account" /></span><p className="account-email">{account.email}</p><button disabled={busy} onClick={() => { if (ANDROID && !confirm(`${androidCopy(lang).logoutTitle}\n\n${androidCopy(lang).logoutNote}`)) return; void run(async () => { await api("/v1/auth/logout", "POST", {}, accountId); await onLogout(accountId); }); }}>{c.logout}</button></div>
       {connection && <div className="account-connect"><p>{c.authorizeNote} <strong>{connection.device_name || connection.platform}</strong></p>{reauth && auth?.site_key ? <EmailProof purpose="login" email={account.email} lang={lang} siteKey={auth.site_key} onProof={async (proof) => { const a = await api<Account>("/v1/auth/email/verify", "POST", { ...proof, ...browserDevice() }); if (currentAccount.current === accountId) await onLogin(a); setReauth(false); }} /> : <button disabled={busy} className="primary" onClick={() => void run(async () => { if (!connection.state || !/^[A-Za-z0-9_-]{43}$/.test(connection.state)) throw new Error("bad_callback"); let result; try { result = await api<{ code: string }>("/v1/auth/authorize", "POST", connection, accountId); } catch (e) { if (e instanceof ApiError && e.message === "fresh_login_required") { setReauth(true); return; } throw e; } if (currentAccount.current !== accountId) return; const url = new URL(connection.redirect_uri!); url.searchParams.set("code", result.code); url.searchParams.set("state", connection.state); location.assign(url.href); })}>{c.authorize}</button>}</div>}
       {children}

@@ -201,7 +201,7 @@
   "poolAPI": "礦池校正",
   "poolSupplement": "補充資料",
   "poolOwnApiMissing": "該礦池自身 API 暫無回應，資料暫取自其他來源。",
-  "poolMergeBonus": "另得 {coin} 約\u00a0{range}",
+  "poolMergeBonus": "另得 {coin} 約 {range}",
   "poolMergeBonusHelp": "{pool} 另有 {coin} 聯合挖礦收益，約值 PRL 收益的 {range}。要先在礦池帳戶裡填好 {coin} 收款地址才會發放。未計入預估收益和真實費用。",
   "poolMinerCostHelp": "{pool} 實際收到的算力比 {app} 顯示的少約 {gap}。按 {app} 顯示的算力算，真實費用約 {cost}；用 {pool} 自家的挖礦軟體約 {base}。",
   "poolMissing": "— 表示暫無資料，不代表 0。",
@@ -563,5 +563,9 @@
   "fleetGrowthManual": "僅供參考，月增長可在【參數】手動設",
   "fleetSummaryLine": "%@ 台裝置 · 共 %@ 張卡（自有 %@ · 租用 %@）· 總算力 %@",
   "retry": "重試",
-  "poolsUnavailable": "暫時無法取得礦池資料"
+  "poolsUnavailable": "暫時無法取得礦池資料",
+  "chainLoadFailed": "鏈上數據加載失敗",
+  "liveDifficulty": "即時難度：目前 %@M · 近7天 %@ · 近3天 %@ · 近24h %@",
+  "notSet": "未設定",
+  "noSecondaryNote": "未選副貨幣：挖礦金額以美元（USD）顯示。可在「設定 → 貨幣」選擇副貨幣後在此換算。"
 }

@@ -6,7 +6,7 @@ import { alive, fresh } from "./store.ts";
 import { enabledMonitors, ownAddresses, targetKey, dailyAverage } from "./monitors.ts";
 import { fleet, fleetDefaults, normalizeDevice, normalizeFleet, effectiveGrowth, gpuEconomics, gpuRent, rentalRate, deviceCards, deviceWatts, syncDevices, type EconomicsContext } from "./fleet.ts";
 import { dual, secondaryCode, rateLine, type FX } from "./currency.ts";
-import { hashrate, roundRent } from "./format.ts";
+import { change, hashrate, roundRent } from "./format.ts";
 import { Icon } from "./Icons.tsx";
 import { InfoTip } from "./InfoTip.tsx";
 import { useBackLayer } from "./back-layer.ts";
@@ -15,7 +15,7 @@ import { Calculator } from "./Calculator.tsx";
 import { useGPUs } from "./gpus.ts";
 import { scenarioUnit } from "./calculator.ts";
 import { ANDROID, androidCopy, fill } from "./android.ts";
-import type { NetworkHistory } from "./market.ts";
+import { diffChange, difficultyAgo, type NetworkHistory } from "./market.ts";
 
 type Translate = (key: TextKey) => string;
 const panels = ["overview", "devices", "catalog", "single"] as const;
@@ -93,6 +93,10 @@ export function FleetCalculator({ state, onState, data, price, fx, incomes, fail
   const num = (v: number | null, digits = 2, minimumDigits = 0) => v == null || !Number.isFinite(v) ? "—" : v.toLocaleString(state.lang, { minimumFractionDigits: minimumDigits, maximumFractionDigits: digits }).replace(/-/g, "−");
   const ctx: EconomicsContext = { input, settings, price: input.price ?? price?.usd ?? null, unit: scenarioUnit(input, data?.network?.prlPerTHDay ?? null, data?.network?.hashrate ?? null), networkHash: input.networkHash ?? data?.network?.hashrate ?? null, code, rate: fxRate, rates: fx?.rates || {} };
   const growth = effectiveGrowth(settings, input, data?.network, difficultyHistory?.points), result = fleet(state.devices || [], gpus, ctx, growth);
+  // iOS PRLSettings: the live difficulty the growth estimate rests on, as a quiet line under it.
+  const liveNet = data?.network, diffTrend = (["7d", "3d", "24h"] as const).map((w) => diffChange(liveNet?.difficulty, difficultyAgo(liveNet, w, difficultyHistory?.points)));
+  const liveDifficulty = liveNet?.difficulty && diffTrend.some((x) => x != null)
+    ? [(liveNet.difficulty / 1e6).toLocaleString(state.lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), ...diffTrend.map(change)].reduce((text, v) => text.replace("%@", v), t("liveDifficulty")) : "";
   const liveDevices = alive(state.devices || []), addresses = ownAddresses(state.monitors);
   // A new device goes straight into its editor: picking its card is the next step anyway (iOS addDevice).
   const addDevice = () => {
@@ -303,9 +307,9 @@ export function FleetCalculator({ state, onState, data, price, fx, incomes, fail
     <details className="card fleet-parameters" hidden={panel === "single"}><summary>{t("parameters")}</summary>
       {check(t("cabinetPower"), settings.powerBudgetEnabled, (powerBudgetEnabled) => setSettings({ powerBudgetEnabled }))}
       <div className="calculator-fields">{field(`${t("electricity")} (USD/kWh)`, input.electricity, 0, .5, .005, (electricity) => setInput({ electricity }))}{field(`${t("poolFee")} (%)`, input.fee, 0, 10, .1, (fee) => setInput({ fee }))}{settings.powerBudgetEnabled && field(t("powerBudget"), settings.powerBudgetW, 500, 30000, 100, (powerBudgetW) => setSettings({ powerBudgetW }))}{field(t("syncEfficiency"), settings.syncWPerTH, 0, 5, .1, (syncWPerTH) => setSettings({ syncWPerTH }), t("syncEfficiencyNote"))}</div>
-      <div className="form-field"><span className="field-label"><label htmlFor={`${id}-growth`}>{t("monthlyGrowth")}</label><InfoTip label={t("monthlyGrowth")} text={t("fleetGrowthExplain")} /></span><select id={`${id}-growth`} value={settings.growthMode} onChange={(e) => setSettings({ growthMode: e.target.value as FleetSettings["growthMode"] })}><option value="auto">{t("automatic")}</option><option value="manual">{t("manual")}</option></select></div>{settings.growthMode === "manual" ? field(t("monthlyGrowth") + " (%)", input.growth, -20, 200, 1, (growth) => setInput({ growth })) : <p className="fleet-data-line">{num(growth)}%</p>}
+      <div className="form-field"><span className="field-label"><label htmlFor={`${id}-growth`}>{t("monthlyGrowth")}</label><InfoTip label={t("monthlyGrowth")} text={t("fleetGrowthExplain")} /></span><select id={`${id}-growth`} value={settings.growthMode} onChange={(e) => setSettings({ growthMode: e.target.value as FleetSettings["growthMode"] })}><option value="auto">{t("automatic")}</option><option value="manual">{t("manual")}</option></select></div>{settings.growthMode === "manual" ? field(t("monthlyGrowth") + " (%)", input.growth, -20, 200, 1, (growth) => setInput({ growth })) : <p className="fleet-data-line">{num(growth)}%</p>}{liveDifficulty && <p className="muted fleet-live-difficulty">{liveDifficulty}</p>}
       {check(t("fleetSelfDilution"), settings.selfDilution, (selfDilution) => setSettings({ selfDilution }), t("selfDilution"))}{check(t("showRentalColumns"), settings.rentEnabled, (rentEnabled) => setSettings({ rentEnabled }), t("fleetRentColumnsNote"))}
-      {code !== "USD" && <>{check(t("fleetAutoRate"), !settings.fxManual, (auto) => setSettings({ fxManual: !auto }), t("autoFX"))}{settings.fxManual ? field(`1 USD = ${code}`, settings.manualFX, Math.max(.0001, liveFx * .5), liveFx * 1.5, Math.max(.0001, liveFx / 200), (manualFX) => setSettings({ manualFX })) : <p className="muted">{rateLine(code, fxRate, state.lang)}{!fx?.rates[code] && <> · {t("fxFallback")}</>}</p>}</>}
+      {code !== "USD" ? <>{check(t("fleetAutoRate"), !settings.fxManual, (auto) => setSettings({ fxManual: !auto }), t("autoFX"))}{settings.fxManual ? field(`1 USD = ${code}`, settings.manualFX, Math.max(.0001, liveFx * .5), liveFx * 1.5, Math.max(.0001, liveFx / 200), (manualFX) => setSettings({ manualFX })) : <p className="muted">{rateLine(code, fxRate, state.lang)}{!fx?.rates[code] && <> · {t("fxFallback")}</>}</p>}</> : <div className="fleet-value-row"><span className="label-tip"><span>{t("secondaryCurrency")}</span><InfoTip label={t("secondaryCurrency")} text={t("noSecondaryNote")} /></span><span>{t("notSet")}</span></div>}
     </details>
     <section id="fleet-single" className="fleet-tab-panel single-calculator" role="tabpanel" aria-labelledby="fleet-tab-single" hidden={!!only || panel !== "single"}><Calculator lang={state.lang} value={input} onChange={(calculator) => onState((s) => ({ ...s, calculator, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))} data={data} price={price} failed={failed} t={t} formatMoney={(v) => money(v)} /></section>
   </div>;

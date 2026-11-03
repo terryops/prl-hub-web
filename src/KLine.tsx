@@ -3,10 +3,15 @@ import type { Lang } from "./types.ts";
 import type { TextKey } from "./i18n/index.ts";
 import { Skeleton } from "./Skeleton.tsx";
 import { Icon } from "./Icons.tsx";
-import { candleScale, intraday, klineURL, parseCandles, priceDigits, shownCount, wheelScale, zoomBounds, zoomed, type Candle, type KlinePeriod } from "./kline.ts";
+import { candleScale, candleSpacing, dragIntent, intraday, klineURL, panned, parseCandles, priceDigits, revealing, shownCount, visibleRange, wheelScale, zoomBounds, zoomed, type Candle, type KlinePeriod } from "./kline.ts";
 
 type Translate = (k: TextKey) => string;
 type Series = { candles: Candle[]; ts: number };
+/// One finger (or the mouse button) on the plot: still deciding, panning, inspecting (a touch held
+/// still for HOLD_MS, as on native), or left to the page (a touch that set off up or down).
+type Drag = { id: number; mouse: boolean; x: number; y: number; lastX: number; from: number; width: number; mode: "wait" | "pan" | "inspect" | "off"; timer?: ReturnType<typeof setTimeout> };
+/// Native HoldToScrub's long press; Android's touch slop (8 dp); DragGesture(minimumDistance: 4) on the Mac.
+const HOLD_MS = 200, TOUCH_SLOP = 8, MOUSE_SLOP = 4;
 
 /// SafeTrade candles for `period`, read while `enabled` (the K-line view is on screen) and
 /// again on each refresh. Periods already read stay on screen while the next read runs.
@@ -61,11 +66,24 @@ export function CandleChart({ candles: loaded, lang, t, zoom, onZoom: setZoom }:
   }, []);
   // Another period (or a refresh) is another series: start again from its latest candle.
   useEffect(() => setActive(null), [loaded]);
+  // Candles hidden past the right edge by dragging the chart; 0 ends it at the latest. A refresh
+  // keeps it, another period starts again from its latest candle (native CandleChart.hidden).
+  const [hiddenState, setHidden] = useState(0), [panning, setPanning] = useState(false);
+  const spacing = candleSpacing(loaded), [period, setPeriod] = useState(spacing);
+  if (period !== spacing) { setPeriod(spacing); setHidden(0); }
   const bounds = zoomBounds(size.width, loaded.length), count = shownCount(zoom, size.width, loaded.length);
   const zoomBy = (scale: number) => setZoom((z) => zoomed(z ?? count, scale, bounds));
   // The wheel and Safari's gesture listeners are attached once; they read the latest render here.
-  const live = useRef({ zoomBy, current: () => zoom ?? count, zoomFrom: (from: number, scale: number) => setZoom(zoomed(from, scale, bounds)) });
-  live.current = { zoomBy, current: () => zoom ?? count, zoomFrom: (from: number, scale: number) => setZoom(zoomed(from, scale, bounds)) };
+  const live = useRef({ zoomBy, current: () => zoom ?? count, zoomFrom: (from: number, scale: number) => setZoom(zoomed(from, scale, bounds)), inspect: (_: number) => {} });
+  const drag = useRef<Drag | null>(null);
+  useEffect(() => {
+    const el = plot.current; if (!el) return;
+    // A pan or a held inspection owns the finger: the page mustn't start scrolling under it.
+    // Until then the page may (touch-action: pan-y), and a drag that sets off up or down is its.
+    const hold = (e: TouchEvent) => { const mode = drag.current?.mode; if ((mode === "pan" || mode === "inspect") && e.cancelable) e.preventDefault(); };
+    el.addEventListener("touchmove", hold, { passive: false });
+    return () => { el.removeEventListener("touchmove", hold); clearTimeout(drag.current?.timer); };
+  }, []);
   useEffect(() => {
     const el = plot.current; if (!el) return;
     let from = 0, gesturing = false;
@@ -87,10 +105,11 @@ export function CandleChart({ candles: loaded, lang, t, zoom, onZoom: setZoom }:
       el.removeEventListener("gesturestart", begin); el.removeEventListener("gesturechange", change); el.removeEventListener("gestureend", finish);
     };
   }, []);
-  // Two fingers on a touch screen pinch; one finger inspects, as before.
+  // Two fingers on a touch screen pinch; one pans, or inspects (see the plot's handlers).
   const touches = useRef(new Map<number, [number, number]>()), pinch = useRef<{ spread: number; from: number } | null>(null);
   const spread = () => { const [a, b] = [...touches.current.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
-  const candles = loaded.slice(-count), n = candles.length;
+  const [start, end] = visibleRange(loaded.length, count, hiddenState), hidden = loaded.length - end;
+  const candles = loaded.slice(start, end), n = candles.length;
   const s = candleScale(candles), digits = priceDigits(s.lo, s.hi), top = 4, bottom = size.height;
   const y = (v: number) => top + (s.top - v) / (s.top - s.floor) * (bottom - top);
   const slot = size.width / n, half = Math.max(.5, slot * .35), x = (i: number) => (i + .5) * slot;
@@ -104,6 +123,16 @@ export function CandleChart({ candles: loaded, lang, t, zoom, onZoom: setZoom }:
   const dir = (c: Candle) => c.c >= c.o ? "kline-up" : "kline-down";
   const select = (i: number) => setActive(candles[Math.max(0, Math.min(n - 1, i))].t);
   const inspect = (clientX: number) => { const box = plot.current!.getBoundingClientRect(); select(Math.floor((clientX - box.left) / box.width * n)); };
+  live.current = { zoomBy, current: () => zoom ?? count, zoomFrom: (from: number, scale: number) => setZoom(zoomed(from, scale, bounds)), inspect };
+  const release = (id: number) => {
+    const d = drag.current; if (!d || d.id !== id) return null;
+    clearTimeout(d.timer); drag.current = null; setPanning(false); return d;
+  };
+  // The keyboard moves the crosshair through everything loaded, panning at the window's edges.
+  const reach = (i: number) => {
+    const at = Math.max(0, Math.min(loaded.length - 1, i));
+    setHidden(revealing(hidden, at, count, loaded.length)); setActive(loaded[at].t);
+  };
   const step = 1.5;
   return <>
   <div className="kline-zoom">
@@ -111,23 +140,57 @@ export function CandleChart({ candles: loaded, lang, t, zoom, onZoom: setZoom }:
     <button className="icon-button" aria-label={t("zoomIn")} title={t("zoomIn")} disabled={count <= bounds.min} onClick={() => zoomBy(step)}><Icon name="plus" /></button>
   </div>
   <div className="kline-frame">
-    <div className="kline-plot" ref={plot} tabIndex={0} role="group" aria-label={t("kline")} aria-description={t("klineHelp")}
+    <div className={panning ? "kline-plot kline-panning" : "kline-plot"} ref={plot} tabIndex={0} role="group" aria-label={t("kline")} aria-description={t("klineHelp")}
+      // The mouse inspects by hovering and pans by dragging. A finger pans by setting off sideways,
+      // inspects once held still (then scrubs) or by tapping, and leaves an up-or-down swipe to the
+      // page; two fingers pinch. As native CandleChart / HoldToScrub.
       onPointerDown={(e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
         if (e.pointerType === "touch") touches.current.set(e.pointerId, [e.clientX, e.clientY]);
-        if (touches.current.size === 2) { pinch.current = { spread: spread(), from: zoom ?? count }; setActive(null); return; }
-        inspect(e.clientX); e.currentTarget.setPointerCapture(e.pointerId);
+        if (touches.current.size >= 2) {
+          if (drag.current) release(drag.current.id);
+          if (touches.current.size === 2) { pinch.current = { spread: spread(), from: zoom ?? count }; setActive(null); }
+          return;
+        }
+        if (drag.current) release(drag.current.id);
+        const mouse = e.pointerType === "mouse", id = e.pointerId;
+        const d: Drag = { id, mouse, x: e.clientX, y: e.clientY, lastX: e.clientX, from: hidden, width: e.currentTarget.getBoundingClientRect().width, mode: "wait" };
+        if (mouse) inspect(e.clientX);
+        else d.timer = setTimeout(() => { const now = drag.current; if (now?.id === id && now.mode === "wait") { now.mode = "inspect"; live.current.inspect(now.lastX); } }, HOLD_MS);
+        drag.current = d;
+        e.currentTarget.setPointerCapture(id);
       }}
       onPointerMove={(e) => {
         if (touches.current.has(e.pointerId)) touches.current.set(e.pointerId, [e.clientX, e.clientY]);
         if (pinch.current) { if (touches.current.size === 2 && pinch.current.spread > 0) live.current.zoomFrom(pinch.current.from, spread() / pinch.current.spread); return; }
-        inspect(e.clientX);
+        const d = drag.current;
+        if (!d || d.id !== e.pointerId) { if (e.pointerType === "mouse") inspect(e.clientX); return; }
+        d.lastX = e.clientX;
+        const dx = e.clientX - d.x, dy = e.clientY - d.y;
+        if (d.mode === "wait") {
+          const intent = d.mouse ? (Math.hypot(dx, dy) >= MOUSE_SLOP ? "pan" : null) : dragIntent(dx, dy, TOUCH_SLOP);
+          if (!intent) { if (d.mouse) inspect(e.clientX); return; }
+          clearTimeout(d.timer);
+          if (intent === "scroll") { d.mode = "off"; return; }
+          d.mode = "pan"; setPanning(true); setActive(null);
+        }
+        if (d.mode === "pan") setHidden(panned(d.from, dx, d.width, count, loaded.length));
+        else if (d.mode === "inspect") inspect(e.clientX);
       }}
-      onPointerUp={(e) => { touches.current.delete(e.pointerId); if (touches.current.size < 2) pinch.current = null; }}
-      onPointerCancel={(e) => { touches.current.delete(e.pointerId); if (touches.current.size < 2) pinch.current = null; }}
-      onPointerLeave={(e) => { if (e.pointerType === "mouse") setActive(null); }}
-      onBlur={() => setActive(null)} onFocus={() => select(n - 1)}
+      onPointerUp={(e) => {
+        touches.current.delete(e.pointerId); if (touches.current.size < 2) pinch.current = null;
+        const d = release(e.pointerId);
+        // A tap inspects the candle under it, as before; after a pan the mouse is back to hovering.
+        if (d && !d.mouse && d.mode === "wait") inspect(e.clientX);
+        else if (d?.mouse && d.mode === "pan") inspect(e.clientX);
+      }}
+      onPointerCancel={(e) => { touches.current.delete(e.pointerId); if (touches.current.size < 2) pinch.current = null; release(e.pointerId); }}
+      onPointerLeave={(e) => { if (e.pointerType === "mouse" && !drag.current) setActive(null); }}
+      // A long press would otherwise bring up the browser's own menu over the inspection.
+      onContextMenu={(e) => { if (drag.current && !drag.current.mouse) e.preventDefault(); }}
+      onBlur={() => setActive(null)} onFocus={() => { if (active == null) select(n - 1); }}
       onKeyDown={(e) => {
-        if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); select(e.key === "Home" ? 0 : e.key === "End" ? n - 1 : (index ?? n - 1) + (e.key === "ArrowLeft" ? -1 : 1)); }
+        if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); const at = index == null ? end - 1 : start + index; reach(e.key === "Home" ? 0 : e.key === "End" ? loaded.length - 1 : at + (e.key === "ArrowLeft" ? -1 : 1)); }
         else if (["+", "=", "-", "_"].includes(e.key)) { e.preventDefault(); zoomBy(e.key === "+" || e.key === "=" ? step : 1 / step); }
       }}>
       <svg viewBox={`0 0 ${size.width} ${size.height}`} preserveAspectRatio="none" role="img" aria-label={t("kline")} className="kline-chart">

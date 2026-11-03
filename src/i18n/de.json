@@ -563,5 +563,9 @@
   "fleetGrowthManual": "Nur zur Orientierung; den monatlichen Anstieg kannst du unter „Parameter“ manuell setzen",
   "fleetSummaryLine": "%@ Geräte · %@ Karten gesamt (eigen %@ · gemietet %@) · Gesamt-Hashrate %@",
   "retry": "Wiederholen",
-  "poolsUnavailable": "Pool-Daten können gerade nicht geladen werden"
+  "poolsUnavailable": "Pool-Daten können gerade nicht geladen werden",
+  "chainLoadFailed": "Chain-Daten konnten nicht geladen werden",
+  "liveDifficulty": "Live-Difficulty: jetzt %@M · 7T %@ · 3T %@ · 24h %@",
+  "notSet": "Nicht gesetzt",
+  "noSecondaryNote": "Keine Zweitwährung: Pool-Beträge werden in USD angezeigt. Wähle unter „Einstellungen → Währung“ eine Zweitwährung, um hier umzurechnen."
 }

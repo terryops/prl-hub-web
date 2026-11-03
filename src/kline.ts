@@ -47,6 +47,41 @@ export const shownCount = (zoom: number | null, plotWidth: number, loaded: numbe
 /// fractional, so a trackpad's many small steps add up instead of each rounding away.
 export const zoomed = (count: number, scale: number, bounds: ZoomBounds) =>
   within(Number.isFinite(scale) && scale > 0 ? count / scale : count, bounds);
+/// Candles a drag can hide past the right edge: back to the oldest loaded, no further (the native
+/// chart doesn't page in older history either).
+const panLimit = (shown: number, loaded: number) => Math.max(0, loaded - shown);
+const clampHidden = (hidden: number, shown: number, loaded: number) => Math.min(Math.max(Math.round(hidden) || 0, 0), panLimit(shown, loaded));
+/// The candles on screen as [start, end) of those loaded: `shown` of them, ending `hidden` short
+/// of the latest (native CandleChart.window). 0 hidden ends the chart at the latest candle.
+export function visibleRange(loaded: number, shown: number, hidden: number): [number, number] {
+  const end = loaded - clampHidden(hidden, shown, loaded);
+  return [Math.max(0, end - shown), end];
+}
+/// `from` candles hidden after a drag of `dx` px to the right, a candle's width at a time (native
+/// CandleChart.pannedOffset): the chart follows the finger, so older candles come in from the left.
+export function panned(from: number, dx: number, plotWidth: number, shown: number, loaded: number) {
+  if (!Number.isFinite(dx) || !(plotWidth > 0) || !(shown > 0)) return clampHidden(from, shown, loaded);
+  return clampHidden(from + Math.round(dx / (plotWidth / shown)), shown, loaded);
+}
+/// `hidden` moved just far enough that candle `index` (of those loaded) is on screen.
+export function revealing(hidden: number, index: number, shown: number, loaded: number) {
+  const [start, end] = visibleRange(loaded, shown, hidden);
+  if (index < start) return clampHidden(loaded - index - shown, shown, loaded);
+  if (index >= end) return clampHidden(loaded - 1 - index, shown, loaded);
+  return clampHidden(hidden, shown, loaded);
+}
+/// A touch that has moved (dx, dy) since it went down: undecided within `slop`, then a pan when it
+/// set off more sideways than up or down; otherwise it is the page's to scroll (native HoldToScrub).
+export function dragIntent(dx: number, dy: number, slop: number): "pan" | "scroll" | null {
+  if (!(Math.hypot(dx, dy) >= slop)) return null;
+  return Math.abs(dx) > Math.abs(dy) ? "pan" : "scroll";
+}
+/// Seconds between candles, from the data itself (native candleMinutes): another period is another series.
+export function candleSpacing(candles: Candle[]) {
+  let gap = 0;
+  for (let i = 1; i < candles.length; i++) { const d = candles[i].t - candles[i - 1].t; if (d > 0 && (!gap || d < gap)) gap = d; }
+  return gap;
+}
 /// One wheel event as a zoom scale. A mouse notch (100 px, or 3 lines in Firefox) is 15%, as on
 /// the native Mac chart, and rolling away from you (deltaY < 0) zooms in; one event counts for
 /// at most three notches. A trackpad pinch arrives as a ctrlKey wheel with small deltas, so it

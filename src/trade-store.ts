@@ -4,8 +4,8 @@
 import { useSyncExternalStore } from "react";
 import * as api from "./safetrade-client.ts";
 import {
-  BASE, DEFAULT_RULES, authProblemOf, displayPrice, failureMessage, failureOf, isNewOrder, isOpen, lookForUnverified, mergeOrders, parseAmount,
-  parsePendingCheck, decText, rollingChange, sameCandles, sameDepth, sameOrders, sameTicker, settleLeft, sha256, signedPercent, TradeError,
+  BASE, DEFAULT_RULES, authProblemOf, dec, decOf, marketPriceCap, slippageFraction, SLIPPAGE_DEFAULT, displayPrice, failureMessage, failureOf, isNewOrder, isOpen, isPending, isSettled, lookForUnverified, mergeOrders, parseAmount,
+  parsePendingCheck, decText, rollingChange, SETTLE_DELAYS, sameCandles, sameDepth, sameOrders, sameTicker, settleLeft, sha256, signedPercent, TradeError,
   type Balance, type Candle, type Depth, type MarketRules, type Order, type PendingOrderCheck, type PendingWithdrawCheck, type Ticker, type Tr,
 } from "./safetrade.ts";
 
@@ -57,6 +57,11 @@ export class TradeStore {
   private keyGen = 0;
   /** The next automatic look for an unverified order, once looks can tell it never went in. */
   private orderRecheck: ReturnType<typeof setTimeout> | undefined;
+  /** Follow-up account reads after an order or a cancel (settle); bumped to stop the one under way. */
+  private settleGen = 0;
+  private settling = false;
+  /** When the order lists were last read, for the open-order watch. */
+  private ordersReadAt = 0;
 
   get state() { return this.s; }
   subscribe = (l: () => void) => { this.listeners.add(l); return () => { this.listeners.delete(l); }; };
@@ -195,21 +200,32 @@ export class TradeStore {
     return pct == null ? null : signedPercent(pct);
   }
 
+  /** A market order's price cap, from the last trade (else the best price it fills against). */
+  marketCap(side: "buy" | "sell", slippagePercent: number) {
+    const fromLast = dec(this.s.ticker?.last), book = side === "buy" ? this.s.depth?.asks[0]?.price : this.s.depth?.bids[0]?.price;
+    const last = fromLast != null && fromLast > 0n ? fromLast : book != null ? decOf(book) : null;
+    return last != null ? marketPriceCap(this.s.rules, side, last, slippageFraction(slippagePercent)) : null;
+  }
+
   /** "placed": the exchange accepted the order. "unverified": it may have (the form clears either way, so it
    *  isn't sent twice). false: it didn't. */
-  async placeOrder(side: "buy" | "sell", type: "limit" | "market", volume: string, price: string | null): Promise<"placed" | "unverified" | false> {
+  async placeOrder(side: "buy" | "sell", type: "limit" | "market", volume: string, price: string | null,
+    slippagePercent = SLIPPAGE_DEFAULT): Promise<"placed" | "unverified" | false> {
     const amount = parseAmount(volume);
     if (this.s.placing || this.s.unverifiedOrder || amount == null) return false;
     const priceValue = price != null ? parseAmount(price) : null;
     const amountText = decText(amount, 18), priceText = priceValue != null ? decText(priceValue, 18) : null;
+    const cap = type === "market" ? this.marketCap(side, slippagePercent) : null, capText = cap != null ? decText(cap, 18) : null;
     const before = { side, knownIDs: this.s.orders.flatMap((o) => o.id != null ? [o.id] : []), knownComplete: !this.s.accountStale };
+    const balancesBefore = this.s.balances;
     this.set({ placing: true, error: null, lastOrder: null });
     try {
-      const o = await api.placeOrder(side, amountText, priceText, type);
+      const o = await api.placeOrder(side, amountText, priceText, type, capText);
       const sideWord = o.side ?? side;
       this.set({ placing: false, orders: [o, ...this.s.orders],
         lastOrder: this.tr("已下单 #{0} · {1} {2} @ {3} · {4}", o.id != null ? String(o.id) : "?", sideWord, o.originAmount ?? amountText, displayPrice(o) ?? priceText ?? "—", o.state ?? "") });
-      void this.refreshAccount();
+      // Reconcile balances + orders until the order has settled.
+      void this.settle(o.id, balancesBefore, 0, type === "market" ? (x) => !isOpen(x) : (x) => !isPending(x));
       clearTimeout(this.lastOrderTimer);
       this.lastOrderTimer = setTimeout(() => this.set({ lastOrder: null }), 5000);
       return "placed";
@@ -263,9 +279,37 @@ export class TradeStore {
   async cancelOrder(o: Order) {
     if (o.id == null || this.s.cancelingID != null || this.s.placing) return;
     this.set({ cancelingID: o.id, error: null, lastOrder: null });
-    try { await api.cancelOrder(o.id); await this.refreshAccount(); }
-    catch (e) { await this.present(e); }
+    const id = o.id, balancesBefore = this.s.balances, done = (x: Order) => !isOpen(x);
+    try {
+      await api.cancelOrder(id);
+      await this.refreshAccount();
+      if (!isSettled(this.s.orders.find((x) => x.id === id), this.s.balances !== balancesBefore, done)) void this.settle(id, balancesBefore, 1, done);
+    } catch (e) { await this.present(e); }
     this.set({ cancelingID: null });
+  }
+
+  /** Read the account again until order `id` is `done` and the balances have moved off `balancesBefore`: after
+   *  `firstDelay`, then after each of SETTLE_DELAYS (~19 s in all; past that the open-order watch carries on). */
+  private async settle(id: number | null | undefined, balancesBefore: Balance[], firstDelay: number, done: (o: Order) => boolean) {
+    const gen = ++this.settleGen;
+    this.settling = true;
+    try {
+      for (const delay of [firstDelay, ...SETTLE_DELAYS]) {
+        if (delay > 0) await new Promise((r) => setTimeout(r, delay * 1000));
+        if (gen !== this.settleGen) return;
+        await this.refreshAccount();
+        if (isSettled(this.s.orders.find((x) => x.id != null && x.id === id), this.s.balances !== balancesBefore, done)) break;
+      }
+    } finally { if (gen === this.settleGen) this.settling = false; }
+  }
+
+  /** The open-order watch, from the 5 s poll: while an order rests on the book, read the account every `ms` so a
+   *  fill shows up without a manual refresh. */
+  async refreshAccountIfOrdersOpen(ms = 15000) {
+    const s = this.s;
+    if (s.hasKeys !== true || !s.orders.some(isOpen) || s.placing || s.refreshing || s.cancelingID != null || s.unverifiedOrder || this.settling) return;
+    if (Date.now() - this.ordersReadAt < ms) return;
+    await this.refreshAccount();
   }
 
   async refreshAccount() {
@@ -292,6 +336,7 @@ export class TradeStore {
       const merged = mergeOrders(recent, (await open) ?? this.s.orders.filter(isOpen));
       if (gen !== this.keyGen) return null;
       if (!sameOrders(merged, this.s.orders)) this.set({ orders: merged });
+      this.ordersReadAt = Date.now();
       return null;
     } catch (e) { return gen === this.keyGen ? e : null; }
   }

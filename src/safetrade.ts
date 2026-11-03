@@ -166,6 +166,16 @@ export function parseOrder(o: Json): Order {
 }
 /** Still resting on the book: the only orders the exchange will cancel. */
 export const isOpen = (o: Order) => ["wait", "pending"].includes((o.state || "").toLowerCase());
+/** Accepted but not yet on the book or matched. */
+export const isPending = (o: Order) => (o.state || "").toLowerCase() === "pending";
+/** Seconds between the follow-up account reads after an order or a cancel (SafeTradeStore.settleDelays): the engine
+ *  settles an order in milliseconds (a market sell: 28 ms, 2026-11-01), but the read right after the POST still showed
+ *  it unsettled and the balance unmoved. */
+export const SETTLE_DELAYS = [1, 2, 3, 5, 8];
+/** An order has settled once the list shows it `done` and the balances have moved (each can lag the engine). */
+export function isSettled(o: Order | undefined, balancesMoved: boolean, done: (o: Order) => boolean) {
+  return balancesMoved && o != null && done(o);
+}
 /** A limit order's price, else a market order's realized average; undefined while unpriced. */
 export const displayPrice = (o: Order) => [o.price, o.avgPrice].find((p) => p != null && Number(p) > 0);
 
@@ -374,6 +384,36 @@ export function ruleProblem(r: MarketRules, amountText: string, priceText: strin
   }
   return null;
 }
+/** How far a market order may fill from the last price, in percent, set on the order form (TradeSlippage in
+ *  SafeTradeRules.swift). SafeTrade's web client sends every market order with `max_price` = last ± this (a ceiling
+ *  for a buy, a floor for a sell; 15% unless changed) and the exchange refuses one that would fill past it
+ *  (`market.order.market_price_exceeded`). The exchange requires it on a market order (`missing_max_price`,
+ *  2026-11-01), so there is no "off". */
+export const SLIPPAGE_DEFAULT = 15, SLIPPAGE_PRESETS = [1, 3, 5, 10, 15], SLIPPAGE_MIN = 0.1, SLIPPAGE_MAX = 50;
+/** A stored value made safe: one decimal, inside SLIPPAGE_MIN – SLIPPAGE_MAX. */
+export function clampSlippage(percent: number) {
+  if (!Number.isFinite(percent)) return SLIPPAGE_DEFAULT;
+  return Math.min(Math.max(Math.round(percent * 10) / 10, SLIPPAGE_MIN), SLIPPAGE_MAX);
+}
+/** What the user typed ("2.5", "2,5", "2.5%") → a percent to store; null when it isn't a number. */
+export function parseSlippage(text: string) {
+  const d = parseAmount(text.replace(/%/g, "").trim());
+  return d == null ? null : clampSlippage(decNumber(d));
+}
+/** 15 → 0.15, exactly. */
+export const slippageFraction = (percent: number): Dec => dec(clampSlippage(percent).toFixed(1))! / 100n;
+/** "15", "0.5" — the number without a trailing ".0". */
+export const slippageNumber = (percent: number) => decText(slippageFraction(percent) * 100n, 1);
+/** SafeTradeMarketRules.marketPriceCap: a market order's `max_price`, the last price ± `slippage` (a fraction),
+ *  rounded outward to the price precision and kept inside the market's price range. null without a last price. */
+export function marketPriceCap(r: MarketRules, side: string, last: Dec, slippage: Dec = slippageFraction(SLIPPAGE_DEFAULT)): Dec | null {
+  if (last <= 0n || slippage <= 0n) return null;
+  const buy = side === "buy", places = Math.max(0, Math.min(Math.trunc(r.pricePrecision) || 0, SCALE));
+  const raw = decMul(last, buy ? ONE + slippage : ONE - slippage), unit = 10n ** BigInt(SCALE - places);
+  let q = raw / unit * unit;
+  if (buy && q < raw) q += unit;
+  return q < r.minPrice ? r.minPrice : q > r.maxPrice ? r.maxPrice : q;
+}
 export function ruleMessage(p: RuleProblem, tr: Tr) {
   switch (p.kind) {
     case "priceDecimals": return tr("价格最多 {0} 位小数", p.places);
@@ -399,6 +439,14 @@ export function parseDepth(body: unknown): Depth | null {
 }
 export const sameDepth = (a: Depth | null, b: Depth | null) => JSON.stringify(a) === JSON.stringify(b);
 
+/** The farthest level `amount` reaches walking `levels` best-first — the worst price a market order fills at;
+ *  null when the visible book can't fill it. */
+export function worstPrice(amount: number, levels: Level[]) {
+  if (!(amount > 0)) return null;
+  let left = amount;
+  for (const l of levels) { left -= l.amount; if (left <= 1e-12) return l.price; }
+  return null;
+}
 /** SafeTrade's default taker fee (0.1%), charged on what an order receives. */
 export const TAKER_FEE = 0.001;
 /** Average fill price for `amount` walking `levels` best-first; null when the visible book can't fill it. */
@@ -536,10 +584,24 @@ function depositMessage(key: string, tr: Tr) {
   const t = tokens(key);
   return key.startsWith("account.deposit") && (t.includes("2fa") || t.includes("otp")) ? tr("SafeTrade 要求先开启谷歌验证（2FA）才能生成充值地址") : undefined;
 }
+/** The order body as JSON text with string values, as SafeTrade's web client sends it (SafeTradeClient.orderBody
+ *  on iOS). A form body loses `max_price`: the exchange answers `market.order.missing_max_price` to a form-encoded
+ *  market order that has it (checked live 2026-11-01). */
+export function orderJSON(side: string, amount: string, price: string | null, type: "limit" | "market", maxPrice: string | null) {
+  const body: Record<string, string> = { market: MARKET, side, amount, type };
+  if (type === "limit" && price) body.price = price;
+  if (type === "market" && maxPrice) body.max_price = maxPrice;
+  return JSON.stringify(body);
+}
 function orderMessage(key: string, tr: Tr) {
   const t = new Set(tokens(key)), has = (w: string) => t.has(w);
   if (has("insufficient") && has("balance")) return tr("SafeTrade 可用余额不足");
-  if (has("liquidity")) return tr("盘口深度不够，市价单成交不了这么多，请减少数量或改用限价单");
+  // A required field didn't arrive (`missing_max_price`): ours to fix, so keep the raw key on screen rather than a
+  // price message that sends the person after the wrong cause.
+  if (has("missing")) return undefined;
+  // `market_price_exceeded`: the fill would pass the market order's price cap. `market_insufficient`: not enough on
+  // the book to fill it.
+  if (has("liquidity") || has("insufficient") || (has("price") && has("exceeded"))) return tr("盘口深度不够，市价单成交不了这么多，请减少数量或改用限价单");
   if (has("round") && has("price")) return tr("价格的小数位太多");
   if (has("round") && (has("amount") || has("volume"))) return tr("数量的小数位太多");
   if ((has("amount") || has("volume")) && (has("min") || has("less") || has("small"))) return tr("数量低于交易所的最小下单量");

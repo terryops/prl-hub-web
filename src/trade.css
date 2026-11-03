@@ -168,6 +168,10 @@
 .trade-row { display: flex; justify-content: space-between; gap: 12px; font-size: var(--font-14); }
 .trade-row > span:first-child { color: var(--muted); }
 .trade-row > span:last-child { text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.trade-slippage { align-items: center; }
+.trade-slippage select { width: auto; min-width: 0; min-height: 0; padding-top: 4px; padding-bottom: 4px; font-size: var(--font-14); font-variant-numeric: tabular-nums; }
+.trade-slippage-input { display: inline-flex; align-items: center; gap: 4px; }
+.trade-slippage-input input { width: 84px; min-height: 0; padding: 4px 8px; text-align: right; }
 .trade-row.strong > span:last-child { font-weight: 700; }
 .trade-facts { display: grid; gap: 6px; }
 .trade-buy { background: var(--candle-up, var(--green)) !important; border-color: var(--candle-up, var(--green)) !important; color: #fff !important; }
@@ -243,5 +247,7 @@
 .trade-alert-buttons button { width: 100%; min-height: 44px; }
 .trade-alert-buttons .danger { border-color: var(--red); background: var(--red); color: #fff; }
 .trade-processing { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgb(0 0 0 / .12); }
+/* Stops at the tab bar's top edge (android.ts trackTabBar; 0 while the keyboard hides the bar). */
+.trade-processing-tabs { bottom: var(--android-nav-clear, 80px); }
 .trade-processing > div { display: grid; justify-items: center; gap: 10px; padding: 20px 28px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-pop); font-size: var(--font-14); }
 .trade-processing .icon { width: 26px; height: 26px; color: var(--blue-text); }

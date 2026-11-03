@@ -48,7 +48,7 @@ import { SecurityOverview } from "./SecurityOverview.tsx";
 import { securityCopy, webSecurity } from "./security-overview.ts";
 import { calculatorWithPoolFee } from "./calculator.ts";
 import { quoteExpired } from "./orders.ts";
-import { dual, rateLine, secondaryCode, currencies, type FX } from "./currency.ts";
+import { dual, rateLine, secondaryCode, currencies, loadFX, saveFX, FX_MAX_AGE, type FX } from "./currency.ts";
 import { applyingEdit, reconcileRule, relativeTime } from "./alertRules.ts";
 import { enabledMonitors, alertMonitors, cleanAddress, moveIds, ownAddresses, targetKey, duplicateMonitor, hashrate24h, dailyAverage, nearestWindow, ALERT_AFTER, ALERT_AGAIN } from "./monitors.ts";
 import { Icon, type IconName } from "./Icons.tsx";
@@ -78,11 +78,16 @@ import { contactsFromWallet, mergeWallets, walletChangesEmpty, withoutSkipped, t
 import { hasBridge, nativeCall } from "./android-bridge.ts";
 import { WalletFrame, walletBack, walletControl } from "./WalletFrame.tsx";
 import { AndroidSettings, AndroidWidgets, type SettingsPage } from "./AndroidSettings.tsx";
+import { AndroidIncomeCard, AlertCardHeader } from "./AndroidAlerts.tsx";
+import { incomeWire, knownAddresses as incomeKnown, readIncome, writeIncome, readKnownWallets, writeKnownWallets, type IncomeSetting } from "./income-alert.ts";
 import { AndroidRuleForm } from "./AndroidRuleForm.tsx";
 import { androidSecurity, androidSecurityCopy } from "./android-security.ts";
 
 // The Google Play build may not sell Pro outside Play billing; it follows the iOS app's rule.
 const fromApp = appClient() || (ANDROID && androidStore() === "play");
+// Where Pro came from, as the store's name; a grant made by hand ("admin") or none names nothing.
+const proSourceName = (src: string | null | undefined, t: (key: TextKey) => string) =>
+  src === "apple" ? t("appleSource") : src === "google" ? "Google Play" : src === "prl" ? "PRL" : "";
 if (ANDROID) installAndroid();
 // The App page's QR code opens pearlhub.net/#download: a phone goes on to its store, anything else sees the App page.
 if (!ANDROID && location.hash === downloadHash) {
@@ -177,11 +182,12 @@ function App() {
     [history, setHistory] = useState<
       Snapshot<{ source: string; points: number[][] }>
     >({});
-  const [fx, setFX] = useState<FX>();
+  const [fxCache] = useState(loadFX);
+  const [fx, setFX] = useState<FX | undefined>(fxCache?.fx);
   const [overview, setOverview] = useState<Snapshot<Overview>>({});
   const [stats, setStats] = useState<Record<string, Snapshot<Stats>>>({});
   // refresh() is created once, so it reads the latest snapshots through these.
-  const statsRef = useRef(stats), incomesRef = useRef(incomes), readAt = useRef<Record<string, number>>({});
+  const statsRef = useRef(stats), incomesRef = useRef(incomes), readAt = useRef<Record<string, number>>(fxCache ? { fx: fxCache.at } : {});
   statsRef.current = stats; incomesRef.current = incomes;
   const [availability, setAvailability] = useState<Availability>({
     pay: { enabled: false, usd: 4.99 },
@@ -208,6 +214,9 @@ function App() {
     ANDROID ? "default" : hasPush() ? Notification.permission : "unavailable",
   );
   const [pushState, setPushState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  // 到账提醒 (income-alert.ts, iOS 2.1.8): this device's one watched address. Android only, kept on the device.
+  const [income, setIncomeState] = useState<IncomeSetting | null>(() => ANDROID ? readIncome() : null);
+  const incomeRef = useRef(income); incomeRef.current = income;
   const [pendingMonitor, setPendingMonitor] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false),
     [syncStatus, setSyncStatus] = useState(""),
@@ -339,7 +348,7 @@ function App() {
       else try { const reg = await pushTimeout(navigator.serviceWorker.ready); const sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch { /* Local features remain available. */ }
     }
   }, []);
-  const adoptAccount = useCallback(async (account: Account, askImport = true, generation = ++accountGeneration.current) => {
+  const adoptAccount = useCallback(async (account: Account, askImport = true, generation = ++accountGeneration.current, importLocal?: boolean) => {
     const id = account.user_id;
     const association=localPurchase()?await associatePurchase(id):null;
     // Email sign-in returns only the ids; the account button is labelled from the email.
@@ -354,7 +363,8 @@ function App() {
     const remote = server.data ? normalizeConfig(server.data) : null;
     let config = cached ? remote ? mergeConfig(configOf(cached), remote) : configOf(cached) : remote || configOf(paid ? defaults() : guest);
     const hasLocal = guest.monitors.length || guest.wallets.length || guest.rules.length || guest.contacts?.length || guest.devices?.length || guest.settingsUpdated;
-    if (paid && askImport && !cached && hasLocal && confirm(accountCopy(guest.lang).import)) config = mergeConfig(config, configOf(guest));
+    // importLocal: chosen before signing in (Android, as iOS); otherwise asked here.
+    if (paid && !cached && hasLocal && (importLocal ?? (askImport && confirm(accountCopy(guest.lang).import)))) config = mergeConfig(config, configOf(guest));
     const followBrowserLanguage = cached?.followBrowserLanguage ?? stateRef.current.followBrowserLanguage;
     const next: State = { ...(cached || (paid ? defaults() : guest)), ...config, followBrowserLanguage, lang: followBrowserLanguage ? browserLanguage() : config.lang, accountId: id, purchaseId:localPurchase()?.id||"", token: localPurchase()?.token || cached?.token || "", sync: cached?.sync ?? true };
     pushGeneration.current++; stateRef.current = next; setState(next); writeStore(next);
@@ -389,7 +399,7 @@ function App() {
     const due = (at: number | undefined, ms: number) => !at || t - at >= ms;
     const own = ownAddresses(s.monitors), target = JSON.stringify(own.slice().sort());
     await Promise.allSettled([
-      due(reads.fx, 600_000) && api<FX>("/v1/fx").then((v) => { reads.fx = Date.now(); setFX(v); }).catch(() => setFX((old) => old ? { ...old, stale: true } : undefined)),
+      due(reads.fx, FX_MAX_AGE) && api<FX>("/v1/fx").then((v) => { reads.fx = Date.now(); setFX(v); saveFX(v, reads.fx); }).catch(() => setFX((old) => old ? { ...old, stale: true } : undefined)),
       api<Price>("/v1/price")
         .then((data) => setPrice({ data }))
         .catch(() => setPrice((prev) => ({ ...prev, failed: true }))),
@@ -430,9 +440,10 @@ function App() {
     setStats((old) => Object.fromEntries(Object.entries(old).filter(([id, snap]) =>
       enabledMonitors(stateRef.current.monitors).some((m) => m.id === id && targetKey(m) === snap.target))));
     void refresh();
-    const timer = state.autoRefresh !== false ? setInterval(() => void refresh(), 5000) : undefined;
+    // Android always refreshes every 5 s while on screen (owner's call, no setting); the website keeps its switch.
+    const timer = ANDROID || state.autoRefresh !== false ? setInterval(() => void refresh(), 5000) : undefined;
     const visible = () => {
-      if (!document.hidden && stateRef.current.autoRefresh !== false) void refresh();
+      if (!document.hidden && (ANDROID || stateRef.current.autoRefresh !== false)) void refresh();
     };
     document.addEventListener("visibilitychange", visible);
     return () => {
@@ -472,7 +483,7 @@ function App() {
       subscribe: (listener) => { hostListeners.add(listener); return () => { hostListeners.delete(listener); }; },
       openPage: (hash) => { location.hash = hash; },
       visible: () => pageRef.current === "wallet" && !panelRef.current && !document.hidden,
-      alerts: () => ({ pro: !!meRef.current?.pro, ready: meRef.current != null, active: stateRef.current.rules.filter((r) => !r.deleted && r.enabled).length }),
+      alerts: () => ({ pro: !!meRef.current?.pro, ready: meRef.current != null, active: stateRef.current.rules.filter((r) => !r.deleted && r.enabled).length + (incomeRegisteredRef.current ? 1 : 0) }),
       widgetPlaced: () => !!infoRef.current?.widgetPlaced,
       // The account's web 钱包 page and the wallet's wallets, both ways for read-only ones (iOS
       // WebSharedMerge.wallets). `base` (what both sides last agreed) is kept per account on this device.
@@ -524,7 +535,11 @@ function App() {
   const contactsKey = ANDROID ? JSON.stringify(state.contacts || []) : "";
   const webWalletsKey = ANDROID ? JSON.stringify(state.wallets) + canSync : "";
   const liveRuleCount = ANDROID ? state.rules.filter((r) => !r.deleted && r.enabled).length : 0;
-  useEffect(() => { if (ANDROID) hostChanged(); }, [state.lang, state.secondary, contactsKey, webWalletsKey, me?.pro, liveRuleCount, androidInfoValue?.widgetPlaced]);
+  // 到账提醒 counts as a live alert only once this device really sends it: Pro, notifications on and connected here
+  // (iOS PriceAlertStore.incomeRegistered).
+  const incomeRegistered = ANDROID && !!me?.pro && !!state.token && permission === "granted" && pushState !== "error" && !!incomeWire(income);
+  const incomeRegisteredRef = useRef(false); incomeRegisteredRef.current = incomeRegistered;
+  useEffect(() => { if (ANDROID) hostChanged(); }, [state.lang, state.secondary, contactsKey, webWalletsKey, me?.pro, liveRuleCount, incomeRegistered, androidInfoValue?.widgetPlaced]);
   // The wallet refreshes when its tab comes back into view, and on returning to the app (a widget may be placed meanwhile).
   useEffect(() => { if (ANDROID && page === "wallet") walletControl(walletFrame)?.refresh?.(); }, [page]);
   useEffect(() => {
@@ -731,6 +746,8 @@ function App() {
       watches: alertMonitors(s.monitors).map((m) => ({
         id: m.id, pool: m.pool, addr: m.addr, acct: m.acct, label: m.label, after: m.after, again: m.again || undefined,
       })),
+      // 到账提醒: the address while its alert is on, null to drop it (the website says nothing: the Worker keeps it).
+      ...ANDROID ? { income: incomeWire(incomeRef.current) } : {},
     }, buyerId(s)),
     saved: (s: State, result: PushReply) => {
       if (s.purchaseId) rememberPurchaseToken(result.token);
@@ -771,6 +788,7 @@ function App() {
     state.window,
     alive(state.rules),
     alertMonitors(state.monitors),
+    ANDROID ? incomeWire(income) : null,
   ]);
   useEffect(() => {
     if (!accountReady || !buyerId(state) || !state.token || !me?.pro || !hasPush()) return;
@@ -781,6 +799,25 @@ function App() {
     }, 400);
     return () => clearTimeout(timer);
   }, [pushValues, state.token, me?.pro]);
+  // 到账提醒 switched on, off or moved to another address (AndroidIncomeCard). Switching it on is the moment to ask
+  // for notifications, as on iOS: it is clear what for. With notifications on, the registration effect sends it.
+  const setIncome = (next: IncomeSetting) => {
+    const was = incomeWire(incomeRef.current);
+    incomeRef.current = next;
+    writeIncome(next);
+    setIncomeState(next);
+    if (next.on && !was && (!stateRef.current.token || permission !== "granted")) enablePush();
+  };
+  // 到账提醒's 我的钱包: every wallet here (read-only ones too), as last seen unlocked on mainnet.
+  const incomeWallets = () => {
+    const control = walletOf(), w = control?.state();
+    if (!control || !w) return readKnownWallets();
+    if (!w.exists) { writeKnownWallets([]); return []; }
+    if (w.locked || w.network !== "mainnet") return readKnownWallets();
+    const live = control.wallets?.({ readOnly: true }) || [];
+    writeKnownWallets(live);
+    return live;
+  };
   const enablePush = () => {
     if (!me?.pro) {
       showPro();
@@ -830,7 +867,8 @@ function App() {
     if (await pushSettings.current!.withdraw(stateRef.current)) setMessage(t("pushDisconnected"));
   });
   const remove = (key: "monitors" | "rules" | "wallets", id: string) => {
-    if (confirm(t("confirmDelete")))
+    // As iOS, a price alert goes at once (its menu's 删除, the editor's 删除提醒); monitors and wallets ask.
+    if ((ANDROID && key === "rules") || confirm(t("confirmDelete")))
       update((s) => ({
         ...s,
         [key]: s[key].map((x) =>
@@ -952,7 +990,11 @@ function App() {
       <section className="card monitor-card" key={m.id} draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", m.id)} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); moveMonitor(e.dataTransfer.getData("text/plain"), activeMonitors.findIndex((x) => x.id === m.id)); }}>
         <div className="card-heading">
           <div className="card-name">
-            <div className="monitor-title"><h2>{m.label}</h2><small>{m.pool}</small>{ANDROID && <code className="monitor-addr" title={m.addr}>{m.addr.length > 20 ? `${m.addr.slice(0, 10)}…${m.addr.slice(-8)}` : m.addr}</code>}{m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : "online-badge"}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
+            <div className="monitor-title"><h2>{m.label}</h2><small>{m.pool}</small>{ANDROID && (m.pool === "F2Pool"
+              // An F2Pool monitor is kept as its read-only page key, and that key lets anyone read the account: it never
+              // goes on screen, where a screenshot would carry it (iOS PoolWatch.displayAddress: the account name, else F2Pool).
+              ? <code className="monitor-addr">{m.acct || "F2Pool"}</code>
+              : <code className="monitor-addr" title={m.addr}>{m.addr.length > 20 ? `${m.addr.slice(0, 10)}…${m.addr.slice(-8)}` : m.addr}</code>)}{m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : "online-badge"}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
           </div>
           <div className="inline-controls"><div className="alert-controls">
             {(pushReady || ANDROID) && !m.paused && (
@@ -1083,8 +1125,9 @@ function App() {
     <label className="form-field">{t("secondaryCurrency")}<select aria-label={t("secondaryCurrency")} value={state.secondary || (state.secondary === "" ? "" : "__auto__")} onChange={(e) => update((s) => ({ ...s, secondary: e.target.value, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))}><option value="__auto__">{t("followLanguage")}</option><option value="">{t("hideCurrency")}</option>{currencies.map(([code, symbol]) => <option key={code} value={code}>{ANDROID ? `${currencyName(code)} · ${code}` : `${code} · ${symbol}`}</option>)}</select></label>
     {ANDROID && <p className="muted currency-rate">{a.primaryCurrency} · {currencyName("USD")} · USD{(state.secondary === undefined || state.secondary === "__auto__") && secondaryCode(state.secondary, state.lang) && <><br />{a.currentSecondary} · {currencyName(secondaryCode(state.secondary, state.lang)!)} · {secondaryCode(state.secondary, state.lang)}</>}</p>}
     {secondaryCode(state.secondary, state.lang) && <p className="muted currency-rate">{fx?.rates[secondaryCode(state.secondary, state.lang)] ? rateLine(secondaryCode(state.secondary, state.lang), fx.rates[secondaryCode(state.secondary, state.lang)], state.lang) : "—"}{ANDROID && <> <InfoTip label={t("moreInfo")} text={a.ratesNote} /></>}<br />{t("updated")} · {fx ? new Date(fx.ts * 1000).toLocaleString(state.lang) : "—"}{fx?.stale && <> · {t("stale")}</>}</p>}
-    {ANDROID && <button type="button" disabled={ratesBusy} onClick={() => { setRatesBusy(true); void api<FX>("/v1/fx").then(setFX, () => setFX((old) => old ? { ...old, stale: true } : old)).finally(() => setRatesBusy(false)); }}>{a.refreshRates}</button>}
-    <label className="settings-toggle"><span>{t("autoRefresh")}</span><input type="checkbox" className="switch" checked={state.autoRefresh !== false} onChange={(e) => update((s) => ({ ...s, autoRefresh: e.target.checked, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))} /></label>
+    {ANDROID && <button type="button" disabled={ratesBusy} onClick={() => { setRatesBusy(true); void api<FX>("/v1/fx").then((v) => { readAt.current.fx = Date.now(); setFX(v); saveFX(v, readAt.current.fx); }, () => setFX((old) => old ? { ...old, stale: true } : old)).finally(() => setRatesBusy(false)); }}>{a.refreshRates}</button>}
+    {/* Android refreshes every 5 s without a setting. */}
+    {!ANDROID && <label className="settings-toggle"><span>{t("autoRefresh")}</span><input type="checkbox" className="switch" checked={state.autoRefresh !== false} onChange={(e) => update((s) => ({ ...s, autoRefresh: e.target.checked, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))} /></label>}
   </div>;
   const pushStatusText =
     pushState === "saving" ? t("pushSaving") :
@@ -1094,6 +1137,35 @@ function App() {
     permission === "denied" ? ANDROID ? a.notifyDenied : t("pushDenied") :
     permission === "unavailable" ? ANDROID ? a.notifyUnavailable : t("pushUnavailable") :
     t("pushDefault");
+  // One price alert's row: on the website's list, and in the Android 价格提醒 card.
+  const ruleRow = (r: Rule) => (
+                  <div className="rule-card" key={r.id}>
+                    <Icon name={r.kind === "above" ? "up" : r.kind === "below" ? "down" : r.kind === "reach" ? "reach" : "change"} />
+                    <div className="rule-label"><button className="text-button" onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><strong>{ANDROID && r.kind === "reach" ? `${fill(a.ruleReachLabel, `$${r.value.toFixed(2)}`)} · ${a.ruleEither}` : <>{t(r.kind)} {r.kind === "move" ? `${r.value}% · ${r.window === 300 ? "5m" : r.window === 3600 ? "1h" : "24h"}` : <Money amount={money(r.value)} />}</>}</strong></button>
+                      {deliveries[r.id]?.deferred && deliveries[r.id].kind === r.kind && deliveries[r.id].value === r.value && deliveries[r.id].window === r.window && <small className="status warn">{t("deferredAlert").replace("%@", state.window ? `${String(Math.floor(state.window.start / 60)).padStart(2, "0")}:${String(state.window.start % 60).padStart(2, "0")} · ${state.window.tz}` : t("start"))}</small>}
+                      <small><span>{t(r.repeat ? "repeatingAlert" : "oneShotAlert")}</span>{r.seen_fired > 0 && <span title={new Date(r.seen_fired * 1000).toLocaleString(state.lang)}>{t("lastAlert").replace("%@", relativeTime(r.seen_fired, state.lang))}</span>}</small>
+                    </div>
+                    <div className="rule-controls"><input type="checkbox" className="switch" aria-label={t("alerts")} checked={r.enabled} onChange={() => gated(() => update((s) => ({ ...s, rules: s.rules.map((x) => x.id === r.id ? { ...x, enabled: !x.enabled, updated: Math.max(fresh(), x.updated + 1) } : x) })))} /><details className="menu"><summary aria-label={t("manage")}><Icon name="more" /></summary><div><button onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><Icon name="edit" />{t("edit")}</button><button className="danger" onClick={() => remove("rules", r.id)}><Icon name="delete" />{t("delete")}</button></div></details></div>
+                  </div>
+  );
+  // The price the alerts trigger on (the Worker prices off SafeTrade and only falls back to the three-exchange median
+  // while that is down) and how it moved: what a new rule is set from.
+  const androidQuote = ANDROID && <>
+    <span className="label-tip"><small>{a.refPrice}</small><InfoTip label={a.refPrice} text={price.data?.source === "median" ? a.sourceMedian : a.sourceSafeTrade} /></span>
+    <strong>{price.data ? `$${price.data.usd.toFixed(2)}` : "—"}</strong>
+    <div className="android-ref-changes">{([[a.min5, price.data?.change5m], [a.hour1, price.data?.change1h], [a.hour24, price.data?.change24h]] as [string, number | null | undefined][]).map(([label, pct]) =>
+      <div key={label}><small>{label}</small><b className={pct == null ? undefined : pct >= 0 ? "up" : "down"}>{pct == null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}</b></div>)}</div>
+  </>;
+  // iOS AlertsView's 价格提醒 card: its title block, the price, the rules (tap one to edit it), then 添加提醒.
+  const androidPriceCard = ANDROID && page === "alerts" && <section className="card alert-card price-card">
+    <AlertCardHeader icon="alerts" title={a.priceAlerts} subtitle={a.priceSubtitle} info={a.alertsPrivacy} />
+    <div className="android-ref-price">{androidQuote}</div>
+    {activeRules.length > 0 && <div className="rules-card" aria-label={a.priceAlerts}>{activeRules.map(ruleRow)}</div>}
+    <button className="primary wide" disabled={activeRules.length >= 20} onClick={() => gated(() => { setEditingRule(null); setPanel("rule"); })}><Icon name="plus" />{a.addAlert}</button>
+  </section>;
+  // …and its 到账提醒 card: the addresses the user has here are worked out while the page is on screen.
+  const androidIncomeCard = ANDROID && page === "alerts" && <AndroidIncomeCard a={a} setting={income} window={!!state.window} onSet={setIncome}
+    known={incomeKnown(incomeWallets(), activeMonitors)} own={walletOf()?.state().address || null} />;
   // Android mirrors the iOS tab bar: 钱包 / 交易 / 挖矿监控 / 我的监控 / 设置.
   const androidTabs: { tab: AndroidTab; icon: "wallet" | "trade" | "pools" | "workers" | "settings"; label: string; page: Page }[] = [
     { tab: "wallet", icon: "wallet", label: a.tabWallet, page: "wallet" },
@@ -1179,7 +1251,7 @@ function App() {
         {!(ANDROID && page === "trade") && <div className="page-toolbar">
         <header className="page-heading">
           <div>
-            <div className="page-title"><h1 className={ANDROID && (page === "pools" || page === "calculator") ? "sr-only" : undefined}>{ANDROID && page === "workers" ? a.myMonitors : t(page === "pools" ? "poolOverview" : page as Exclude<Page, "trade">)}</h1>{ANDROID && miningPages.includes(page as MiningPage) && <InfoTip label={t("moreInfo")} text={a.notMining} />}{ANDROID && ["market", "pools", "calculator", "workers"].includes(page) && <button className="icon-button android-refresh" aria-label={a.refresh} title={a.refresh} disabled={manualRefresh} onClick={() => { setManualRefresh(true); void refresh().finally(() => setManualRefresh(false)); }}><Icon name="refresh" className={manualRefresh ? "spin" : undefined} /></button>}{page === "alerts" && me?.pro && <span className="badge" title={t("proActive")}><Icon name="check" />PRO · {me.pro_src === "apple" ? t("appleSource") : me.pro_src || "PRO"}</span>}{page === "wallet" && !ANDROID && <InfoTip label={t("moreInfo")} text={t("walletNote")} />}</div>
+            <div className="page-title"><h1 className={ANDROID && (page === "pools" || page === "calculator") ? "sr-only" : undefined}>{ANDROID && page === "workers" ? a.myMonitors : ANDROID && page === "alerts" ? a.alertsTitle : t(page === "pools" ? "poolOverview" : page as Exclude<Page, "trade">)}</h1>{ANDROID && miningPages.includes(page as MiningPage) && <InfoTip label={t("moreInfo")} text={a.notMining} />}{ANDROID && ["market", "pools", "calculator", "workers"].includes(page) && <button className="icon-button android-refresh" aria-label={a.refresh} title={a.refresh} disabled={manualRefresh} onClick={() => { setManualRefresh(true); void refresh().finally(() => setManualRefresh(false)); }}><Icon name="refresh" className={manualRefresh ? "spin" : undefined} /></button>}{!ANDROID && page === "alerts" && me?.pro && <span className="badge" title={t("proActive")}><Icon name="check" />{proSourceName(me.pro_src, t) ? `PRO · ${proSourceName(me.pro_src, t)}` : "PRO"}</span>}{page === "wallet" && !ANDROID && <InfoTip label={t("moreInfo")} text={t("walletNote")} />}</div>
             {/* No subtitle under the title (iOS 6a1e720): the page's own layout and controls say what it is. */}
             {page === "wallet" && !ANDROID && state.hideExtensionBanner === true && <p><button className="text-button extension-banner-show" onClick={() => update((s) => ({ ...s, hideExtensionBanner: false }))}>Pearl Hub Wallet</button></p>}
           </div>
@@ -1223,7 +1295,7 @@ function App() {
                 <button className="icon-button market-banner-close" onClick={hideAndroidBanner} aria-label={t("close")} title={t("close")}><Icon name="close" /></button>
               </section>
             )}
-            <MarketData price={price.data} overview={overview.data} history={history.data} failed={price.failed || overview.failed || history.failed} t={t} lang={state.lang} money={money} refresh={refreshEpoch} live={state.autoRefresh !== false} />
+            <MarketData price={price.data} overview={overview.data} history={history.data} failed={price.failed || overview.failed || history.failed} t={t} lang={state.lang} money={money} refresh={refreshEpoch} live={ANDROID || state.autoRefresh !== false} />
             {ANDROID && <FleetCalculator only="overview" onOpenDevices={() => setPage("calculator")} state={state} onState={update} data={overview.data} price={price.data} fx={fx}
               incomes={Object.fromEntries(ownAddresses(state.monitors).map((addr) => [addr, incomeFor(addr)]))}
               failed={price.failed || overview.failed} t={t} />}
@@ -1353,19 +1425,14 @@ function App() {
         </>}
         {page === "alerts" && (
           <>
-            {ANDROID && <section className="card android-ref-price">
-              {/* The Worker prices off SafeTrade and only falls back to the three-exchange median while that is down. */}
-              <span className="label-tip"><small>{a.refPrice}</small><InfoTip label={a.refPrice} text={price.data?.source === "median" ? a.sourceMedian : a.sourceSafeTrade} /></span>
-              <strong>{price.data ? `$${price.data.usd.toFixed(2)}` : "—"}</strong>
-              <div className="android-ref-changes">{([[a.min5, price.data?.change5m], [a.hour1, price.data?.change1h], [a.hour24, price.data?.change24h]] as [string, number | null | undefined][]).map(([label, pct]) =>
-                <div key={label}><small>{label}</small><b className={pct == null ? undefined : pct >= 0 ? "up" : "down"}>{pct == null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}</b></div>)}</div>
-            </section>}
+            {/* Pro: the price sits in 价格提醒's card (androidPriceCard); before Pro it heads the page on its own. */}
+            {ANDROID && !(me?.pro && pushReady) && <section className="card android-ref-price">{androidQuote}</section>}
             {me?.pro&&me.pro_scope==="device"&&<section className="card"><p role="status">{accountCopy(state.lang).guestPro}</p>{!state.accountId&&<button onClick={()=>setPanel("account")}>{accountCopy(state.lang).savePurchase}</button>}</section>}
             {!me?.pro && <section className="card pro-preview">
               <img className="pro-preview-logo" src="/icon-192.png?v=pearl-light" alt="" width="40" height="40" />
               <div className="pro-preview-copy">
                 <h2>{t("pro")}</h2>
-                <p>{t("priceAlerts")} · {t("offlineAlert")} · {t("dataSync")}</p>
+                <p>{t("priceAlerts")} · {ANDROID && <>{a.incomeAlerts} · </>}{t("offlineAlert")} · {t("dataSync")}</p>
               </div>
               <div className="pro-preview-actions">
                 {!fromApp && <strong className="pro-preview-price"><Money amount={money(availability.pay.usd)} block /></strong>}
@@ -1376,7 +1443,7 @@ function App() {
               <Empty symbol="alerts" text={ANDROID ? androidInfoValue?.fcm === false ? a.notifyUnavailable : a.notifyNotReady : t("pushOff")} />
             ) : (
               <>
-                {me?.pro && state.token && permission === "granted" && pushState !== "error" ? <section className="card notification-status"><span role="status"><Icon name="check" />{t(pushState === "saving" ? "pushSaving" : "notificationOn")}</span><div className="actions"><button disabled={busy} onClick={() => void run(async () => { await api(`/v1/devices/${state.token}/test`, "POST"); setMessage(t("testSent")); })}>{t("testPush")}</button><button onClick={disablePush} disabled={busy}>{t("disablePush")}</button></div></section> : (
+                {me?.pro && state.token && permission === "granted" && pushState !== "error" ? <section className="card notification-status"><span role="status">{pushState === "saving" ? <Icon name="refresh" className="spin" /> : <Icon name="check" />}{t("notificationOn")}{pushState === "saving" && <span className="sr-only">{t("pushSaving")}</span>}</span><div className="actions"><button disabled={busy} onClick={() => void run(async () => { await api(`/v1/devices/${state.token}/test`, "POST"); setMessage(t("testSent")); })}>{t("testPush")}</button><button onClick={disablePush} disabled={busy}>{t("disablePush")}</button></div></section> : (
                 <section className="card">
                   <div className="card-heading">
                     <span className="label-tip"><h2>{ANDROID ? a.notificationSettings : t("notifications")}</h2>{!ANDROID && <InfoTip label={t("pushHelp")} text={t("pushLimits")} />}</span>
@@ -1421,6 +1488,8 @@ function App() {
                   <span className="label-tip"><h2>{t("offlineAlert")}</h2><InfoTip label={t("offlineAlert")} text={t("offlineGuide")} /></span>
                   <button onClick={() => setPage("workers")}>{t("workers")} <Icon name="right" /></button>
                 </section>}
+                {/* Android with Pro: 价格提醒 and 到账提醒 as one card each (iOS AlertsView). */}
+                {ANDROID && me?.pro ? <>{androidPriceCard}{androidIncomeCard}</> : <>
                 <div className="list-toolbar">
                   <span className="label-tip">{t("priceAlerts")} {activeRules.length} / 20{ANDROID && <InfoTip label={t("priceAlerts")} text={a.alertsPrivacy} />}</span>
                   <button
@@ -1436,16 +1505,8 @@ function App() {
                     <Icon name="plus" />{t("add")}
                   </button>
                 </div>
-                {!activeRules.length ? <Empty symbol="alerts" text={t("noRules")} button={t("addPriceAlert")} onClick={() => gated(() => { setEditingRule(null); setPanel("rule"); })} /> : <section className="card rules-card" aria-label={t("alerts")}>{activeRules.map((r) => (
-                  <div className="rule-card" key={r.id}>
-                    <Icon name={r.kind === "above" ? "up" : r.kind === "below" ? "down" : r.kind === "reach" ? "reach" : "change"} />
-                    <div className="rule-label"><button className="text-button" onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><strong>{ANDROID && r.kind === "reach" ? `${fill(a.ruleReachLabel, `$${r.value.toFixed(2)}`)} · ${a.ruleEither}` : <>{t(r.kind)} {r.kind === "move" ? `${r.value}% · ${r.window === 300 ? "5m" : r.window === 3600 ? "1h" : "24h"}` : <Money amount={money(r.value)} />}</>}</strong></button>
-                      {deliveries[r.id]?.deferred && deliveries[r.id].kind === r.kind && deliveries[r.id].value === r.value && deliveries[r.id].window === r.window && <small className="status warn">{t("deferredAlert").replace("%@", state.window ? `${String(Math.floor(state.window.start / 60)).padStart(2, "0")}:${String(state.window.start % 60).padStart(2, "0")} · ${state.window.tz}` : t("start"))}</small>}
-                      <small><span>{t(r.repeat ? "repeatingAlert" : "oneShotAlert")}</span>{r.seen_fired > 0 && <span title={new Date(r.seen_fired * 1000).toLocaleString(state.lang)}>{t("lastAlert").replace("%@", relativeTime(r.seen_fired, state.lang))}</span>}</small>
-                    </div>
-                    <div className="rule-controls"><input type="checkbox" className="switch" aria-label={t("alerts")} checked={r.enabled} onChange={() => gated(() => update((s) => ({ ...s, rules: s.rules.map((x) => x.id === r.id ? { ...x, enabled: !x.enabled, updated: Math.max(fresh(), x.updated + 1) } : x) })))} /><details className="menu"><summary aria-label={t("manage")}><Icon name="more" /></summary><div><button onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><Icon name="edit" />{t("edit")}</button><button className="danger" onClick={() => remove("rules", r.id)}><Icon name="delete" />{t("delete")}</button></div></details></div>
-                  </div>
-                ))}</section>}
+                {!activeRules.length ? <Empty symbol="alerts" text={t("noRules")} button={t("addPriceAlert")} onClick={() => gated(() => { setEditingRule(null); setPanel("rule"); })} /> : <section className="card rules-card" aria-label={t("alerts")}>{activeRules.map(ruleRow)}</section>}
+                </>}
                 <section className="card">
                   <div className="card-heading">
                     <span className="label-tip"><h2>{t("pushWindow")}</h2>{ANDROID && <InfoTip label={t("pushWindow")} text={state.window ? fill(a.windowSummary, hm(state.window.start), hm(state.window.end), hm(state.window.start)) : a.windowAllDay} />}</span>
@@ -1506,7 +1567,7 @@ function App() {
             )}
           </>
         )}
-        {ANDROID && page === "settings" && <AndroidSettings state={state} me={me} accountReady={accountReady} accountEmail={accountEmail} info={androidInfoValue} a={a} t={t} general={generalSettings}
+        {ANDROID && page === "settings" && <AndroidSettings state={state} me={me} accountReady={accountReady} accountEmail={accountEmail} info={androidInfoValue} a={a} t={t} general={generalSettings} incomeOn={incomeRegistered}
           page={settingsPage} setPage={(next) => { setSettingsPage(next); window.scrollTo(0, 0); }} live={live} wallet={walletOf} pushReady={pushReady}
           pay={fromApp ? null : { price: <Money amount={money(availability.pay.usd)} />, enabled: availability.pay.enabled && accountReady && !busy }}
           store={playStore}
@@ -1586,14 +1647,14 @@ function App() {
             {ANDROID ? <SecurityOverview lang={state.lang} sections={androidSecurity} copy={androidSecurityCopy(state.lang)} /> : <SecurityOverview lang={state.lang} sections={webSecurity} />}
           </>}
           {(panel === "account" || panel === "restore") && (
-            <AccountPanel restore={panel === "restore" && !canSync} accountId={accountReady ? state.accountId : ""} lang={state.lang} auth={availability.auth} onLogin={(a) => adoptAccount(a)} onLogout={leaveAccount} onEmail={setAccountEmail} purchases={(
+            <AccountPanel restore={panel === "restore" && !canSync} accountId={accountReady ? state.accountId : ""} lang={state.lang} auth={availability.auth} onLogin={(a, importLocal) => adoptAccount(a, true, undefined, importLocal)} onLogout={leaveAccount} onEmail={setAccountEmail} purchases={(
                 <div className="setting-section">
                   <div className="card-heading">
                     <div>
                       <span className="label-tip"><h3>{t("pro")}</h3>{!me?.pro && !fromApp && <InfoTip label={t("pro")} text={t("appPurchaseLink")} />}</span>
                       <p className="muted">
                         {me?.pro
-                          ? `${me.pro_scope==="device"?accountCopy(state.lang).guestPro:t("proActive")} · ${me.pro_src === "apple" ? t("appleSource") : me.pro_src} · ${new Date(me.pro_at! * 1000).toLocaleDateString(state.lang)}`
+                          ? `${[me.pro_scope==="device"?accountCopy(state.lang).guestPro:t("proActive"), proSourceName(me.pro_src, t), new Date(me.pro_at! * 1000).toLocaleDateString(state.lang)].filter(Boolean).join(" · ")}`
                           : fromApp ? t("proCopy") : <><Money amount={money(availability.pay.usd)} /> · {t("proCopy")}</>}
                       </p>
                     </div>

@@ -71,11 +71,14 @@ export function MarketData({ price, overview, history, failed, t, lang, money, r
   // so the 5-second page refresh only asks again after a minute (or after a failure).
   const readAt = useRef<Record<string, number>>({});
   const due = (key: string) => Date.now() - (readAt.current[key] ?? 0) >= 60_000;
+  const [networkRetry, setNetworkRetry] = useState(0);
+  // Clearing the failure shows the loading state again; a failed read never set readAt, so it is due.
+  const retryNetwork = () => { setNetwork((s) => ({ ...s, [span]: { data: s[span]?.data } })); setNetworkRetry((n) => n + 1); };
   useEffect(() => {
     let disposed = false;
     for (const range of new Set(["7d", ...(metric !== "price" ? [span] : [])])) if (due(`network/${range}`)) void api<NetworkHistory>(`/v1/network/history?span=${range}`).then((data) => { if (!disposed) { readAt.current[`network/${range}`] = Date.now(); setNetwork((s) => ({ ...s, [range]: { data } })); } }).catch(() => { if (!disposed) setNetwork((s) => ({ ...s, [range]: { ...s[range], failed: true } })); });
     return () => { disposed = true; };
-  }, [refresh, metric, span]);
+  }, [refresh, metric, span, networkRetry]);
   useEffect(() => {
     if (priceSpan === "24h" || !due(`price/${priceSpan}`)) return;
     let disposed = false;
@@ -117,7 +120,7 @@ export function MarketData({ price, overview, history, failed, t, lang, money, r
       {kline ? <div className="segments">{KLINE_PERIODS.map((p) => <button key={p} className={klinePeriod === p ? "selected" : ""} aria-pressed={klinePeriod === p} onClick={() => setKlinePeriod(p)}>{klinePeriodLabel(p)}</button>)}</div>
         : metric !== "price" ? <div className="segments">{HASH_SPANS.map((s) => <button key={s} className={span === s ? "selected" : ""} aria-pressed={span === s} onClick={() => setSpan(s)}>{s === "all" ? t("all") : s}</button>)}</div> : ranges.length > 0 && <div className="segments">{ranges.map((s) => <button key={s} className={priceSpan === s ? "selected" : ""} onClick={() => setPriceSpan(s)}>{s}</button>)}</div>}</div>
       {kline ? <KLinePanel data={candles.data} failed={candles.failed} t={t} lang={lang} zoom={klineZoom} onZoom={setKlineZoom} />
-        : metric === "hash" ? <><HashChart points={hashSeries?.data?.points || []} series={series[span]} blocks={blocks(span)} span={span} t={t} lang={lang} loading={!settled(span)} />
+        : metric === "hash" ? <><HashChart points={hashSeries?.data?.points || []} series={series[span]} blocks={blocks(span)} span={span} t={t} lang={lang} loading={!settled(span)} failed={!!hashSeries?.failed} onRetry={retryNetwork} />
           <p className="chart-source">{t("source")} · Blockbook</p>{hashSeries?.failed && <p className="status warn">{t("stale")}</p>}
           {hashSeries?.data?.firstHeight != null && <footer className="data-footer"><span>Block {hashSeries.data.firstHeight.toLocaleString(lang)}</span><span>Block {hashSeries.data.lastHeight?.toLocaleString(lang) || "—"}</span></footer>}</>
         : <LineChart lang={lang} points={trendPoints} label={cards.find((c) => c[0] === metric)![1]} help={t("chartHelp")} loading={metric === "price" ? priceLoading : (!overview && !failed) || !settled(span)} empty={t(metric === "price" ? "emptyChart" : "samplingHistory")} axisFormat={metric === "price" ? (v) => money(v).split(" · ")[0] : metric === "unit" ? (v) => v.toLocaleString(lang, { notation: "compact", maximumFractionDigits: 2 }) : undefined} log={metric === "unit" && span === "all"} format={metric === "price" ? money : metric === "diff" ? (v) => difficulty(v, lang) : (v) => v.toLocaleString(lang, { maximumFractionDigits: 2 })} />}

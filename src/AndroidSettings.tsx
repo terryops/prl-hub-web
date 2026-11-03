@@ -75,7 +75,7 @@ const LICENSES: { name: string; license: string; holder: string; url: string }[]
   { name: "Kotlin Standard Library", license: "Apache-2.0", holder: "© JetBrains s.r.o. and Kotlin Programming Language contributors", url: "https://github.com/JetBrains/kotlin" },
 ];
 
-export function AndroidSettings({ state, me, accountReady, accountEmail, info, a, t, general, page, setPage, live, wallet, pushReady, pay, store, offlineAlerts,
+export function AndroidSettings({ state, me, accountReady, accountEmail, info, a, t, general, page, setPage, live, wallet, pushReady, pay, store, offlineAlerts, incomeOn,
   onAppearance, onInfo, onAccount, onBuy, onAlerts, onSecurity, onWidgets, onWallet, trade }: {
   state: State; me: Me | null; accountReady: boolean; accountEmail: string; info: AndroidInfo | null;
   a: AndroidCopy; t: (key: TextKey) => string; general: ReactNode;
@@ -87,6 +87,8 @@ export function AndroidSettings({ state, me, accountReady, accountEmail, info, a
   // Billing or the server's purchase check is not available.
   store: PlayStore | null;
   offlineAlerts: OfflineAlerts;
+  // 到账提醒 is on and this device sends it (it counts on 价格和到账提醒's row then, as iOS's incomeRegistered).
+  incomeOn: boolean;
   onAppearance: (appearance: Partial<Pick<State, "theme">> & { palette?: string }) => void;
   onInfo: (info: AndroidInfo) => void;
   onAccount: () => void; onBuy: () => void; onAlerts: () => void; onSecurity: () => void; onWidgets: () => void;
@@ -127,7 +129,7 @@ export function AndroidSettings({ state, me, accountReady, accountEmail, info, a
   </div>;
 
   const proFeatures = <ul className="android-features">
-    {([["refresh", a.proFeatureSync], ["market", a.proFeatureTarget], ["change", a.proFeatureMove], ["workers", a.proFeatureOffline], ["lock", a.proFeatureLive], ["pools", a.proFeatureDepth], ["app", a.proFeatureWidgets]] as [IconName, string][])
+    {([["refresh", a.proFeatureSync], ["market", a.proFeatureTarget], ["change", a.proFeatureMove], ["received", a.proFeatureIncome], ["workers", a.proFeatureOffline], ["lock", a.proFeatureLive], ["pools", a.proFeatureDepth], ["app", a.proFeatureWidgets]] as [IconName, string][])
       .map(([name, text]) => <li key={text}><Icon name={name} /><span>{text}</span></li>)}
   </ul>;
   const proCard = pro
@@ -283,12 +285,13 @@ export function AndroidSettings({ state, me, accountReady, accountEmail, info, a
         { icon: "lock", label: a.lockWallet, plain: true, onClick: () => wallet()?.lock() },
         { icon: "delete", label: walletState.readOnly ? a.removeWatchWallet : a.removeWallet, danger: true, onClick: () => openWallet("remove") },
       ]} />
-      {/* Brings back the wallet page's NOCK line once closed there (only for a wallet that doesn't use NOCK). */}
-      {walletState.nockLink && <label className="android-row android-row-static android-row-switch">
+      {/* NOCK is opt-in (iOS 2.1.9): on, the wallet page gets its NOCK entry. A read-only wallet has no seed to derive
+          NOCK from (nock is null then). Not a <label>: tapping the ⓘ must not flip the switch. */}
+      {walletState.nock != null && <div className="android-row android-row-static android-row-switch">
         <span className="android-row-icon"><svg className="icon" viewBox="0 0 512 512" aria-hidden="true"><path d="M256 40 443 148v216L256 472 69 364V148Z" fill="currentColor" /></svg></span>
-        <span className="android-row-label">{a.showNockLink}</span>
-        <input type="checkbox" className="switch" checked={walletState.nockLink === "shown"} onChange={(e) => wallet()?.setNockLink?.(e.target.checked)} />
-      </label>}
+        <span className="android-row-label android-title-tip">{a.nockWallet}<InfoTip label={a.nockWallet} text={a.nockNote} /></span>
+        <input type="checkbox" className="switch" aria-label={a.nockWallet} checked={walletState.nock} onChange={(e) => wallet()?.setNock?.(e.target.checked)} />
+      </div>}
     </Group>}
     {/* Locked (it locks after five minutes): the rows above need the wallet open, so offer the unlock. */}
     {walletState?.exists && walletState.locked && <Group title={a.walletSection}>
@@ -332,7 +335,7 @@ export function AndroidSettings({ state, me, accountReady, accountEmail, info, a
     </Group>
     <Group title={a.notificationSettings}>
       <Rows rows={[
-        { icon: "alerts", label: a.priceAlerts, value: proBadge(rules), onClick: onAlerts },
+        { icon: "alerts", label: a.alertsTitle, value: proBadge(rules + (incomeOn ? 1 : 0)), onClick: onAlerts },
         { icon: "workers", label: a.offlineAlerts, value: proBadge(offline), onClick: () => setPage("offline") },
         { icon: "lock", label: a.liveTicker, value: !pro ? <Badge>{a.premium}</Badge> : live.running ? <span className="android-live-on">{a.liveRunning}</span> : undefined, onClick: () => setPage("live") },
       ]} />

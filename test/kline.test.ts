@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { KLINE_PERIODS, candleScale, intraday, klinePeriodLabel, klineURL, parseCandles, priceDigits, shownCount, wheelScale, zoomBounds, zoomed } from "../src/kline.ts";
+import { KLINE_PERIODS, candleScale, candleSpacing, dragIntent, intraday, klinePeriodLabel, klineURL, panned, parseCandles, priceDigits, revealing, shownCount, visibleRange, wheelScale, zoomBounds, zoomed } from "../src/kline.ts";
 
 test("k-line: the latest window is requested explicitly, with the native periods", () => {
   assert.deepEqual(KLINE_PERIODS.map(klinePeriodLabel), ["5m", "15m", "1h", "4h", "1d"]);
@@ -85,4 +85,69 @@ test("k-line: price decimals keep neighbouring ticks distinct; intraday spans sh
   assert.equal(intraday([at(0), at(35 * 3600)]), true);
   assert.equal(intraday([at(0), at(36 * 3600)]), false);
   assert.equal(intraday([at(0)]), false);
+});
+
+test("k-line: the window ends `hidden` candles short of the latest, never past what is loaded", () => {
+  assert.deepEqual(visibleRange(300, 40, 0), [260, 300]);
+  assert.deepEqual(visibleRange(300, 40, 25), [235, 275]);
+  // As far back as the oldest candle, and no further; never past the latest either.
+  assert.deepEqual(visibleRange(300, 40, 260), [0, 40]);
+  assert.deepEqual(visibleRange(300, 40, 1000), [0, 40]);
+  assert.deepEqual(visibleRange(300, 40, -5), [260, 300]);
+  assert.deepEqual(visibleRange(300, 40, NaN), [260, 300]);
+  // Zoomed out to everything loaded (or fewer loaded than fit): nothing to pan.
+  assert.deepEqual(visibleRange(300, 300, 40), [0, 300]);
+  assert.deepEqual(visibleRange(7, 25, 3), [0, 7]);
+  assert.deepEqual(visibleRange(0, 25, 0), [0, 0]);
+});
+
+test("k-line: dragging right brings older candles in, a candle's width at a time, within what is loaded", () => {
+  // 400 px showing 40 candles: 10 px a candle.
+  assert.equal(panned(0, 0, 400, 40, 300), 0);
+  assert.equal(panned(0, 4, 400, 40, 300), 0);
+  assert.equal(panned(0, 6, 400, 40, 300), 1);
+  assert.equal(panned(0, 120, 400, 40, 300), 12);
+  // Back towards the latest, from where the drag began, and no further than the latest.
+  assert.equal(panned(30, -100, 400, 40, 300), 20);
+  assert.equal(panned(30, -1000, 400, 40, 300), 0);
+  // No further back than the oldest candle loaded.
+  assert.equal(panned(250, 400, 400, 40, 300), 260);
+  assert.equal(panned(0, 1e9, 400, 40, 300), 260);
+  assert.equal(panned(0, 50, 400, 300, 300), 0);
+  // A start outside the range (the zoom changed since) is clamped first.
+  assert.equal(panned(290, 0, 400, 40, 300), 260);
+  // Nothing measurable: the start, clamped.
+  assert.equal(panned(12, NaN, 400, 40, 300), 12);
+  assert.equal(panned(12, 50, 0, 40, 300), 12);
+  assert.equal(panned(12, 50, 400, 0, 300), 12);
+});
+
+test("k-line: the keyboard pans just far enough to reach the candle it moves to", () => {
+  // Window [235, 275).
+  assert.equal(revealing(25, 250, 40, 300), 25);
+  assert.equal(revealing(25, 234, 40, 300), 26);
+  assert.equal(revealing(25, 275, 40, 300), 24);
+  assert.equal(revealing(25, 0, 40, 300), 260);
+  assert.equal(revealing(25, 299, 40, 300), 0);
+});
+
+test("k-line: a touch pans once it sets off sideways; up or down is the page's scroll", () => {
+  assert.equal(dragIntent(0, 0, 8), null);
+  assert.equal(dragIntent(5, 5, 8), null);
+  assert.equal(dragIntent(9, 3, 8), "pan");
+  assert.equal(dragIntent(-9, 3, 8), "pan");
+  assert.equal(dragIntent(3, 9, 8), "scroll");
+  assert.equal(dragIntent(2, -12, 8), "scroll");
+  // Exactly diagonal is a scroll: the page keeps what it can't be sure of.
+  assert.equal(dragIntent(8, 8, 8), "scroll");
+  assert.equal(dragIntent(NaN, 0, 8), null);
+});
+
+test("k-line: the candle spacing tells one period's series from another's", () => {
+  const at = (t: number) => ({ t, o: 1, h: 1, l: 1, c: 1, v: 1 });
+  assert.equal(candleSpacing([at(0), at(3600), at(7200)]), 3600);
+  // A gap where no trade happened doesn't change the period.
+  assert.equal(candleSpacing([at(0), at(10800), at(14400)]), 3600);
+  assert.equal(candleSpacing([at(0)]), 0);
+  assert.equal(candleSpacing([]), 0);
 });

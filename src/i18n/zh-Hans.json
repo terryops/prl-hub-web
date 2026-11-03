@@ -201,7 +201,7 @@
   "poolAPI": "矿池校正",
   "poolSupplement": "补充数据",
   "poolOwnApiMissing": "该矿池自身 API 暂无响应，数据暂取自其他来源。",
-  "poolMergeBonus": "另得 {coin} 约\u00a0{range}",
+  "poolMergeBonus": "另得 {coin} 约 {range}",
   "poolMergeBonusHelp": "{pool} 另有 {coin} 联合挖矿收益，约值 PRL 收益的 {range}。要先在矿池账户里填好 {coin} 收款地址才会发放。未计入预估收益和真实费用。",
   "poolMinerCostHelp": "{pool} 实际收到的算力比 {app} 显示的少约 {gap}。按 {app} 显示的算力算，真实费用约 {cost}；用 {pool} 自家的挖矿软件约 {base}。",
   "poolMissing": "— 表示暂无数据，不代表 0。",
@@ -563,5 +563,9 @@
   "fleetGrowthManual": "仅供参考，月增长可在【参数】手动设",
   "fleetSummaryLine": "%@ 台设备 · 共 %@ 张卡（自有 %@ · 租用 %@）· 总算力 %@",
   "retry": "重试",
-  "poolsUnavailable": "暂时无法获取矿池数据"
+  "poolsUnavailable": "暂时无法获取矿池数据",
+  "chainLoadFailed": "链上数据加载失败",
+  "liveDifficulty": "实时难度：当前 %@M · 近7天 %@ · 近3天 %@ · 近24h %@",
+  "notSet": "未设置",
+  "noSecondaryNote": "未选副货币：挖矿金额按美元（USD）显示。可在「设置 → 货币」选择副货币后在此换算。"
 }

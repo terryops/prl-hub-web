@@ -391,6 +391,7 @@ h1 {
   border-radius: 12px;
   margin-bottom: 16px;
 }
+.chart-failed { flex-direction: column; gap: 10px; } .chart-failed p { margin: 0; }
 .data-footer {
   border-top: 1px solid var(--line);
   padding-top: 18px;
@@ -2028,6 +2029,8 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .restore-purchase-guide ol { padding-inline-start: 22px; margin: 0; display: grid; gap: 10px; }
 .restore-purchase-guide .muted { margin-bottom: 0; }
 .notification-status > span { display: flex; align-items: center; gap: 8px; font-size: var(--font-14); } .notification-status .icon { color: var(--green); }
+.notification-status .icon.spin { animation: status-spin .9s linear infinite; } @keyframes status-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .notification-status .icon.spin { animation: none; } }
 .rules-card { padding-block: 0; } .rule-card { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
 .rule-card:last-child { border: 0; } .rule-card > .icon { color: var(--blue-text); }
 .rule-label { display: grid; min-width: 0; gap: 6px; } .rule-label button { text-align: left; justify-content: flex-start; color: var(--text); font-size: var(--font-14); overflow-wrap: anywhere; }
@@ -2718,7 +2721,8 @@ main.narrow-page { max-width: 904px; }
 .kline-zoom .icon-button .icon { width: 18px; height: 18px; }
 .kline-zoom .icon-button:disabled { opacity: .35; cursor: default; }
 .kline-frame { display: grid; grid-template-columns: minmax(0, 1fr) max-content; row-gap: 8px; margin: 4px 0 12px; }
-.kline-plot { position: relative; height: 280px; min-width: 0; touch-action: pan-y; cursor: crosshair; }
+.kline-plot { position: relative; height: 280px; min-width: 0; touch-action: pan-y; cursor: crosshair; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.kline-plot.kline-panning { cursor: grabbing; }
 .kline-chart { display: block; width: 100%; height: 100%; overflow: visible; }
 .kline-up { fill: var(--candle-up); stroke: var(--candle-up); color: var(--candle-up); }
 .kline-down { fill: var(--candle-down); stroke: var(--candle-down); color: var(--candle-down); }
@@ -3297,3 +3301,8 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
 .label-tip > h2, .label-tip > h3 { margin: 0; }
 /* 提醒 → 掉线提醒: the title with its ⓘ, and the way to 矿机 on the same line. */
 .offline-intro { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+/* iOS PRLSettings value rows: the live difficulty under 难度月增长, and 副货币 · 未设置. */
+.fleet-live-difficulty { margin: -4px 0 0; font-size: var(--font-13); }
+.fleet-value-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
+.fleet-value-row > span:last-child { color: var(--muted); }

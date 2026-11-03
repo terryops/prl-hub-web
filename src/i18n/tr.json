@@ -563,5 +563,9 @@
   "fleetGrowthManual": "Yalnızca bilgi amaçlıdır; aylık artışı Parametreler bölümünden elle ayarlayabilirsiniz",
   "fleetSummaryLine": "%@ cihaz · toplam %@ kart (Kendi %@ · Kiralık %@) · Toplam hashrate %@",
   "retry": "Yeniden Dene",
-  "poolsUnavailable": "Havuz verileri şu anda yüklenemiyor"
+  "poolsUnavailable": "Havuz verileri şu anda yüklenemiyor",
+  "chainLoadFailed": "Zincir verileri yüklenemedi",
+  "liveDifficulty": "Canlı zorluk: şimdi %@M · 7g %@ · 3g %@ · 24sa %@",
+  "notSet": "Ayarlanmadı",
+  "noSecondaryNote": "İkincil para birimi seçilmedi: havuz tutarları USD olarak gösterilir. Burada dönüştürmek için Ayarlar → Para Birimi bölümünden bir ikincil para birimi seçin."
 }

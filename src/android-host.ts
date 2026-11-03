@@ -13,7 +13,7 @@ export type PearlHost = {
   openPage(hash: string): void;
   // The 钱包 tab is on screen with nothing over it (the wallet's one-time donation ask waits for that).
   visible?(): boolean;
-  // The wallet's iOS one-line links: 价格提醒 (Pro, live rules) and 桌面小组件 (hidden once one is placed).
+  // The wallet's iOS one-line links: 价格和到账提醒 (Pro, live alerts) and 桌面小组件 (hidden once one is placed).
   alerts?(): { pro: boolean; active: number; ready?: boolean };
   widgetPlaced?(): boolean;
   open?(target: "alerts" | "widgets"): void;
@@ -197,9 +197,10 @@ export type WalletState = { exists: boolean; locked: boolean; count: number; net
   address?: string | null;
   // The selected wallet only watches an address (no seed): 查看助记词, 找回搁浅的找零, NOCK and 从钱包转入 don't apply.
   readOnly?: boolean;
-  // 设置 → 钱包与安全's 在钱包页显示 NOCK 钱包: whether the wallet page's NOCK line shows; null when the switch
-  // doesn't apply (locked, a read-only wallet, or one that uses NOCK and always shows its strip).
-  nockLink?: "shown" | "hidden" | null };
+  // 设置 → 钱包与安全's NOCK 钱包 (iOS NockWalletStore.enabled): NOCK is on on this device. Off, no NOCK key is
+  // derived, no node is asked and the wallet page has no NOCK entry. null when the switch doesn't apply
+  // (locked, or a read-only wallet, which has no seed to derive NOCK from).
+  nock?: boolean | null };
 export type WalletControl = {
   state(): WalletState;
   open(target: WalletTarget): void;
@@ -210,13 +211,14 @@ export type WalletControl = {
   refresh?(): void;
   // The 交易 tab's 提现 (iOS 我的钱包): the main mainnet address of every wallet with its seed here, while
   // unlocked on mainnet. Read-only wallets are left out: the address they watch may well be someone else's.
-  wallets?(): { name: string; address: string }[];
+  // `readOnly`: 到账提醒's 我的钱包 (iOS IncomeAlertCard.knownAddresses), which lists them too, marked.
+  wallets?(options?: { readOnly?: boolean }): { name: string; address: string; readOnly?: boolean }[];
   // The 交易 tab's 充值 → 从钱包转入: the send screen with this address filled in (amount, fee and the device
   // check stay the person's). Locked: it opens once the wallet is unlocked; false then, off mainnet, or when
   // the selected wallet is read-only (it can't send).
   send?(address: string): boolean;
-  // Shows or hides the wallet page's NOCK line (WalletState.nockLink).
-  setNockLink?(shown: boolean): void;
+  // Switches NOCK on or off on this device (WalletState.nock).
+  setNock?(on: boolean): void;
 };
 
 declare global {

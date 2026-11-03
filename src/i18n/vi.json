@@ -563,5 +563,9 @@
   "fleetGrowthManual": "Chỉ để tham khảo; có thể đặt tăng trưởng tháng thủ công trong Tham số",
   "fleetSummaryLine": "%@ thiết bị · tổng %@ card (sở hữu %@ · thuê %@) · tổng hashrate %@",
   "retry": "Thử lại",
-  "poolsUnavailable": "Tạm thời không lấy được dữ liệu pool"
+  "poolsUnavailable": "Tạm thời không lấy được dữ liệu pool",
+  "chainLoadFailed": "Không tải được dữ liệu chuỗi",
+  "liveDifficulty": "Độ khó thời gian thực: hiện tại %@M · 7 ngày %@ · 3 ngày %@ · 24h %@",
+  "notSet": "Chưa cài đặt",
+  "noSecondaryNote": "Chưa chọn tiền tệ phụ: số tiền đào hiển thị bằng USD. Chọn tiền tệ phụ trong Cài đặt → Tiền tệ để quy đổi tại đây."
 }

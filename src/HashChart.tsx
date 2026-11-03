@@ -14,8 +14,10 @@ type Translate = (k: TextKey) => string;
 /// both on the same gridlines; then block time over the same window, on the same time axis.
 /// `points` are the span's samples and `series` their estimates over `blocks` blocks (historySeries),
 /// the same kind the Network hashrate card reads its figures from.
-export function HashChart({ points, series, blocks, span, loading, t, lang }: { points: NetworkPoint[]; series: number[][]; blocks: number; span: HashSpan; loading: boolean; t: Translate; lang: Lang }) {
+export function HashChart({ points, series, blocks, span, loading, failed = false, onRetry, t, lang }: { points: NetworkPoint[]; series: number[][]; blocks: number; span: HashSpan; loading: boolean; failed?: boolean; onRetry?: () => void; t: Translate; lang: Lang }) {
   if (loading) return <Skeleton label={t("loading")} kind="chart" />;
+  // As iOS NetworkChartCard: nothing loaded, and the read failed — say so and offer to ask again.
+  if (series.length < 2 && failed && onRetry) return <div className="chart-empty chart-failed"><p role="status">{t("chainLoadFailed")}</p><button type="button" onClick={onRetry}>{t("retry")}</button></div>;
   if (series.length < 2) return <p className="chart-empty">{t("samplingHistory")}</p>;
   return <HashPlot series={series} points={points} blocks={blocks} span={span} t={t} lang={lang} />;
 }

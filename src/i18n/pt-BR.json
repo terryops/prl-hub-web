@@ -563,5 +563,9 @@
   "fleetGrowthManual": "Apenas referência; defina o crescimento mensal manualmente em Parâmetros",
   "fleetSummaryLine": "Dispositivos: %@ · Placas: %@ (próprias %@ · alugadas %@) · Hashrate total %@",
   "retry": "Tentar de novo",
-  "poolsUnavailable": "Não foi possível carregar os dados do pool agora"
+  "poolsUnavailable": "Não foi possível carregar os dados do pool agora",
+  "chainLoadFailed": "Falha ao carregar dados da blockchain",
+  "liveDifficulty": "Dificuldade ao vivo: agora %@M · 7d %@ · 3d %@ · 24h %@",
+  "notSet": "Não definido",
+  "noSecondaryNote": "Sem moeda secundária: os valores dos pools aparecem em USD. Escolha uma moeda secundária em Ajustes → Moeda para converter aqui."
 }
