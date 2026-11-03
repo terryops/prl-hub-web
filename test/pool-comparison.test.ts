@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sortPools, poolSparkline, poolPayouts, realCostPeriods, hasPpsRealCost, ppsWindowEnd, weekLuck, estimatedYield, yieldTrustworthy, netPerPH, payoutCost, netYield, bestYield, rankedYield, orphanRate, schemeFamily, poolsByScheme, ownApiMissing } from "../src/pool-comparison.ts";
+import { sortPools, poolSparkline, poolPayouts, realCostPeriods, hasPpsRealCost, ppsWindowEnd, weekLuck, estimatedYield, yieldTrustworthy, netPerPH, payoutCost, netYield, bestYield, rankedYield, orphanRate, schemeFamily, poolsByScheme, ownApiMissing, foundingFee, mergeBonus, minerReport, realFeePending, shareYield, percentRange, realCostParts, realFeeTiers } from "../src/pool-comparison.ts";
+import type { PoolPayout } from "../src/types.ts";
 import type { PoolOverview } from "../src/types.ts";
 
 test("pool sorting: genuine zero is ordered, missing values stay last in either direction", () => {
@@ -52,6 +53,18 @@ test("Real Cost help distinguishes PPLNS and PPS windows without borrowing a PPS
   assert.deepEqual(row, before);
 });
 
+test("Real Cost help: the PPS settlement note appears only for a shown PPS-family value", () => {
+  const row = (payouts: unknown[], scheme = "PPS") => ({ name: "P", realFeeMeasurement: { scheme, start: 100, end: 600 }, payouts }) as PoolOverview;
+  assert.equal(hasPpsRealCost([row([{ scheme: "PPS", realFeePercent: 5 }])]), true);
+  assert.equal(hasPpsRealCost([row([{ scheme: "PPS+", realFeePercent: 0 }], "PPS+")]), true);
+  assert.equal(hasPpsRealCost([row([{ scheme: null, realFeePercent: 3 }])]), true); // legacy payout borrows the measurement's scheme
+  assert.equal(hasPpsRealCost([row([{ scheme: "PPLNS", realFeePercent: 21.6, realFeePeriod: { start: 500, end: 600 } }])]), false);
+  assert.equal(hasPpsRealCost([row([{ scheme: "PPS", realFeePercent: null }, { scheme: "PPS", realFeePercent: NaN }])]), false);
+  assert.equal(hasPpsRealCost([{ name: "Legacy" } as PoolOverview]), false);
+  assert.equal(ppsWindowEnd(Date.UTC(2026, 9, 18, 1, 22)), Date.UTC(2026, 9, 18));
+  assert.equal(ppsWindowEnd(Date.UTC(2026, 9, 18)), Date.UTC(2026, 9, 18));
+});
+
 const fortune = (luck: unknown) => ({ id: "pf", name: "Pearl Fortune", scheme: "PPLNS", pps: false, solo: false, trustworthy: true,
   earningsPerPH: 80, theoreticalEarningsPerPH: 100, blocksSample: 25, luck,
   payouts: [{ scheme: "PPS", fee: 5, grossPerPH: 100, realFeePercent: 5, estimated: true, solo: false },
@@ -89,18 +102,6 @@ test("7-day luck: missing, unreadable, PPS and SOLO rows fall back to the 24h fi
   assert.equal(weekLuck({ ...fortune(week(1, 190)), solo: true }), null);
   assert.equal(weekLuck({ ...fortune(week(1, 190)), theoreticalEarningsPerPH: null }), null);
   assert.equal(yieldTrustworthy({ ...fortune(null), trustworthy: false }), false);
-});
-
-test("Real Cost help: the PPS settlement note appears only for a shown PPS-family value", () => {
-  const row = (payouts: unknown[], scheme = "PPS") => ({ name: "P", realFeeMeasurement: { scheme, start: 100, end: 600 }, payouts }) as PoolOverview;
-  assert.equal(hasPpsRealCost([row([{ scheme: "PPS", realFeePercent: 5 }])]), true);
-  assert.equal(hasPpsRealCost([row([{ scheme: "PPS+", realFeePercent: 0 }], "PPS+")]), true);
-  assert.equal(hasPpsRealCost([row([{ scheme: null, realFeePercent: 3 }])]), true);
-  assert.equal(hasPpsRealCost([row([{ scheme: "PPLNS", realFeePercent: 21.6, realFeePeriod: { start: 500, end: 600 } }])]), false);
-  assert.equal(hasPpsRealCost([row([{ scheme: "PPS", realFeePercent: null }, { scheme: "PPS", realFeePercent: NaN }])]), false);
-  assert.equal(hasPpsRealCost([{ name: "Legacy" } as PoolOverview]), false);
-  assert.equal(ppsWindowEnd(Date.UTC(2026, 9, 18, 1, 22)), Date.UTC(2026, 9, 18));
-  assert.equal(ppsWindowEnd(Date.UTC(2026, 9, 18)), Date.UTC(2026, 9, 18));
 });
 
 const payout = (scheme: string | null, fee: number | null, grossPerPH: number | null, realFeePercent: number | null = null, solo = false) =>
@@ -158,6 +159,7 @@ test("take-home yield: sorting and the green mark use what a miner keeps", () =>
   assert.equal(bestYield([kryptex, f2pool, solo, unknown]), null);
   assert.equal(bestYield([]), null);
 });
+
 test("orphan rate: the pool's own orphans ÷ blocks; unreadable or missing counts are unknown, a genuine zero is kept", () => {
   const pool = (orphans: unknown) => ({ id: "p", name: "P", orphans }) as PoolOverview;
   const week = { start: 1000, end: 1000 + 7 * 86400 };
@@ -201,4 +203,85 @@ test("own API dot: only a partial snapshot's Kryptex, HeroMiners or Pearl Fortun
   // Pools the overview never asks directly, and SOLO rows, which keep their own terms.
   assert.equal(ownApiMissing(row("PearlHash", false), true), false);
   assert.equal(ownApiMissing(row("Kryptex", false, true), true), false);
+});
+
+test("merge bonus: F2Pool's NOCK label is read only when the service sent sane terms", () => {
+  const payout = (mergeBonus: unknown) => ({ scheme: "PPS", fee: 1, grossPerPH: 16, realFeePercent: null, estimated: true, solo: false, mergeBonus } as PoolPayout);
+  assert.deepEqual(mergeBonus(payout({ coin: "NOCK", minPercent: 1, maxPercent: 2 })), { coin: "NOCK", min: 1, max: 2 });
+  assert.deepEqual(mergeBonus(payout({ coin: "NOCK", minPercent: 1.5, maxPercent: 1.5 })), { coin: "NOCK", min: 1.5, max: 1.5 });
+  for (const bad of [undefined, null, {}, { coin: "nock", minPercent: 1, maxPercent: 2 }, { coin: "<b>", minPercent: 1, maxPercent: 2 },
+    { coin: "NOCK", minPercent: 3, maxPercent: 2 }, { coin: "NOCK", minPercent: -1, maxPercent: 2 }, { coin: "NOCK", minPercent: 1, maxPercent: 200 },
+    { coin: "NOCK", minPercent: "1", maxPercent: 2 }, { coin: "NOCK", minPercent: 1, maxPercent: Infinity }])
+    assert.equal(mergeBonus(payout(bad)), null, JSON.stringify(bad));
+});
+test("miner report: PearlHash's WildRig line needs sane terms and a Real Cost of its own", () => {
+  const report = { miner: "WildRig", credited: .91, realFeePercent: 9.091 };
+  const payout = (minerReport: unknown, realFeePercent: number | null = .1) => ({ scheme: "PROP", fee: .1, grossPerPH: 16, realFeePercent, estimated: true, solo: false, minerReport } as PoolPayout);
+  assert.deepEqual(minerReport(payout(report)), { miner: "WildRig", credited: .91, realFeePercent: 9.091 });
+  assert.equal(minerReport(payout(report, null)), null);
+  for (const bad of [undefined, null, {}, { ...report, realFeePercent: null }, { ...report, realFeePercent: NaN }, { ...report, realFeePercent: 101 },
+    { ...report, credited: 0 }, { ...report, credited: 1.1 }, { ...report, credited: "0.91" }, { ...report, miner: "<b>" }, { ...report, miner: "" }, { ...report, miner: 7 }])
+    assert.equal(minerReport(payout(bad)), null, JSON.stringify(bad));
+});
+test("share yield: a part between 0 and 1, and only beside a Real Cost figure", () => {
+  const payout = (y: unknown, realFeePercent: number | null = 9.42) => ({ scheme: "PROP", fee: 1, grossPerPH: 16, realFeePercent, estimated: true, solo: false, shareYield: y } as PoolPayout);
+  assert.equal(shareYield(payout(.915)), .915);
+  assert.equal(shareYield(payout(.915, null)), null);
+  assert.equal(shareYield(payout(.915, Number.NaN)), null);
+  for (const bad of [undefined, null, 0, 1, 1.2, -.5, "0.915", Number.NaN]) assert.equal(shareYield(payout(bad)), null, String(bad));
+});
+test("Real Cost parts: fee, the week's orphans and the rest, at 2 decimals, adding up to the figure (PF on 2026-11-02)", () => {
+  const week = { start: 1000, end: 1000 + 7 * 86400 };
+  const row = (orphans: unknown, extra = {}) => ({ id: "p", name: "Pearl Fortune", pps: false, solo: false, orphans, ...extra }) as PoolOverview;
+  const pay = (scheme: string | null, realFeePercent: unknown, fee: unknown = 2, solo = false) =>
+    ({ scheme, fee, grossPerPH: 13, realFeePercent, estimated: true, solo }) as PoolPayout;
+  const live = row({ ...week, blocks: 322, orphans: 4, source: "chain" });
+  assert.deepEqual(realCostParts(live, pay("PPLNS", 3.470538202021678)), { fee: 2, orphans: { percent: 1.24, orphans: 4, blocks: 322 }, other: 0.23, total: 3.47 });
+  // No orphan count: the rest is everything past the fee.
+  assert.deepEqual(realCostParts(row(null), pay("PROP", 3.470538202021678)), { fee: 2, orphans: null, other: 1.47, total: 3.47 });
+  // The rest can be negative, and an even split reads 0, never -0.
+  assert.equal(realCostParts(row({ ...week, blocks: 100, orphans: 1 }), pay("PROP", .5, 1))!.other, -1.5);
+  assert.ok(Object.is(realCostParts(row(null), pay("PROP", 1.001, 1))!.other, 0));
+  // A PPS settlement has no parts, nor SOLO, nor a payout without a figure or a fee; an unnamed scheme follows its row.
+  for (const [r, p] of [[live, pay("PPS", 3)], [live, pay("PPS+", 3)], [row(null, { pps: true }), pay(null, 3)], [live, pay("SOLO", 3, 1, true)],
+    [row(null, { solo: true }), pay("PPLNS", 3)], [live, pay("PPLNS", null)], [live, pay("PPLNS", Number.NaN)], [live, pay("PPLNS", 3, null)]] as const)
+    assert.equal(realCostParts(r, p), null, JSON.stringify(p));
+  assert.equal(realCostParts(row(null), pay(null, 3))!.total, 3);
+});
+test("held-back Real Cost: a real day and no figure, read as a UTC date", () => {
+  const payout = (realFeePending: unknown, realFeePercent: number | null = null) => ({ scheme: "PROP", fee: .1, grossPerPH: 16, realFeePercent, estimated: true, solo: false, realFeePending } as PoolPayout);
+  assert.equal(realFeePending(payout("2026-11-02"))?.toISOString(), "2026-11-02T00:00:00.000Z");
+  assert.equal(realFeePending(payout("2026-11-02", .1)), null);
+  for (const bad of [undefined, null, "", "2026-11-31", "2026-13-02", "2026-11-2", "11/02/2026", "2026-11-02T00:00Z", 20261102])
+    assert.equal(realFeePending(payout(bad)), null, JSON.stringify(bad));
+  // The day as the cell writes it, whatever the reader's time zone.
+  const day = realFeePending(payout("2026-11-02"))!;
+  assert.equal(day.toLocaleDateString("zh-Hans", { month: "short", day: "numeric", timeZone: "UTC" }), "11月2日");
+  assert.equal(day.toLocaleDateString("en", { month: "short", day: "numeric", timeZone: "UTC" }), "Nov 2");
+});
+test("merge bonus: the range keeps one percent sign where each language writes it", () => {
+  assert.equal(percentRange(1, 2, "en"), "1–2%");
+  assert.equal(percentRange(1, 2, "zh-Hans"), "1–2%");
+  assert.equal(percentRange(1, 2, "de").replace(/\s/gu, " "), "1–2 %"); // a no-break space, as Intl writes it
+  assert.equal(percentRange(1, 2, "tr"), "%1–2");
+  assert.equal(percentRange(1.5, 1.5, "en"), "1.5%");
+  assert.equal(percentRange(1.5, 1.5, "fr").replace(/\s/gu, " "), "1,5 %");
+});
+test("founding fee: a sane founding fee and its months after FP8; anything else is no label", () => {
+  const payout = (founding: unknown) => ({ scheme: "PPLNS", fee: 1, grossPerPH: 13, realFeePercent: null, estimated: true, solo: false, founding } as PoolPayout);
+  assert.deepEqual(foundingFee(payout({ fee: 0, afterFP8Months: 6 })), { fee: 0, afterFP8Months: 6 });
+  assert.deepEqual(foundingFee(payout({ fee: 0.5 })), { fee: 0.5, afterFP8Months: null });
+  assert.deepEqual(foundingFee(payout({ fee: 0.5, afterFP8Months: 1.5 })), { fee: 0.5, afterFP8Months: null });
+  for (const bad of [undefined, null, {}, { fee: "0" }, { fee: -1 }, { fee: 101 }, { fee: Number.NaN }]) assert.equal(foundingFee(payout(bad)), null);
+});
+
+test("Peryn's Real Cost per fee tier: the shown tier first, the other after it, missing figures as null", () => {
+  const pay = (extra: Record<string, unknown>) => ({ scheme: "PPS+", fee: 1, grossPerPH: null, realFeePercent: 0.78, estimated: true, solo: false, ...extra }) as PoolPayout;
+  assert.deepEqual(realFeeTiers(pay({ realFeeTier: "founding", realFeeTiers: { founding: 0.78, standard: 1.26 } })),
+    [{ tier: "founding", percent: 0.78, shown: true }, { tier: "standard", percent: 1.26, shown: false }]);
+  assert.deepEqual(realFeeTiers(pay({ realFeeTier: "standard", realFeeTiers: { founding: null, standard: 1.26 } })),
+    [{ tier: "standard", percent: 1.26, shown: true }, { tier: "founding", percent: null, shown: false }]);
+  assert.deepEqual(realFeeTiers(pay({ realFeeTier: "founding", realFeeTiers: { founding: 0.78, standard: "1.26" } }))![1].percent, null);
+  for (const bad of [{}, { realFeeTier: "gold", realFeeTiers: {} }, { realFeeTier: "founding" }, { realFeeTier: "founding", realFeeTiers: {}, realFeePercent: null }])
+    assert.equal(realFeeTiers(pay(bad)), null);
 });

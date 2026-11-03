@@ -19,8 +19,9 @@ export type RawTx = {
 export const RAW_TX_MAX_BYTES = 400_000;
 const MIN_BYTES = 60;
 
-const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-function polymod(values: number[]) {
+export const BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+const CHARSET = BECH32_CHARSET;
+export function bech32Polymod(values: number[]) {
   const G = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
   let chk = 1;
   for (const v of values) {
@@ -40,7 +41,7 @@ export function segwitAddress(hrp: string, version: number, program: Uint8Array)
   }
   if (bits) data.push((acc << (5 - bits)) & 31);
   const expanded = [...hrp].map((c) => c.charCodeAt(0) >> 5).concat(0, [...hrp].map((c) => c.charCodeAt(0) & 31));
-  const mod = (polymod([...expanded, ...data, 0, 0, 0, 0, 0, 0]) ^ (version === 0 ? 1 : 0x2bc830a3)) >>> 0;
+  const mod = (bech32Polymod([...expanded, ...data, 0, 0, 0, 0, 0, 0]) ^ (version === 0 ? 1 : 0x2bc830a3)) >>> 0;
   const checksum = [0, 1, 2, 3, 4, 5].map((i) => (mod >>> (5 * (5 - i))) & 31);
   return `${hrp}1${[...data, ...checksum].map((d) => CHARSET[d]).join("")}`;
 }

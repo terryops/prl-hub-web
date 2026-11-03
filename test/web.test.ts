@@ -74,6 +74,10 @@ test("merge: tombstones win ties, edits commute and deleted items stay deleted",
   assert.deepEqual(mergeItems([b], [c]), [c]);
   assert.deepEqual(mergeItems([c], [b]), [c]);
   assert.deepEqual(mergeItems([a, b], [c]), mergeItems([c], [a, b]));
+  // A newer edit beats an older tombstone in either order; the loser's deleted flag does not leak.
+  const restored = { id: "one", updated: 3, label: "restored" };
+  assert.deepEqual(mergeItems([c], [restored]), [restored]);
+  assert.deepEqual(mergeItems([restored], [c]), [restored]);
   const base = configOf(defaults());
   const result = mergeConfig(
     { ...base, lang: "en", settingsUpdated: 2 },

@@ -6,7 +6,7 @@ import type { TextKey } from "./i18n/index.ts";
 // The official wallet download is maintained separately from this frontend.
 import manifest from "./extension-release.json";
 
-const download = `/downloads/pearl-hub-wallet-${manifest.version}.zip`;
+const download = `https://pearlhub.net/downloads/pearl-hub-wallet-${manifest.version}.zip`;
 
 // The wallet page leads with this: what the extension does, its Chrome Web Store page, and the full guide.
 // Touch devices get only the guide, which says the extension needs desktop Chrome.

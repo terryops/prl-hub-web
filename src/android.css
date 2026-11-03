@@ -1,0 +1,204 @@
+/* The Android app (web/src/android.ts): the iOS-style tab bar, the wallet frame and the
+   设置 tab. Loaded only by the Android build. The shell pads the WebView for system bars, so
+   safe-area insets are zero here. */
+.android-app main[hidden], .wallet-frame[hidden] { display: none !important; }
+.android-app .nav-item small { display: none; }
+.wallet-frame { display: block; width: 100%; height: 100dvh; border: 0; background: var(--page-bg); }
+
+@media (max-width: 640px) {
+  /* Only the fixed bottom bar remains of the sidebar. */
+  .android-app .sidebar { height: 0; min-height: 0; padding: 0; border: 0; }
+  .android-app .sidebar nav { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 4px 8px; }
+  .android-app .nav-item { font-size: var(--font-12); }
+  .android-app main, .android-app main.pool-page { padding-top: 16px; padding-bottom: calc(var(--android-nav, 72px) + 24px); }
+  .wallet-frame { height: calc(100dvh - var(--android-nav, 72px)); }
+  /* While the keyboard is up the bar would float above it and cover sheets; trackTabBar then
+     measures 0, so the wallet frame takes the full height. */
+  .android-keyboard .android-app .sidebar nav { display: none; }
+}
+
+.android-segments { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; max-width: 560px; margin: 0 0 16px; padding: 3px; background: var(--track); border-radius: 12px; }
+.android-segments button { min-height: 36px; padding: 6px 8px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: var(--font-14); font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.android-segments button:hover { background: transparent; color: var(--text); }
+.android-segments button[aria-selected="true"], .android-segments button[aria-selected="true"]:hover { background: var(--seg-selected); color: var(--text); box-shadow: var(--seg-shadow); }
+
+.android-back { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin: 0 0 8px; padding: 4px 0; border: 0; background: transparent; color: var(--blue-text); font-size: var(--font-14); font-weight: 550; }
+.android-back:hover { background: transparent; }
+.android-back .icon { width: 16px; height: 16px; transform: rotate(90deg); }
+
+.android-settings { display: grid; gap: 20px; }
+.android-group h2 { margin: 0 0 8px 4px; color: var(--muted); font-size: var(--font-13); font-weight: 600; letter-spacing: 0; }
+.android-card { padding: 0 !important; overflow: hidden; }
+.android-rows { display: grid; }
+.android-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; margin: 0; padding: 10px 16px; border: 0; border-radius: 0; background: transparent; color: var(--text); font-size: var(--font-14); font-weight: 500; text-align: left; text-decoration: none; }
+.android-row + .android-row { border-top: 1px solid var(--line); }
+.android-row:hover, .android-row:active { background: var(--hover); text-decoration: none; }
+.android-row-icon { display: grid; flex: none; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--selected); color: var(--blue-text); }
+.android-row-icon .icon { width: 18px; height: 18px; }
+.android-row-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.android-row-value { flex: none; max-width: 45%; overflow: hidden; color: var(--muted); font-size: var(--font-13); text-overflow: ellipsis; white-space: nowrap; }
+.android-row-value .badge { display: inline-block; margin: 0; }
+.android-row-chevron { flex: none; width: 16px; height: 16px; color: var(--muted); transform: rotate(-90deg); }
+.android-row[target="_blank"] .android-row-chevron { transform: none; }
+.android-fields { display: grid; gap: 16px; padding: 16px; }
+.android-fields .setting-section { padding: 0; border: 0; }
+.android-fields .form-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.android-version { margin: 0; padding: 12px 16px; border-top: 1px solid var(--line); font-size: var(--font-13); }
+
+.android-widgets { display: grid; gap: 14px; }
+.android-widgets p { margin: 0; line-height: 1.55; }
+.android-widget-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.android-widget-row + .android-widget-row { border-top: 1px solid var(--line); }
+.android-widget-copy { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.android-widget-copy small { color: var(--muted); font-size: var(--font-12); line-height: 1.45; }
+.android-widget-row button { flex: none; }
+
+/* 设置's second-level pages (AndroidSettings.tsx), after the iOS app's SettingsPages. */
+.android-page-title { margin: 0; font-size: var(--font-20, 20px); font-weight: 700; }
+.android-row-label small { display: block; margin-top: 2px; color: var(--muted); font-size: var(--font-12); font-weight: 400; }
+.android-row:disabled { opacity: 1; cursor: default; }
+.android-row:disabled:hover { background: transparent; }
+.android-row.danger, .android-row.danger .android-row-icon { color: var(--red); }
+.android-footer { margin: 8px 4px 0; font-size: var(--font-12); line-height: 1.5; }
+.android-info { display: flex; gap: 10px; margin: 0; padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--font-13); line-height: 1.5; }
+.android-card > .android-info:first-child { border-top: 0; }
+.android-info .icon { flex: none; width: 16px; height: 16px; margin-top: 2px; color: var(--blue-text); }
+.android-center { justify-self: center; text-align: center; }
+
+.android-pro-card { display: grid; gap: 14px; padding: 18px !important; }
+.android-pro-card p { margin: 0; }
+.android-pro-head { display: flex; align-items: center; gap: 10px; }
+.android-pro-head strong { flex: 1; }
+.android-pro-head .badge { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
+.android-pro-hero { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.android-pro-hero .android-row-icon { width: 48px; height: 48px; border-radius: 14px; }
+.android-pro-hero .android-row-icon .icon { width: 26px; height: 26px; }
+.android-pro-hero strong { font-size: var(--font-18, 18px); }
+.android-features { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.android-features li { display: flex; gap: 10px; font-size: var(--font-14); line-height: 1.45; }
+.android-features .icon { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--blue-text); }
+
+.android-live { display: grid; gap: 12px; padding: 16px !important; }
+.android-live p { margin: 0; }
+.android-live-head { display: flex; align-items: center; gap: 12px; }
+.android-live-copy { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.android-live-copy small { color: var(--muted); font-size: var(--font-12); line-height: 1.45; }
+.android-live-on { color: var(--green); font-weight: 600; }
+.android-warn { color: var(--warn); font-size: var(--font-13); }
+.android-choices { display: grid; border-top: 1px solid var(--line); }
+.android-choice { display: flex; align-items: flex-start; gap: 10px; width: 100%; margin: 0; padding: 10px 0; border: 0; border-radius: 0; background: transparent; color: var(--text); text-align: left; }
+.android-choice + .android-choice { border-top: 1px solid var(--line); }
+.android-choice:hover { background: transparent; }
+.android-choice span:last-child { display: grid; gap: 2px; }
+.android-choice strong { font-size: var(--font-14); font-weight: 550; }
+.android-choice small { color: var(--muted); font-size: var(--font-12); line-height: 1.45; }
+.android-radio { flex: none; width: 18px; height: 18px; margin-top: 1px; border: 2px solid var(--line-strong); border-radius: 50%; }
+.android-radio.on { border: 5px solid var(--blue); }
+
+.android-icons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 16px !important; }
+.android-icon { position: relative; display: grid; justify-items: center; gap: 8px; margin: 0; padding: 12px 4px; border: 2px solid transparent; border-radius: 16px; background: transparent; color: var(--text); font-size: var(--font-13); font-weight: 550; }
+.android-icon:hover { background: var(--hover); }
+.android-icon.selected { border-color: var(--blue); background: var(--selected); }
+.android-icon img { width: 72px; height: 72px; border-radius: 16px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.18); object-fit: cover; }
+.android-icon > .icon { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; color: var(--blue-text); }
+
+.android-licenses { display: grid; }
+.android-license { display: grid; gap: 3px; padding: 12px 16px; }
+.android-license + .android-license { border-top: 1px solid var(--line); }
+.android-license div { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.android-license strong { font-size: var(--font-14); font-weight: 550; }
+.android-license small { font-size: var(--font-12); }
+.android-license a { font-size: var(--font-12); overflow-wrap: anywhere; }
+.android-license-badge { flex: none; padding: 2px 6px; border-radius: 999px; background: var(--selected); color: var(--blue-text); font-family: ui-monospace, monospace; font-size: var(--font-12); font-weight: 600; }
+
+/* 掉线提醒 (iOS OfflineAlertsView). */
+.android-offline-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+.android-offline-row + .android-offline-row { border-top: 1px solid var(--line); }
+.android-offline-copy { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.android-offline-copy strong { overflow: hidden; font-size: var(--font-14); font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.android-offline-copy small { color: var(--muted); font-size: var(--font-12); line-height: 1.4; }
+.android-offline-pickers { display: grid; flex: none; gap: 6px; max-width: 46%; }
+.android-offline-pickers select { min-height: 34px; padding: 4px 8px; font-size: var(--font-13); }
+.android-empty { margin: 0; padding: 20px 16px; color: var(--muted); font-size: var(--font-13); line-height: 1.5; text-align: center; }
+.android-loose { border-top: 0; padding: 4px 6px; }
+
+/* 我的监控 (iOS PoolView): the refresh button, the 掉线提醒 pointer, the empty state, the monitored address. */
+.android-app .page-title { align-items: center; }
+/* The heading block spans the row so the refresh button sits at its end on every page (as on
+   iOS), not wherever the subtitle happens to stop. */
+.android-app .page-heading > div { flex: 1 1 auto; }
+.android-refresh { margin-left: auto; width: 36px; height: 36px; padding: 0; border: 0; background: transparent; color: var(--blue-text); }
+.android-refresh .icon { width: 20px; height: 20px; }
+.android-refresh .spin { animation: android-spin .9s linear infinite; }
+@keyframes android-spin { to { transform: rotate(360deg); } }
+.android-hint { display: flex; align-items: flex-start; gap: 4px; margin: 0 0 16px; padding: 4px !important; }
+.android-hint-body { display: flex; flex: 1; align-items: center; gap: 12px; min-width: 0; margin: 0; padding: 10px 12px; border: 0; background: transparent; color: var(--text); text-align: left; }
+.android-hint-body:hover { background: transparent; }
+.android-hint-body > span:last-child { display: grid; gap: 3px; }
+.android-hint-body strong { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--font-14); }
+.android-hint-body strong .badge { margin: 0; }
+.android-hint-body small { color: var(--muted); font-size: var(--font-12); line-height: 1.45; }
+.android-hint-close { flex: none; width: 32px; height: 32px; padding: 0; border: 0; background: transparent; color: var(--muted); }
+.android-hint-close .icon { width: 14px; height: 14px; }
+.android-monitor-empty { display: grid; justify-items: center; gap: 10px; padding: 32px 20px; text-align: center; }
+.android-monitor-empty > .icon { width: 40px; height: 40px; color: var(--blue-text); }
+.android-monitor-empty h2 { margin: 0; font-size: var(--font-16); }
+.android-monitor-empty p, .android-monitor-empty small { margin: 0; color: var(--muted); line-height: 1.5; }
+.monitor-addr { display: block; width: 100%; color: var(--muted); font-size: var(--font-12); user-select: text; }
+.field-error { display: block; margin: -4px 0 8px; color: var(--red); font-size: var(--font-12); }
+.use-wallet { margin: 0 0 8px; padding: 0; border: 0; background: transparent; color: var(--blue-text); font-size: var(--font-13); }
+
+/* 价格提醒 (iOS PriceAlertsView): the reference price card. */
+.android-ref-price { display: grid; gap: 8px; }
+.android-ref-price > small { color: var(--muted); font-size: var(--font-12); }
+.android-ref-price > strong { font-size: 30px; font-variant-numeric: tabular-nums; font-weight: 700; }
+.android-ref-changes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.android-ref-changes div { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; background: var(--soft); }
+.android-ref-changes small { color: var(--muted); font-size: var(--font-12); }
+.android-ref-changes b { font-variant-numeric: tabular-nums; }
+.android-ref-changes b.up { color: var(--green); }
+.android-ref-changes b.down { color: var(--red); }
+/* The price-alert editor (iOS AlertEditorSheet). */
+.android-rule-form { display: grid; gap: 12px; }
+.android-rule-form p { margin: 0; }
+.android-rule-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+.android-money-input { display: flex; align-items: center; gap: 6px; }
+.android-money-input input { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+.android-money-input span { color: var(--muted); }
+.android-rule-line { display: flex; justify-content: space-between; color: var(--muted); font-size: var(--font-14); }
+.android-rule-line b { color: var(--text); font-variant-numeric: tabular-nums; }
+/* 挖矿监控's first-run tip. */
+/* A second-level 设置 page shows its own back button and title, like an iOS navigation bar. */
+.android-app main[data-subpage] .page-toolbar { display: none; }
+/* 概览's fleet card (iOS 我的设备 on the dashboard). */
+.fleet-only { margin: 20px 0; }
+.rate-ref { display: flex; align-items: baseline; gap: 6px; color: var(--muted); font-size: var(--font-13); }
+.rate-ref b { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
+/* The Play build's 恢复购买 · 一次性购买，不是订阅。 line under the purchase button (android-billing.ts). */
+.android-store-foot .text-button { font-size: inherit; }
+
+/* iOS 6a1e720: explanations moved into ⓘ tips (InfoTip.tsx) beside section and page titles. */
+.android-group-head { display: flex; align-items: center; gap: 2px; margin: 0 0 8px 4px; }
+.android-group-head h2 { margin: 0; }
+.android-page-head { display: flex; align-items: center; gap: 4px; }
+.android-title-tip, .android-live-copy.android-title-tip { display: flex; align-items: center; gap: 4px; }
+.android-row-static:hover, .android-row-static:active { background: transparent; }
+/* 设置 → 网页版 (iOS WebVersionView): the address, its ⓘ and 复制 on one line. */
+.android-web-address { display: flex; align-items: center; gap: 6px; min-height: 56px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.android-web-address code { color: var(--text); font-size: var(--font-18, 18px); font-weight: 650; }
+.android-web-address .text-button { margin-left: auto; }
+/* 我的监控's 网页版 card (iOS WebVersionHintCard). */
+.android-web-hint .android-hint-body { align-items: center; }
+.android-web-hint .android-hint-body > span:nth-child(2) { flex: 1; }
+.android-web-hint code { color: var(--muted); font-size: var(--font-12); }
+.android-web-hint { align-items: center; }
+.android-choice { justify-content: flex-start; }
+
+/* A switch row after a card's rows (设置 → 钱包与安全 → 在钱包页显示 NOCK 钱包). */
+.android-rows + .android-row-switch { border-top: 1px solid var(--line); }
+.android-row-switch input.switch { flex: none; }
+/* 桌面小组件 (iOS WidgetGuide): Pro status first, then one row per widget. */
+.android-widget-pro { display: flex; align-items: center; gap: 8px; color: var(--green); font-weight: 600; }
+.android-widget-pro .icon { width: 18px; height: 18px; flex: none; }
+.android-widget-upsell { display: grid; gap: 12px; justify-items: start; }
+.android-widget-copy.android-title-tip { display: flex; }

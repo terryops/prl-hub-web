@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import qrcode from "qrcode-generator";
 import { api, syncConfig, ApiError } from "./api.ts";
@@ -64,12 +64,34 @@ import { ExtensionBanner, WalletExtension } from "./WalletExtension.tsx";
 import { pushTimeout, subscribePush } from "./push.ts";
 import type { Overview } from "./types.ts";
 import { appClient } from "./app-client.ts";
+import { ANDROID, fill, androidStore, androidCopy, androidInfo, installAndroid, reportTheme, trackTabBar, publishWidget, onNative, setBackHandler, tabOf, miningPages, androidPages, notificationStatus, requestNotifications, pushToken, deletePushToken, openNotificationSettings, requestReview, type AndroidInfo, type AndroidTab, type MiningPage, type NativePermission } from "./android.ts";
+import { useLiveTicker } from "./android-live.ts";
+import { appStoreURL, macStoreURL, playStoreURL, downloadHash, downloadLink, storeFor } from "./app-stores.ts";
+import { tradeBack } from "./trade-nav.ts";
+import { InfoTip } from "./InfoTip.tsx";
+import { popBackLayer } from "./back-layer.ts";
+import { TabIcon } from "./android-icons.tsx";
+import { widgetPoolSnapshot } from "./android-widget-snapshot.ts";
+import { usePlayStore } from "./android-billing.ts";
+import { PushSettings, pushTargetKey } from "./push-settings.ts";
+import { contactsFromWallet, mergeWallets, walletChangesEmpty, withoutSkipped, type PearlHost } from "./android-host.ts";
+import { hasBridge, nativeCall } from "./android-bridge.ts";
+import { WalletFrame, walletBack, walletControl } from "./WalletFrame.tsx";
+import { AndroidSettings, AndroidWidgets, type SettingsPage } from "./AndroidSettings.tsx";
+import { AndroidRuleForm } from "./AndroidRuleForm.tsx";
+import { androidSecurity, androidSecurityCopy } from "./android-security.ts";
 
-const fromApp = appClient();
+// The Google Play build may not sell Pro outside Play billing; it follows the iOS app's rule.
+const fromApp = appClient() || (ANDROID && androidStore() === "play");
+if (ANDROID) installAndroid();
+// The App page's QR code opens pearlhub.net/#download: a phone goes on to its store, anything else sees the App page.
+if (!ANDROID && location.hash === downloadHash) {
+  const store = storeFor(navigator.userAgent, navigator.maxTouchPoints);
+  if (store) location.replace(store);
+  else history.replaceState(null, "", `${location.pathname}${location.search}#app`);
+}
 
-type Page = "market" | "workers" | "pools" | "calculator" | "wallet" | "alerts" | "app";
-const appStoreURL = "https://apps.apple.com/app/id6777132941";
-const macStoreURL = `${appStoreURL}?platform=mac`;
+type Page = "market" | "workers" | "pools" | "calculator" | "wallet" | "alerts" | "app" | "settings" | "trade";
 const navShortKeys = {
   market: "navMarketShort",
   workers: "navWorkersShort",
@@ -79,7 +101,7 @@ const navShortKeys = {
   alerts: "navAlertsShort",
   app: "navAppShort",
 } as const;
-type Panel = "settings" | "security" | "account" | "restore" | "monitor" | "rule" | "pro" | "payment" | "wallet" | "walletqr" | "extension" | "appqr" | "txlookup" | null;
+type Panel = "settings" | "security" | "account" | "restore" | "monitor" | "rule" | "pro" | "payment" | "wallet" | "walletqr" | "extension" | "appqr" | "widgets" | "txlookup" | null;
 /// `at` is when `data` last arrived; a failed refresh keeps the previous data.
 type Snapshot<T> = { data?: T; failed?: boolean; target?: string; at?: number };
 // ?account=manage|delete|restore opens a panel once, when the page loads; keeping it in the address bar
@@ -90,12 +112,23 @@ function keptSearch() {
   const s = q.toString();
   return s ? `?${s}` : "";
 }
+// The 交易 tab (SafeTrade) and 设置 → 交易（SafeTrade） load with their copy only when opened; the website
+// build has neither.
+declare const __PEARL_ANDROID__: boolean | undefined;
+// The build-time constant itself (not the imported ANDROID), so the website build drops the import()s and
+// emits no trade chunks.
+const TradeTab = __PEARL_ANDROID__ ? lazy(() => import("./TradeTab.tsx")) : null;
+const TradeSettings = __PEARL_ANDROID__ ? lazy(() => import("./TradeSettings.tsx")) : null;
 const pageFromHash = (): Page => {
   const page = location.hash.slice(1).split("?")[0];
+  // Like the iOS app, Android always opens on the wallet unless a notification names a page.
+  if (ANDROID) return page === "pro" ? "settings" : (androidPages as readonly string[]).includes(page) ? page as Page : "wallet";
   return ["market", "workers", "pools", "calculator", "wallet", "alerts", "app"].includes(page) ? page as Page : "market";
 };
+// Android has no watch-only wallet page; its wallet is the real one.
+const linkFromHash = (hash: string) => { const d = deepLink(hash); return ANDROID && d?.page === "wallet" ? null : d; };
 const uid = () => crypto.randomUUID();
-const hasPush = () =>
+const hasPush = () => ANDROID ? hasBridge() :
   "serviceWorker" in navigator &&
   "PushManager" in window &&
   "Notification" in window;
@@ -107,18 +140,34 @@ const QR = ({ value, cell = 5, margin = 12, alt = "QR" }: { value: string; cell?
 };
 const initialState = readStore();
 applyAppearance(initialState.theme, initialState.palette);
+// Android: the wallet frame watches language, currency, appearance and its address book.
+const hostListeners = new Set<() => void>();
+const hostChanged = () => { for (const listener of hostListeners) { try { listener(); } catch { /* A closed frame. */ } } };
 function App() {
   const [state, setState] = useState<State>(initialState),
     stateRef = useRef(state);
   stateRef.current = state;
   const [page, setPage] = useState<Page>(pageFromHash),
-    [panel, setPanel] = useState<Panel>(() => { const d = deepLink(location.hash), account = new URLSearchParams(location.search).get("account"); return connectingDevice || ["manage", "delete"].includes(account || "") ? "account" : account === "restore" ? "restore" : d ? d.page === "wallet" ? "wallet" : "monitor" : null; });
-  const [draftAddress, setDraftAddress] = useState(() => deepLink(location.hash)?.addr || "");
+    [panel, setPanel] = useState<Panel>(() => { const d = linkFromHash(location.hash), account = new URLSearchParams(location.search).get("account"); return connectingDevice || ["manage", "delete"].includes(account || "") ? "account" : account === "restore" ? "restore" : d ? d.page === "wallet" ? "wallet" : "monitor" : null; });
+  const [settingsPage, setSettingsPage] = useState<SettingsPage | null>(() => ANDROID && location.hash === "#pro" ? "pro" : null);
+  const [draftAddress, setDraftAddress] = useState(() => linkFromHash(location.hash)?.addr || "");
   const [walletId, setWalletId] = useState(""), [qrWallet, setQrWallet] = useState<Wallet | null>(null);
   const [refreshEpoch, setRefreshEpoch] = useState(0);
   const [txTab, setTxTab] = useState<TxTab>("lookup");
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [editingMonitor, setEditingMonitor] = useState<Monitor | null>(null);
+  const [watchStatus, setWatchStatus] = useState<Record<string, { missing: boolean; stale: boolean }>>({});
+  const [alertHintDismissed, setAlertHintDismissed] = useState(() => { if (!ANDROID) return true; try { return localStorage.getItem("pearlhub.android.alertHint") === "1"; } catch { return false; } });
+  const dismissAlertHint = () => { setAlertHintDismissed(true); try { localStorage.setItem("pearlhub.android.alertHint", "1"); } catch { /* This run only. */ } };
+  // iOS PoolView's 网页版 card (WebVersionHintCard): opened or closed, it never comes back. It never sits beside
+  // the 掉线提醒 card, and once that card was up this run it waits for a later launch rather than taking its place.
+  const [webHintDismissed, setWebHintDismissed] = useState(() => { if (!ANDROID) return true; try { return localStorage.getItem("pearlhub.android.webHint") === "1"; } catch { return false; } });
+  const dismissWebHint = () => { setWebHintDismissed(true); try { localStorage.setItem("pearlhub.android.webHint", "1"); } catch { /* This run only. */ } };
+  const [alertHintSeen, setAlertHintSeen] = useState(false);
+  // Market page: the Android launch banner, website only. Closing it is remembered on this device.
+  const [androidBannerHidden, setAndroidBannerHidden] = useState(() => { if (ANDROID || fromApp) return true; try { return localStorage.getItem("pearlhub.androidBanner") === "1"; } catch { return false; } });
+  const hideAndroidBanner = () => { setAndroidBannerHidden(true); try { localStorage.setItem("pearlhub.androidBanner", "1"); } catch { /* This visit only. */ } };
+  const [manualRefresh, setManualRefresh] = useState(false);
   /// The monitor opened from 一览, shown as its full card in place of the list; null = none.
   /// `listScroll` is where the list was, to return to it.
   const [openMonitor, setOpenMonitor] = useState<string | null>(null), listScroll = useRef(0);
@@ -138,35 +187,46 @@ function App() {
     pay: { enabled: false, usd: 4.99 },
     vapid_key: null,
   });
+  const [androidInfoValue, setAndroidInfo] = useState<AndroidInfo | null>(null);
+  const pushReady = ANDROID ? !!availability.fcm && androidInfoValue?.fcm === true : !!availability.vapid_key;
+  const [miningPage, setMiningPage] = useState<MiningPage>(() => miningPages.includes(pageFromHash() as MiningPage) ? pageFromHash() as MiningPage : "market");
+  const walletFrame = useRef<HTMLIFrameElement>(null);
   const [me, setMe] = useState<Me | null>(null),
     [order, setOrder] = useState<Order | null>(null),
     [accountEmail, setAccountEmail] = useState("");
   const canSync = !!(state.accountId && me?.pro && me.pro_scope !== "device");
   const canSyncRef = useRef(canSync);
   canSyncRef.current = canSync;
+  const live = useLiveTicker({ price: price.data, pro: me ? me.pro : undefined, buyer: state.accountId || state.purchaseId, pushReady, a: androidCopy(state.lang) });
+  const walletOf = useCallback(() => ANDROID ? walletControl(walletFrame) : undefined, []);
   const [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
   const [clock, setClock] = useState(Date.now());
   const [accountReady, setAccountReady] = useState(false);
   const accountReadyRef = useRef(accountReady); accountReadyRef.current = accountReady;
-  const [permission, setPermission] = useState(
-    hasPush() ? Notification.permission : "unavailable",
+  const [permission, setPermission] = useState<NotificationPermission | NativePermission>(
+    ANDROID ? "default" : hasPush() ? Notification.permission : "unavailable",
   );
   const [pushState, setPushState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [pendingMonitor, setPendingMonitor] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false),
-    [syncStatus, setSyncStatus] = useState("");
+    [syncStatus, setSyncStatus] = useState(""),
+    // When the account last synced (iOS "已同步 · 3 分钟前").
+    [syncedAt, setSyncedAt] = useState(0);
+  const [ratesBusy, setRatesBusy] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null),
     refreshingRef = useRef(false),
     refreshQueued = useRef(false),
     syncRef = useRef(false),
     pushGeneration = useRef(0),
-    accountGeneration = useRef(0),
-    pushQueue = useRef<Promise<unknown>>(Promise.resolve());
+    accountGeneration = useRef(0);
+  const pushSettings = useRef<PushSettings<State, PushTarget, PushReply> | null>(null);
   const money = (v: number) => dual(v, state.secondary, state.lang, fx);
   const t = (key: TextKey) => dictionaries[state.lang][key];
+  const a = androidCopy(state.lang);
   const errorText = (error: unknown) =>
     error instanceof Error && error.message === "purchase_storage" ? t("storageError") :
+    ANDROID && error instanceof Error && error.message === "pushPermission" ? a.notifyDenied :
     error instanceof Error && ["pushTimeout", "pushConnectError", "pushPermission"].includes(error.message)
       ? t(error.message as TextKey)
       :
@@ -183,7 +243,7 @@ function App() {
   useEffect(() => {
     const changed = () => {
       setPage(pageFromHash());
-      const d = deepLink(location.hash);
+      const d = linkFromHash(location.hash);
       if (d) { setDraftAddress(d.addr); setPanel(d.page === "wallet" ? "wallet" : "monitor"); }
       window.history.replaceState(null, "", `/${keptSearch()}#${pageFromHash()}`);
     };
@@ -198,6 +258,12 @@ function App() {
   // An opened monitor starts at the top; going back returns to where the list was.
   useEffect(() => { window.scrollTo(0, openMonitor ? 0 : listScroll.current); }, [openMonitor]);
   useEffect(() => {
+    if (ANDROID) {
+      // The system permission can change in Settings while the app is in the background.
+      const check = () => void notificationStatus().then(setPermission);
+      check();
+      return onNative("resume", check);
+    }
     if (!hasPush()) return;
     let status: PermissionStatus | undefined, disposed = false;
     void navigator.permissions.query({ name: "notifications" }).then((value) => {
@@ -209,7 +275,7 @@ function App() {
   }, []);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => applyAppearance(state.theme, state.palette);
+    const apply = () => { applyAppearance(state.theme, state.palette); if (ANDROID) { reportTheme(); hostChanged(); } };
     apply(); media.addEventListener("change", apply);
     return () => media.removeEventListener("change", apply);
   }, [state.theme, state.palette]);
@@ -269,7 +335,8 @@ function App() {
     stateRef.current = guest; setState(guest); writeStore(guest);
     setMe(null); setOrder(null); setDeliveries({}); setPushState("idle"); setAccountEmail(""); setAccountReady(true);
     if (hasPush() && !localPurchase()) {
-      try { const reg = await pushTimeout(navigator.serviceWorker.ready); const sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch { /* Local features remain available. */ }
+      if (ANDROID) await deletePushToken();
+      else try { const reg = await pushTimeout(navigator.serviceWorker.ready); const sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch { /* Local features remain available. */ }
     }
   }, []);
   const adoptAccount = useCallback(async (account: Account, askImport = true, generation = ++accountGeneration.current) => {
@@ -377,22 +444,142 @@ function App() {
     void api<Availability>("/v1/web/status")
       .then(setAvailability)
       .catch(() => {});
-    if ("serviceWorker" in navigator)
+    if (!ANDROID && "serviceWorker" in navigator)
       void navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
+  const panelRef = useRef(panel); panelRef.current = panel;
+  const pageRef = useRef(page); pageRef.current = page;
+  const openMonitorRef = useRef(openMonitor); openMonitorRef.current = openMonitor;
+  const settingsPageRef = useRef(settingsPage); settingsPageRef.current = settingsPage;
+  const meRef = useRef(me); meRef.current = me;
+  const infoRef = useRef(androidInfoValue); infoRef.current = androidInfoValue;
+  useEffect(() => {
+    if (!ANDROID) return;
+    void androidInfo().then(setAndroidInfo);
+    // The wallet frame's view of the app (android-host.ts). Its address book is the app's
+    // `contacts`, so a Pro account syncs it with the iOS app, the website and the extension.
+    window.__pearlApp = {
+      prefs: () => {
+        const s = stateRef.current;
+        return { lang: s.lang, secondary: s.secondary === undefined ? "__auto__" : s.secondary, theme: document.documentElement.dataset.theme === "dark" ? "dark" : "light", palette: s.palette === "mono" ? "mono" : "classic" };
+      },
+      contacts: () => alive(stateRef.current.contacts || []).map(({ updated: _updated, ...contact }) => contact),
+      setContacts: (next) => {
+        const contacts = contactsFromWallet(stateRef.current.contacts || [], next, fresh);
+        stateRef.current = { ...stateRef.current, contacts };
+        setState((s) => ({ ...s, contacts: contactsFromWallet(s.contacts || [], next, fresh) }));
+      },
+      subscribe: (listener) => { hostListeners.add(listener); return () => { hostListeners.delete(listener); }; },
+      openPage: (hash) => { location.hash = hash; },
+      visible: () => pageRef.current === "wallet" && !panelRef.current && !document.hidden,
+      alerts: () => ({ pro: !!meRef.current?.pro, ready: meRef.current != null, active: stateRef.current.rules.filter((r) => !r.deleted && r.enabled).length }),
+      widgetPlaced: () => !!infoRef.current?.widgetPlaced,
+      // The account's web 钱包 page and the wallet's wallets, both ways for read-only ones (iOS
+      // WebSharedMerge.wallets). `base` (what both sides last agreed) is kept per account on this device.
+      syncWallets: (rows) => {
+        const s = stateRef.current;
+        if (!canSyncRef.current || !s.sync || !s.accountId) return null;
+        let saved: { account?: string; items?: Record<string, string> } = {};
+        try { saved = JSON.parse(localStorage.getItem("pearlhub.android.walletBase") || "{}"); } catch { /* start over */ }
+        const merged = mergeWallets(rows, s.wallets, saved.account === s.accountId ? saved.items || {} : {}, fresh());
+        const commit = (skipped: string[] = []) => { try { localStorage.setItem("pearlhub.android.walletBase", JSON.stringify({ account: s.accountId, items: withoutSkipped(merged.base, skipped) })); } catch { /* storage full */ } };
+        if (merged.changed) {
+          const wallets = merged.rows as typeof s.wallets;
+          stateRef.current = { ...stateRef.current, wallets };
+          // Merged against this list: if a sync changed it meanwhile, the next round redoes it.
+          setState((cur) => cur.wallets === s.wallets ? { ...cur, wallets } : cur);
+        }
+        // Nothing for the wallet to do: agreed now. Otherwise once the wallet has applied it.
+        if (walletChangesEmpty(merged.native)) commit();
+        return { changes: merged.native, commit };
+      },
+      open: (target) => { if (target === "widgets") { setPage("settings"); setPanel("widgets"); } else { setPanel(null); setPage("alerts"); } },
+    } satisfies PearlHost;
+    setBackHandler(() => {
+      if (pageRef.current === "wallet" && !panelRef.current && walletBack(walletFrame)) return true;
+      if (panelRef.current) { setPanel(null); return true; }
+      if (popBackLayer()) return true;
+      if (pageRef.current === "trade" && tradeBack()) return true;
+      if (pageRef.current === "settings" && settingsPageRef.current) { setSettingsPage(settingsPageRef.current === "licenses" ? "about" : settingsPageRef.current === "tradeGuide" ? "trade" : null); return true; }
+      if (pageRef.current === "workers" && openMonitorRef.current) { setOpenMonitor(null); return true; }
+      if (pageRef.current === "alerts") { setPage("settings"); return true; }
+      if (pageRef.current !== "wallet") { setPage("wallet"); return true; }
+      return false;
+    });
+    const off = [
+      onNative("notification", (data) => {
+        const route = String(data.route || "");
+        if (route === "pro") { setPanel(null); setPage("settings"); setSettingsPage("pro"); }
+        else if ((androidPages as readonly string[]).includes(route)) { setPanel(null); setPage(route as Page); }
+      }),
+      // A rotated FCM token: register it while notifications are on.
+      onNative("pushToken", () => {
+        if (!stateRef.current.token) return;
+        void sendSettings(stateRef.current).catch(() => {});
+      }),
+    ];
+    const untrack = trackTabBar(document.querySelector(".sidebar nav"));
+    return () => { off.forEach((stop) => stop()); setBackHandler(undefined); untrack(); };
+  }, []);
+  const contactsKey = ANDROID ? JSON.stringify(state.contacts || []) : "";
+  const webWalletsKey = ANDROID ? JSON.stringify(state.wallets) + canSync : "";
+  const liveRuleCount = ANDROID ? state.rules.filter((r) => !r.deleted && r.enabled).length : 0;
+  useEffect(() => { if (ANDROID) hostChanged(); }, [state.lang, state.secondary, contactsKey, webWalletsKey, me?.pro, liveRuleCount, androidInfoValue?.widgetPlaced]);
+  // The wallet refreshes when its tab comes back into view, and on returning to the app (a widget may be placed meanwhile).
+  useEffect(() => { if (ANDROID && page === "wallet") walletControl(walletFrame)?.refresh?.(); }, [page]);
+  useEffect(() => {
+    if (!ANDROID) return;
+    return onNative("resume", () => {
+      // Back in the foreground: fresh figures, as iOS refreshes on becoming active, auto-refresh or not.
+      void refresh();
+      hostChanged();
+      void androidInfo(true).then((info) => { if (info) setAndroidInfo(info); });
+      if (pageRef.current === "wallet") walletControl(walletFrame)?.refresh?.();
+    });
+  }, []);
+  useEffect(() => { if (ANDROID && miningPages.includes(page as MiningPage)) setMiningPage(page as MiningPage); }, [page]);
+  // Home-screen widgets: what the iOS app writes to its App Group snapshot (WidgetBridge.swift).
+  useEffect(() => {
+    if (!ANDROID) return;
+    const code = secondaryCode(state.secondary, state.lang), currency = currencies.find(([c]) => c === code), rateValue = currency && fx?.rates[currency[0]];
+    const running = enabledMonitors(state.monitors);
+    publishWidget("app", {
+      lang: state.lang, theme: state.theme || "system", palette: state.palette === "mono" ? "mono" : "classic", pro: !!me?.pro,
+      price: price.data ? { usd: price.data.usd, change1h: price.data.change1h ?? null, change24h: price.data.change24h ?? null, at: price.data.ts } : null,
+      fiat: currency && rateValue ? { code: currency[0], symbol: currency[1], decimals: currency[2], rate: rateValue } : null,
+      ...widgetPoolSnapshot(running, stats),
+      monitors: running.map((m) => ({ pool: m.pool, addr: m.addr, acct: m.acct ?? null, label: m.label })),
+      at: Math.floor(Date.now() / 1000),
+    });
+  }, [state.lang, state.theme, state.palette, state.secondary, me?.pro, price.data, fx, stats, state.monitors]);
   const loadMe = useCallback(async (accountId: string) => {
+    const generation = accountGeneration.current;
     const result = await api<Me>("/v1/me", "GET", undefined, accountId);
-    if ((stateRef.current.accountId||stateRef.current.purchaseId) !== accountId) return result;
+    if (generation !== accountGeneration.current || (stateRef.current.accountId||stateRef.current.purchaseId) !== accountId) return result;
     setMe(result);
     setAvailability((previous) => ({ ...previous, ...result }));
     if (result.order) setOrder(result.order);
     return result;
   }, []);
+  // The Play build sells Pro through Google Play Billing (android-billing.ts) when its shell has it and
+  // the server can check purchases (/v1/web/status `play`). `pro` is false only once this device is
+  // known not to be Pro, so the launch-time check of owned purchases waits for /v1/me.
+  const playStore = usePlayStore({
+    on: accountReady && ANDROID && androidStore() === "play" && androidInfoValue?.billing === true && availability.play === true,
+    identity: `${state.accountId}:${accountGeneration.current}`,
+    pro: !accountReady ? undefined : me ? me.pro : buyerId(state) ? undefined : false,
+    buyer: ensureBuyer, loadMe,
+    copy: { unavailable: androidCopy(state.lang).playUnavailable, unverified: androidCopy(state.lang).purchaseUnverified,
+      pending: androidCopy(state.lang).purchasePending, nothingToRestore: androidCopy(state.lang).nothingToRestore,
+      linkedElsewhere: accountCopy(state.lang).purchaseLinkedElsewhere },
+  });
   const reconcileRules = async (token: string) => {
     const result = await api<{
       rules: { id: string; kind: Rule["kind"]; value: number; window: number; enabled: boolean; last_fired: number | null; deferred?: boolean }[];
+      watches?: { id: string; missing: boolean; stale: boolean }[];
     }>(`/v1/devices/${token}`, "GET", undefined, buyerId(stateRef.current));
     if (stateRef.current.token !== token) return;
+    setWatchStatus(Object.fromEntries((result.watches || []).map((w) => [w.id, { missing: !!w.missing, stale: !!w.stale }])));
     setDeliveries(Object.fromEntries(result.rules.map((r) => [r.id, r])));
     update((s) => ({
       ...s,
@@ -443,6 +630,7 @@ function App() {
           return { ...latest, ...config, lang: latest.followBrowserLanguage ? browserLanguage() : config.lang };
         });
         setSyncStatus(dictionaries[stateRef.current.lang].synced);
+        setSyncedAt(Math.floor(Date.now() / 1000));
       }
     } catch (e) {
       if (e instanceof ApiError && e.status === 401 && stateRef.current.accountId === s.accountId) { setMessage(accountCopy(s.lang).expired); void leaveAccount(); }
@@ -484,7 +672,7 @@ function App() {
       await navigator.clipboard.writeText(value);
       setMessage(t("copied"));
     });
-  const showPro = () => setPanel("pro");
+  const showPro = () => { if (ANDROID) { setPanel(null); setPage("settings"); setSettingsPage("pro"); } else setPanel("pro"); };
   const buy = () => {
     if (fromApp) return;
     if (!availability.pay.enabled) {
@@ -525,56 +713,59 @@ function App() {
     }, 5000);
     return () => clearInterval(timer);
   }, [panel, order?.id, order?.status, state.accountId, state.purchaseId, loadMe]);
-  const sendSettings = async (s: State, subscription?: PushSubscription) => {
-    setPushState("saving");
-    try {
-      const reg = await pushTimeout(navigator.serviceWorker.ready),
-        sub = subscription || (await reg.pushManager.getSubscription());
-      if (!sub || !buyerId(s) || Notification.permission !== "granted") {
-        update((latest) => ({ ...latest, token: "" }));
-        throw new Error("pushConnectError");
-      }
-      const result = await api<{
-        token: string;
-        rules: { id: string; kind: Rule["kind"]; value: number; window: number; enabled: boolean; last_fired: number | null }[];
-      }>(
-        "/v1/web/push",
-        "PUT",
-        {
-          subscription: sub.toJSON(),
-          lang: s.lang,
-          window: s.window,
-          rules: alive(s.rules),
-          watches: alertMonitors(s.monitors)
-            .map((m) => ({
-              id: m.id,
-              pool: m.pool,
-              addr: m.addr,
-              acct: m.acct,
-              label: m.label,
-              after: m.after,
-              again: m.again || undefined,
-            })),
-        },
-        buyerId(s),
-      );
-      if (buyerId(stateRef.current) !== buyerId(s)) return;
-      if(s.purchaseId)rememberPurchaseToken(result.token);
+  type PushTarget = { subscription: PushSubscriptionJSON } | { fcm: { token: string } };
+  type PushReply = { token: string; rules: (Pick<Rule, "id" | "kind" | "value" | "window" | "enabled" | "repeat"> & { last_fired: number | null })[] };
+  if (!pushSettings.current) pushSettings.current = new PushSettings({
+    current: () => ({ state: stateRef.current, account: accountGeneration.current, generation: pushGeneration.current }),
+    saving: () => setPushState("saving"),
+    key: pushTargetKey,
+    attempted: (s: State, token: string) => {
+      if (s.purchaseId) rememberPurchaseToken(token);
+      const next = { ...stateRef.current, token };
+      stateRef.current = next;
+      update((latest) => ({ ...latest, token }));
+      writeStore(next);
+    },
+    put: (s: State, target: PushTarget) => api<PushReply>("/v1/web/push", "PUT", {
+      ...target, lang: s.lang, window: s.window, rules: alive(s.rules),
+      watches: alertMonitors(s.monitors).map((m) => ({
+        id: m.id, pool: m.pool, addr: m.addr, acct: m.acct, label: m.label, after: m.after, again: m.again || undefined,
+      })),
+    }, buyerId(s)),
+    saved: (s: State, result: PushReply) => {
+      if (s.purchaseId) rememberPurchaseToken(result.token);
       setPushState("saved");
-      update((latest) => ({
-        ...latest,
-        token: result.token,
-        rules: latest.rules.map((r) => {
-          const remote = result.rules.find((x) => x.id === r.id);
-          return reconcileRule(r, remote);
-        }),
-      }));
-    } catch (error) {
-      if (buyerId(stateRef.current) !== buyerId(s)) return;
-      setPushState("error");
-      throw error;
+      update((latest) => ({ ...latest, token: result.token, rules: latest.rules.map((r) => reconcileRule(r, result.rules.find((x) => x.id === r.id))) }));
+    },
+    // A temporary transport failure does not remove server watches. Keep their known key
+    // so retry/disable can still reach them, and expose the failed connection separately.
+    failed: () => setPushState("error"),
+    remove: async (s: State) => { if (s.token) await api(`/v1/devices/${s.token}`, "DELETE", {}, buyerId(s)); },
+    removed: async () => {
+      rememberPurchaseToken("");
+      stateRef.current = { ...stateRef.current, token: "" };
+      update((s) => ({ ...s, token: "" }));
+      setPushState("idle");
+      // FCM is shared with the independent live ticker. DELETE above disables ordinary alerts;
+      // deleting transport here would also silently stop the ticker's background updates.
+      if (!ANDROID) {
+        const reg = await pushTimeout(navigator.serviceWorker.ready), sub = await reg.pushManager.getSubscription();
+        if (sub) await sub.unsubscribe();
+      }
+    },
+  });
+  const sendSettings = (s: State, subscription?: PushSubscription) => pushSettings.current!.register(s, async (): Promise<PushTarget> => {
+    if (ANDROID) {
+      const status = await notificationStatus();
+      setPermission(status);
+      const token = status === "granted" && buyerId(s) ? await pushTimeout(pushToken()).catch(() => "") : "";
+      if (!token) throw new Error("pushConnectError");
+      return { fcm: { token } };
     }
-  };
+    const reg = await pushTimeout(navigator.serviceWorker.ready), sub = subscription || await reg.pushManager.getSubscription();
+    if (!sub || !buyerId(s) || Notification.permission !== "granted") throw new Error("pushConnectError");
+    return { subscription: sub.toJSON() };
+  });
   const pushValues = JSON.stringify([
     state.lang,
     state.window,
@@ -585,9 +776,7 @@ function App() {
     if (!accountReady || !buyerId(state) || !state.token || !me?.pro || !hasPush()) return;
     const generation = pushGeneration.current;
     const timer = setTimeout(() => {
-      pushQueue.current = pushQueue.current
-        .catch(() => {})
-        .then(() => generation === pushGeneration.current && stateRef.current.token ? sendSettings(stateRef.current) : undefined)
+      if (generation === pushGeneration.current && stateRef.current.token) void sendSettings(stateRef.current)
         .catch(() => setMessage(dictionaries[stateRef.current.lang].error));
     }, 400);
     return () => clearTimeout(timer);
@@ -597,32 +786,38 @@ function App() {
       showPro();
       return;
     }
-    if (!hasPush() || !availability.vapid_key) {
-      setMessage(t("pushUnavailable"));
+    if (!hasPush() || !pushReady) {
+      setMessage(ANDROID ? androidInfoValue?.fcm === false ? a.notifyUnavailable : a.notifyNotReady : t("pushUnavailable"));
       return;
     }
     void run(async () => {
-      const p = await Notification.requestPermission();
+      const generation = pushGeneration.current, account = accountGeneration.current;
+      const p = ANDROID ? await requestNotifications() : await Notification.requestPermission();
+      if (generation !== pushGeneration.current || account !== accountGeneration.current) return;
       setPermission(p);
       if (p !== "granted") throw new Error("pushPermission");
       await ensureBuyer();
+      if (generation !== pushGeneration.current || account !== accountGeneration.current) return;
       setPushState("saving");
       try {
-        const reg = await pushTimeout(navigator.serviceWorker.ready);
-        const sub = await pushTimeout(subscribePush(reg, availability.vapid_key!));
+        const sub = ANDROID ? undefined : await pushTimeout(subscribePush(await pushTimeout(navigator.serviceWorker.ready), availability.vapid_key!));
+        if (generation !== pushGeneration.current || account !== accountGeneration.current) return;
         const next = {
           ...stateRef.current,
           monitors: stateRef.current.monitors.map((m) =>
             m.id === pendingMonitor ? { ...m, alert: true, updated: Math.max(fresh(), m.updated + 1) } : m),
         };
-        await sendSettings(next, sub);
+        if (!await sendSettings(next, sub)) return;
+        if (generation !== pushGeneration.current || account !== accountGeneration.current) return;
         if (pendingMonitor) {
-          update((s) => ({ ...s, monitors: next.monitors }));
+          update((s) => ({ ...s, monitors: s.monitors.map((m) => m.id === pendingMonitor && !m.deleted
+            ? { ...m, alert: true, updated: Math.max(fresh(), m.updated + 1) } : m) }));
           setPendingMonitor(null);
           setPage("workers");
         }
         setMessage(t("pushConnected"));
       } catch (error) {
+        if (generation !== pushGeneration.current || account !== accountGeneration.current) return;
         setPushState("error");
         if (error instanceof ApiError || (error instanceof Error && error.message === "pushTimeout")) throw error;
         throw new Error("pushConnectError");
@@ -632,17 +827,7 @@ function App() {
   const disablePush = () => void run(async () => {
     // Delete server watches first, so a disconnected browser cannot leave active alerts.
     pushGeneration.current++;
-    await pushQueue.current.catch(() => {});
-    const token = stateRef.current.token;
-    if (token) await api(`/v1/devices/${token}`, "DELETE", {}, buyerId(stateRef.current));
-    rememberPurchaseToken("");
-    stateRef.current = { ...stateRef.current, token: "" };
-    update((s) => ({ ...s, token: "" }));
-    setPushState("idle");
-    const reg = await pushTimeout(navigator.serviceWorker.ready);
-    const sub = await reg.pushManager.getSubscription();
-    if (sub) await sub.unsubscribe();
-    setMessage(t("pushDisconnected"));
+    if (await pushSettings.current!.withdraw(stateRef.current)) setMessage(t("pushDisconnected"));
   });
   const remove = (key: "monitors" | "rules" | "wallets", id: string) => {
     if (confirm(t("confirmDelete")))
@@ -676,7 +861,7 @@ function App() {
       if (!me?.pro) showPro();
       else {
         setPage("alerts");
-        setMessage(t("pushSetupMonitor"));
+        setMessage(ANDROID ? a.notifyFirst : t("pushSetupMonitor"));
       }
       return;
     }
@@ -700,6 +885,9 @@ function App() {
       })),
     );
   /// "10 min", "2 h": whole hours read as hours.
+  // Currency names in the app's language, as iOS lists them ("人民币 · CNY").
+  const currencyName = (code: string) => { try { return new Intl.DisplayNames([state.lang], { type: "currency" }).of(code) || code; } catch { return code; } };
+  const hm = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
   const duration = (seconds: number) =>
     seconds % 3600 === 0
       ? t("durationHours").replace("%@", String(seconds / 3600))
@@ -721,6 +909,9 @@ function App() {
   const selected = (state.hashWindow as WindowName) || "day";
   const activeMonitors = orderedMonitors(configOf(state)),
     activeRules = alive(state.rules);
+  const showsAlertHint = ANDROID && activeMonitors.length > 0 && !alertHintDismissed && !activeMonitors.some((m) => m.alert);
+  const showsWebHint = ANDROID && activeMonitors.length > 0 && !webHintDismissed && !showsAlertHint && !alertHintSeen;
+  useEffect(() => { if (showsAlertHint && page === "workers") setAlertHintSeen(true); }, [showsAlertHint, page]);
   /// 卡片 or 一览 (MonitorCompact.tsx), this browser's choice.
   const layout = monitorLayout(state.monitorLayout);
   const openedMonitor = openMonitor ? activeMonitors.find((m) => m.id === openMonitor) : undefined;
@@ -745,6 +936,12 @@ function App() {
   const incomeAddresses = ownAddresses(state.monitors), fleetIncomes = incomeAddresses.flatMap((addr) => incomeFor(addr) ? [incomeFor(addr)!] : []);
   const fleetHash = fleetStats.reduce((n, s) => n + rate(s, nearestWindow(selected, s.windows)), 0);
   const fleetOnline = fleetStats.reduce((n, s) => n + s.workers.filter((w) => w.online).length, 0), fleetTotal = fleetStats.reduce((n, s) => n + s.workers.length, 0);
+  const reviewAsked = useRef(false);
+  useEffect(() => {
+    if (!ANDROID || reviewAsked.current || page !== "workers" || fleetTotal === 0) return;
+    reviewAsked.current = true;
+    requestReview();
+  }, [page, fleetTotal]);
   const summaryWaiting = fleetSnapshots.some((s) => !s?.data && !s?.failed) || incomeAddresses.some((a) => !incomes[a] || incomes[a].target !== incomeTarget);
   /// One monitor's full card: in the card grid, and on its own when opened from 一览.
   const monitorCard = (m: Monitor) => {
@@ -755,10 +952,10 @@ function App() {
       <section className="card monitor-card" key={m.id} draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", m.id)} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); moveMonitor(e.dataTransfer.getData("text/plain"), activeMonitors.findIndex((x) => x.id === m.id)); }}>
         <div className="card-heading">
           <div className="card-name">
-            <div className="monitor-title"><h2>{m.label}</h2><small>{m.pool}</small>{m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : "online-badge"}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
+            <div className="monitor-title"><h2>{m.label}</h2><small>{m.pool}</small>{ANDROID && <code className="monitor-addr" title={m.addr}>{m.addr.length > 20 ? `${m.addr.slice(0, 10)}…${m.addr.slice(-8)}` : m.addr}</code>}{m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : "online-badge"}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
           </div>
           <div className="inline-controls"><div className="alert-controls">
-            {availability.vapid_key && !m.paused && (
+            {(pushReady || ANDROID) && !m.paused && (
               <>
                 <label
                   className="compact-check"
@@ -813,7 +1010,7 @@ function App() {
         </div>
         {!m.paused && stale(snap?.failed || (m.pool !== "F2Pool" && incomeStale(m.addr)))}
         {!m.paused && m.alert && (pushState === "error" || !state.token) && <button className="status warn status-link" onClick={() => setPage("alerts")}><span>{t("pushNeedsConnection")}</span><Icon name="right" /></button>}
-        {m.paused ? <div className="monitor-paused"><p className="muted">{t("pausedNote")}</p><button onClick={() => setMonitorPaused(m, false)}>{t("resume")}</button></div> : <>
+        {m.paused ? <div className="monitor-paused"><button onClick={() => setMonitorPaused(m, false)}>{t("resume")}</button></div> : <>
           {!s ? (
             snap?.failed ? <p className="muted">{t("error")}</p> : <Skeleton label={t("loading")} />
           ) : s.missing ? (
@@ -823,6 +1020,7 @@ function App() {
               <div className="rate-value">
                 {hashrate(rate(s, w), state.lang)}
               </div>
+              {ANDROID && (() => { const ref = w === "day" ? s.windows.find((x) => x !== "day") : s.windows.includes("day") ? "day" : undefined; return ref ? <div className="rate-ref"><small>{t(ref)}</small><b>{hashrate(rate(s, ref), state.lang)}</b></div> : null; })()}
               <div className="segments">
                 {s.windows.map((win) => (
                   <button
@@ -858,6 +1056,52 @@ function App() {
   };
   const restoreLink = <a className="pro-restore" href="/?account=restore#alerts" onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) { e.preventDefault(); setPanel("restore"); } }}>{t("restorePurchase")}</a>;
   const pendingOrderLink = order && order.status !== "paid" && <button onClick={() => setPanel("payment")}>{t("order")} · {order.id.slice(0, 8)}</button>;
+  const generalSettings = <div className="setting-section appearance-settings">
+    <label className="form-field">
+      {t("language")}
+      <select
+        aria-label={t("language")}
+        value={state.followBrowserLanguage ? "system" : state.lang}
+        onChange={(e) => {
+          const value = e.target.value;
+          update((s) => ({
+            ...s,
+            lang: value === "system" ? browserLanguage() : value as Lang,
+            followBrowserLanguage: value === "system",
+            settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1),
+          }));
+        }}
+      >
+        <option value="system">{t(ANDROID ? "systemTheme" : "browserLanguage")}</option>
+        {langs.map((l) => (
+          <option key={l} value={l}>
+            {languageNames[l]}
+          </option>
+        ))}
+      </select>
+    </label>
+    <label className="form-field">{t("secondaryCurrency")}<select aria-label={t("secondaryCurrency")} value={state.secondary || (state.secondary === "" ? "" : "__auto__")} onChange={(e) => update((s) => ({ ...s, secondary: e.target.value, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))}><option value="__auto__">{t("followLanguage")}</option><option value="">{t("hideCurrency")}</option>{currencies.map(([code, symbol]) => <option key={code} value={code}>{ANDROID ? `${currencyName(code)} · ${code}` : `${code} · ${symbol}`}</option>)}</select></label>
+    {ANDROID && <p className="muted currency-rate">{a.primaryCurrency} · {currencyName("USD")} · USD{(state.secondary === undefined || state.secondary === "__auto__") && secondaryCode(state.secondary, state.lang) && <><br />{a.currentSecondary} · {currencyName(secondaryCode(state.secondary, state.lang)!)} · {secondaryCode(state.secondary, state.lang)}</>}</p>}
+    {secondaryCode(state.secondary, state.lang) && <p className="muted currency-rate">{fx?.rates[secondaryCode(state.secondary, state.lang)] ? rateLine(secondaryCode(state.secondary, state.lang), fx.rates[secondaryCode(state.secondary, state.lang)], state.lang) : "—"}{ANDROID && <> <InfoTip label={t("moreInfo")} text={a.ratesNote} /></>}<br />{t("updated")} · {fx ? new Date(fx.ts * 1000).toLocaleString(state.lang) : "—"}{fx?.stale && <> · {t("stale")}</>}</p>}
+    {ANDROID && <button type="button" disabled={ratesBusy} onClick={() => { setRatesBusy(true); void api<FX>("/v1/fx").then(setFX, () => setFX((old) => old ? { ...old, stale: true } : old)).finally(() => setRatesBusy(false)); }}>{a.refreshRates}</button>}
+    <label className="settings-toggle"><span>{t("autoRefresh")}</span><input type="checkbox" className="switch" checked={state.autoRefresh !== false} onChange={(e) => update((s) => ({ ...s, autoRefresh: e.target.checked, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))} /></label>
+  </div>;
+  const pushStatusText =
+    pushState === "saving" ? t("pushSaving") :
+    pushState === "error" ? t("pushSaveError") :
+    state.token && permission === "granted" ? t("pushConnected") :
+    permission === "granted" ? t(ANDROID ? "pushDisconnected" : "pushGranted") :
+    permission === "denied" ? ANDROID ? a.notifyDenied : t("pushDenied") :
+    permission === "unavailable" ? ANDROID ? a.notifyUnavailable : t("pushUnavailable") :
+    t("pushDefault");
+  // Android mirrors the iOS tab bar: 钱包 / 交易 / 挖矿监控 / 我的监控 / 设置.
+  const androidTabs: { tab: AndroidTab; icon: "wallet" | "trade" | "pools" | "workers" | "settings"; label: string; page: Page }[] = [
+    { tab: "wallet", icon: "wallet", label: a.tabWallet, page: "wallet" },
+    { tab: "trade", icon: "trade", label: a.tabTrade, page: "trade" },
+    { tab: "mining", icon: "pools", label: a.tabMining, page: miningPage },
+    { tab: "workers", icon: "workers", label: a.tabMonitor, page: "workers" },
+    { tab: "settings", icon: "settings", label: a.tabSettings, page: "settings" },
+  ];
   const proOffer = <div className="pro-intro">
     {!fromApp && <div className="pro-price"><strong><Money amount={money(availability.pay.usd)} block /></strong><span>{t("payWithPRL")}</span></div>}
     <p>{t("proCopy")}</p>
@@ -873,17 +1117,22 @@ function App() {
     </>}
   </div>;
   return (
-    <div className="app">
+    <div className={ANDROID ? "app android-app" : "app"}>
       <aside className="sidebar">
-        <a className="brand" href="/" aria-label="Pearl Hub">
+        {!ANDROID && <a className="brand" href="/" aria-label="Pearl Hub">
           <img src="/icon-192.png?v=pearl-light" alt="" width="44" height="44" />
           <span className="brand-copy">
             <span className="brand-name">Pearl Hub</span>
             <small className="brand-meta"><span>PRL</span><span className="brand-dot" aria-hidden="true" /><span className="brand-platform">WEB</span></small>
           </span>
-        </a>
+        </a>}
         <nav>
-          {(
+          {ANDROID ? androidTabs.map((item) => (
+            <button key={item.tab} className={tabOf(page) === item.tab ? "nav-item active" : "nav-item"} aria-label={item.label} title={item.label} aria-current={tabOf(page) === item.tab ? "page" : undefined} onClick={() => setPage(item.page)}>
+              <span className="nav-icon"><TabIcon name={item.icon} /></span>
+              <span className="nav-label" aria-hidden="true"><span className="nav-label-full">{item.label}</span><span className="nav-label-short">{item.label}</span></span>
+            </button>
+          )) : (
             [
               "market",
               "workers",
@@ -892,7 +1141,7 @@ function App() {
               "wallet",
               "alerts",
               "app",
-            ] as Page[]
+            ] as Exclude<Page, "settings" | "trade">[]
           ).map((p) => (
             <button
               key={p}
@@ -912,43 +1161,39 @@ function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">
+        {!ANDROID && <div className="sidebar-foot">
           <div className="sidebar-actions">
             <button className="settings-button" aria-label={t("settings")} title={t("settings")} onClick={() => setPanel("settings")}><Icon name="settings" /></button>
             <button className={`account-entry ${accountReady && state.accountId ? "" : "primary"}`} onClick={() => setPanel("account")} title={accountReady && state.accountId ? accountEmail || undefined : undefined} aria-label={accountReady && state.accountId ? accountEmail ? `${accountCopy(state.lang).account}: ${accountEmail}` : accountCopy(state.lang).account : t("signIn")} aria-haspopup="dialog">
               <Icon name="account" /><span className={accountReady && state.accountId && accountEmail ? "account-entry-name" : undefined}>{accountReady && state.accountId ? accountEmail.split("@")[0] || accountCopy(state.lang).account : t("signIn")}</span>
             </button>
           </div>
-        </div>
+        </div>}
       </aside>
-      <main className={page === "pools" ? "pool-page" : page === "wallet" || page === "alerts" || page === "app" ? "narrow-page" : undefined}>
-        <div className="page-toolbar">
+      {ANDROID && <WalletFrame frame={walletFrame} visible={page === "wallet"} title={a.tabWallet} />}
+      <main className={page === "pools" ? "pool-page" : page === "wallet" || page === "alerts" || page === "app" || page === "settings" ? "narrow-page" : undefined} hidden={ANDROID && page === "wallet"} data-subpage={ANDROID && page === "settings" && settingsPage ? "" : undefined}>
+        {ANDROID && miningPages.includes(page as MiningPage) && <div className="android-segments" role="tablist" aria-label={a.tabMining}>
+          {miningPages.map((p) => <button key={p} role="tab" aria-selected={page === p} onClick={() => setPage(p)}>{p === "market" ? a.overview : p === "pools" ? a.pool : t("calculator")}</button>)}
+        </div>}
+        {ANDROID && page === "alerts" && <button className="android-back" onClick={() => setPage("settings")}><Icon name="chevron" />{a.tabSettings}</button>}
+        {!(ANDROID && page === "trade") && <div className="page-toolbar">
         <header className="page-heading">
           <div>
-            <div className="page-title"><h1>{t(page === "pools" ? "poolOverview" : page)}</h1>{page === "alerts" && me?.pro && <span className="badge" title={t("proActive")}><Icon name="check" />PRO · {me.pro_src === "apple" ? t("appleSource") : me.pro_src || "PRO"}</span>}</div>
-            {page !== "app" && (
-              <p>
-                {t(
-                  (
-                    {
-                      market: "marketNote",
-                      workers: "workerNote",
-                      pools: "poolsNote",
-                      calculator: "calculatorNote",
-                      wallet: "walletNote",
-                      alerts: "alertNote",
-                    } as const
-                  )[page],
-                )}
-                {page === "wallet" && state.hideExtensionBanner === true && <> <button className="text-button extension-banner-show" onClick={() => update((s) => ({ ...s, hideExtensionBanner: false }))}>Pearl Hub Wallet</button></>}
-              </p>
-            )}
+            <div className="page-title"><h1 className={ANDROID && (page === "pools" || page === "calculator") ? "sr-only" : undefined}>{ANDROID && page === "workers" ? a.myMonitors : t(page === "pools" ? "poolOverview" : page as Exclude<Page, "trade">)}</h1>{ANDROID && miningPages.includes(page as MiningPage) && <InfoTip label={t("moreInfo")} text={a.notMining} />}{ANDROID && ["market", "pools", "calculator", "workers"].includes(page) && <button className="icon-button android-refresh" aria-label={a.refresh} title={a.refresh} disabled={manualRefresh} onClick={() => { setManualRefresh(true); void refresh().finally(() => setManualRefresh(false)); }}><Icon name="refresh" className={manualRefresh ? "spin" : undefined} /></button>}{page === "alerts" && me?.pro && <span className="badge" title={t("proActive")}><Icon name="check" />PRO · {me.pro_src === "apple" ? t("appleSource") : me.pro_src || "PRO"}</span>}{page === "wallet" && !ANDROID && <InfoTip label={t("moreInfo")} text={t("walletNote")} />}</div>
+            {/* No subtitle under the title (iOS 6a1e720): the page's own layout and controls say what it is. */}
+            {page === "wallet" && !ANDROID && state.hideExtensionBanner === true && <p><button className="text-button extension-banner-show" onClick={() => update((s) => ({ ...s, hideExtensionBanner: false }))}>Pearl Hub Wallet</button></p>}
           </div>
         </header>
-        <div className="global-actions">
+        {!ANDROID && <div className="global-actions">
           <AppearanceMenu state={state} t={t} onChange={(appearance) => update((s) => ({ ...s, ...appearance, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))} />
-        </div>
-        </div>
+        </div>}
+        </div>}
+        {ANDROID && page === "trade" && TradeTab && <Suspense fallback={<Skeleton label={t("loading")} kind="chart" />}>
+          <TradeTab lang={state.lang} t={t} pro={!!me?.pro} live={live} wallet={walletOf} visible={page === "trade" && !panel} alertsActive={liveRuleCount}
+            contacts={alive(state.contacts || []).map((c) => ({ name: c.name, address: c.address }))}
+            addContact={(name, address) => update((s) => ({ ...s, contacts: [...(s.contacts || []), { id: uid(), updated: fresh(), name, address, note: "" }] }))}
+            onPro={showPro} onAlerts={() => { setPanel(null); setPage("alerts"); }} onWallet={() => { setPanel(null); setPage("wallet"); }} />
+        </Suspense>}
         {page === "app" && (
           <section className="app-download" aria-labelledby="app-download-title">
             <div className="app-download-main">
@@ -958,11 +1203,11 @@ function App() {
               <div className="app-download-actions">
                 <a className="primary app-download-button" href={appStoreURL} target="_blank" rel="noreferrer"><Icon name="app" />{t("iosDownload")}</a>
                 <a className="primary app-download-button" href={macStoreURL} target="_blank" rel="noreferrer"><Icon name="mac" />{t("macDownload")}</a>
+                <a className="primary app-download-button" href={playStoreURL} target="_blank" rel="noreferrer"><Icon name="android" />{t("androidDownload")}</a>
               </div>
-              <p className="app-coming-soon">Android<span>{t("appComingSoon")}</span></p>
             </div>
             <div className="app-download-qr">
-              <QR value={appStoreURL} cell={4} margin={16} />
+              <QR value={downloadLink} cell={4} margin={16} />
               <p>{t("appScanDownload")}</p>
             </div>
             <button className="app-qr-button" aria-label={t("appShowQR")} title={t("appShowQR")} aria-haspopup="dialog" onClick={() => setPanel("appqr")}><Icon name="qr" /></button>
@@ -970,7 +1215,18 @@ function App() {
         )}
         {page === "market" && (
           <>
+            {!androidBannerHidden && (
+              <section className="card market-banner" aria-labelledby="market-banner-title">
+                <img src="/icon-192.png?v=pearl-light" alt="" width="48" height="48" />
+                <h2 id="market-banner-title">{t("androidBannerTitle")}</h2>
+                <a className="primary market-banner-action" href={playStoreURL} target="_blank" rel="noreferrer"><Icon name="android" />{t("androidBannerAction")}</a>
+                <button className="icon-button market-banner-close" onClick={hideAndroidBanner} aria-label={t("close")} title={t("close")}><Icon name="close" /></button>
+              </section>
+            )}
             <MarketData price={price.data} overview={overview.data} history={history.data} failed={price.failed || overview.failed || history.failed} t={t} lang={state.lang} money={money} refresh={refreshEpoch} live={state.autoRefresh !== false} />
+            {ANDROID && <FleetCalculator only="overview" onOpenDevices={() => setPage("calculator")} state={state} onState={update} data={overview.data} price={price.data} fx={fx}
+              incomes={Object.fromEntries(ownAddresses(state.monitors).map((addr) => [addr, incomeFor(addr)]))}
+              failed={price.failed || overview.failed} t={t} />}
             <div className="summary-grid">
               <button
                 className="card shortcut"
@@ -991,7 +1247,7 @@ function App() {
                 <span>
                   {t("wallet")}
                   <small>
-                    {t("extensionShortcut")}
+                    {ANDROID ? `${a.receive} · ${a.send}` : t("extensionShortcut")}
                   </small>
                 </span>
                 <Icon name="right" />
@@ -1015,6 +1271,7 @@ function App() {
             lang={state.lang}
             data={overview.data}
             failed={overview.failed}
+            onRetry={() => void refresh()}
             t={t}
             onUse={(r) => {
               update((s) => ({
@@ -1054,8 +1311,25 @@ function App() {
               <div><small>{t("recent24h")}</small><strong><PRLAmount lang={state.lang} value={fleetIncomes.length ? fleetIncomes.reduce((n, i) => n + i.h24, 0) : null} /></strong></div>
               <div><small>{t("recent7d")}</small><strong><PRLAmount lang={state.lang} value={fleetIncomes.length ? fleetIncomes.reduce((n, i) => n + i.d7, 0) : null} /></strong></div>
             </div>}{(fleetSnapshots.some((s) => s?.failed || s?.data?.partial) || fleetIncomes.length < incomeAddresses.length || incomeAddresses.some(incomeStale)) && !summaryWaiting && <p className="status warn">{t("partial")}</p>}</section>}
-            {!activeMonitors.length && (
-              <Empty
+            {showsAlertHint && <div className="card android-hint">
+              <button className="android-hint-body" onClick={() => { dismissAlertHint(); setPage("settings"); setSettingsPage("offline"); }}>
+                <span className="android-row-icon"><Icon name="alerts" /></span>
+                <span><strong>{a.offlineHint}{!me?.pro && <span className="badge">{a.premium}</span>}</strong></span>
+              </button>
+              <button className="android-hint-close" aria-label={a.close} onClick={dismissAlertHint}><Icon name="close" /></button>
+            </div>}
+            {/* Name + address: the card is the way to 设置 → 网页版, nothing to read. */}
+            {showsWebHint && <div className="card android-hint android-web-hint">
+              <button className="android-hint-body" onClick={() => { dismissWebHint(); setPage("settings"); setSettingsPage("web"); }}>
+                <span className="android-row-icon"><Icon name="mac" /></span>
+                <span><strong>{a.webVersion}</strong><code>pearlhub.net</code></span>
+                <Icon name="chevron" className="android-row-chevron" />
+              </button>
+              <button className="android-hint-close" aria-label={a.close} onClick={dismissWebHint}><Icon name="close" /></button>
+            </div>}
+            {!activeMonitors.length && (ANDROID
+              ? <section className="empty android-monitor-empty"><Icon name="workers" /><h2>{a.addMonitorTitle}</h2><button className="primary" onClick={() => setPanel("monitor")}><Icon name="plus" />{t("add")}</button><small>{a.notMining}</small></section>
+              : <Empty
                 symbol="workers"
                 text={t("noMonitors")}
                 onClick={() => setPanel("monitor")}
@@ -1071,7 +1345,7 @@ function App() {
             {layout === "cards" && activeMonitors.length > 0 && <div className="monitor-grid">{activeMonitors.map(monitorCard)}</div>}
           </>
         )}
-        {page === "wallet" && <>
+        {page === "wallet" && !ANDROID && <>
           {state.hideExtensionBanner !== true && <ExtensionBanner t={t} onGuide={() => setPanel("extension")} onHide={() => update((s) => ({ ...s, hideExtensionBanner: true }))} />}
           <WatchWallet lang={state.lang} wallets={alive(state.wallets)} selected={walletId} onSelect={setWalletId} price={price.data} refresh={refreshEpoch} t={t} money={money} onCopy={copy}
             onAdd={() => { setDraftAddress(""); setPanel("wallet"); }} onReceive={(w) => { setQrWallet(w); setPanel("walletqr"); }} onSend={() => setPanel("extension")}
@@ -1079,6 +1353,13 @@ function App() {
         </>}
         {page === "alerts" && (
           <>
+            {ANDROID && <section className="card android-ref-price">
+              {/* The Worker prices off SafeTrade and only falls back to the three-exchange median while that is down. */}
+              <span className="label-tip"><small>{a.refPrice}</small><InfoTip label={a.refPrice} text={price.data?.source === "median" ? a.sourceMedian : a.sourceSafeTrade} /></span>
+              <strong>{price.data ? `$${price.data.usd.toFixed(2)}` : "—"}</strong>
+              <div className="android-ref-changes">{([[a.min5, price.data?.change5m], [a.hour1, price.data?.change1h], [a.hour24, price.data?.change24h]] as [string, number | null | undefined][]).map(([label, pct]) =>
+                <div key={label}><small>{label}</small><b className={pct == null ? undefined : pct >= 0 ? "up" : "down"}>{pct == null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}</b></div>)}</div>
+            </section>}
             {me?.pro&&me.pro_scope==="device"&&<section className="card"><p role="status">{accountCopy(state.lang).guestPro}</p>{!state.accountId&&<button onClick={()=>setPanel("account")}>{accountCopy(state.lang).savePurchase}</button>}</section>}
             {!me?.pro && <section className="card pro-preview">
               <img className="pro-preview-logo" src="/icon-192.png?v=pearl-light" alt="" width="40" height="40" />
@@ -1091,30 +1372,18 @@ function App() {
                 <button className="primary" onClick={showPro}>{t("learnMore")}<Icon name="right" /></button>
               </div>
             </section>}
-            {!availability.vapid_key ? (
-              <Empty symbol="alerts" text={t("pushOff")} />
+            {!pushReady ? (
+              <Empty symbol="alerts" text={ANDROID ? androidInfoValue?.fcm === false ? a.notifyUnavailable : a.notifyNotReady : t("pushOff")} />
             ) : (
               <>
                 {me?.pro && state.token && permission === "granted" && pushState !== "error" ? <section className="card notification-status"><span role="status"><Icon name="check" />{t(pushState === "saving" ? "pushSaving" : "notificationOn")}</span><div className="actions"><button disabled={busy} onClick={() => void run(async () => { await api(`/v1/devices/${state.token}/test`, "POST"); setMessage(t("testSent")); })}>{t("testPush")}</button><button onClick={disablePush} disabled={busy}>{t("disablePush")}</button></div></section> : (
                 <section className="card">
                   <div className="card-heading">
-                    <h2>{t("notifications")}</h2>
+                    <span className="label-tip"><h2>{ANDROID ? a.notificationSettings : t("notifications")}</h2>{!ANDROID && <InfoTip label={t("pushHelp")} text={t("pushLimits")} />}</span>
                     <span className="badge">PRO</span>
                   </div>
-                  <p role="status">
-                    {t(
-                      pushState === "saving" ? "pushSaving" :
-                      pushState === "error" ? "pushSaveError" :
-                      state.token && permission === "granted" ? "pushConnected" :
-                      permission === "granted"
-                        ? "pushGranted"
-                        : permission === "denied"
-                          ? "pushDenied"
-                          : permission === "unavailable"
-                            ? "pushUnavailable"
-                            : "pushDefault",
-                    )}
-                  </p>
+                  <p role="status">{pushStatusText}</p>
+                  {ANDROID && permission === "denied" && <button onClick={openNotificationSettings}>{a.openSettings}</button>}
                   <div className="actions">
                     <button
                       className="primary"
@@ -1145,19 +1414,15 @@ function App() {
                       </button>
                     </>}
                   </div>
-                  <details className="help">
-                    <summary>{t("pushHelp")}</summary>
-                    <p>{t("pushLimits")}</p>
-                  </details>
                 </section>
                 )}
-                <section className="card offline-intro">
-                  <h2>{t("offlineAlert")}</h2>
-                  <p>{t("offlineIntro")}</p><details className="help"><summary>{t("learnMore")}</summary><p>{t("offlineGuide")}</p></details>
+                {/* Android reaches 掉线提醒 from its own 设置 row, as on iOS; the website points at 矿机 with the guide in the ⓘ. */}
+                {!ANDROID && <section className="card offline-intro">
+                  <span className="label-tip"><h2>{t("offlineAlert")}</h2><InfoTip label={t("offlineAlert")} text={t("offlineGuide")} /></span>
                   <button onClick={() => setPage("workers")}>{t("workers")} <Icon name="right" /></button>
-                </section>
+                </section>}
                 <div className="list-toolbar">
-                  <span>{t("priceAlerts")} {activeRules.length} / 20</span>
+                  <span className="label-tip">{t("priceAlerts")} {activeRules.length} / 20{ANDROID && <InfoTip label={t("priceAlerts")} text={a.alertsPrivacy} />}</span>
                   <button
                     className="primary"
                     onClick={() =>
@@ -1174,7 +1439,7 @@ function App() {
                 {!activeRules.length ? <Empty symbol="alerts" text={t("noRules")} button={t("addPriceAlert")} onClick={() => gated(() => { setEditingRule(null); setPanel("rule"); })} /> : <section className="card rules-card" aria-label={t("alerts")}>{activeRules.map((r) => (
                   <div className="rule-card" key={r.id}>
                     <Icon name={r.kind === "above" ? "up" : r.kind === "below" ? "down" : r.kind === "reach" ? "reach" : "change"} />
-                    <div className="rule-label"><button className="text-button" onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><strong>{t(r.kind)} {r.kind === "move" ? `${r.value}% · ${r.window === 300 ? "5m" : r.window === 3600 ? "1h" : "24h"}` : <Money amount={money(r.value)} />}</strong></button>
+                    <div className="rule-label"><button className="text-button" onClick={() => gated(() => { setEditingRule(r); setPanel("rule"); })}><strong>{ANDROID && r.kind === "reach" ? `${fill(a.ruleReachLabel, `$${r.value.toFixed(2)}`)} · ${a.ruleEither}` : <>{t(r.kind)} {r.kind === "move" ? `${r.value}% · ${r.window === 300 ? "5m" : r.window === 3600 ? "1h" : "24h"}` : <Money amount={money(r.value)} />}</>}</strong></button>
                       {deliveries[r.id]?.deferred && deliveries[r.id].kind === r.kind && deliveries[r.id].value === r.value && deliveries[r.id].window === r.window && <small className="status warn">{t("deferredAlert").replace("%@", state.window ? `${String(Math.floor(state.window.start / 60)).padStart(2, "0")}:${String(state.window.start % 60).padStart(2, "0")} · ${state.window.tz}` : t("start"))}</small>}
                       <small><span>{t(r.repeat ? "repeatingAlert" : "oneShotAlert")}</span>{r.seen_fired > 0 && <span title={new Date(r.seen_fired * 1000).toLocaleString(state.lang)}>{t("lastAlert").replace("%@", relativeTime(r.seen_fired, state.lang))}</span>}</small>
                     </div>
@@ -1183,7 +1448,7 @@ function App() {
                 ))}</section>}
                 <section className="card">
                   <div className="card-heading">
-                    <h2>{t("pushWindow")}</h2>
+                    <span className="label-tip"><h2>{t("pushWindow")}</h2>{ANDROID && <InfoTip label={t("pushWindow")} text={state.window ? fill(a.windowSummary, hm(state.window.start), hm(state.window.end), hm(state.window.start)) : a.windowAllDay} />}</span>
                     <label className="compact-check">
                       <input
                         type="checkbox" className="switch"
@@ -1220,19 +1485,15 @@ function App() {
                               const [h, m] = e.target.value
                                 .split(":")
                                 .map(Number);
-                              if (
-                                !Number.isFinite(h + m) ||
-                                h * 60 + m ===
-                                  state.window![
-                                    key === "start" ? "end" : "start"
-                                  ]
-                              )
-                                return;
-                              update((s) => ({
-                                ...s,
-                                window: { ...s.window!, [key]: h * 60 + m },
-                                settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1),
-                              }));
+                              if (!Number.isFinite(h + m)) return;
+                              const same = h * 60 + m === state.window![key === "start" ? "end" : "start"];
+                              if (same && !ANDROID) return;
+                              // An empty window would mean "never": like iOS, push the end an hour on.
+                              update((s) => {
+                                const next = { ...s.window!, [key]: h * 60 + m };
+                                if (next.start === next.end) next.end = (next.end + 60) % 1440;
+                                return { ...s, window: next, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) };
+                              });
                             }}
                           />
                         </label>
@@ -1245,7 +1506,18 @@ function App() {
             )}
           </>
         )}
-        <footer className="main-foot">
+        {ANDROID && page === "settings" && <AndroidSettings state={state} me={me} accountReady={accountReady} accountEmail={accountEmail} info={androidInfoValue} a={a} t={t} general={generalSettings}
+          page={settingsPage} setPage={(next) => { setSettingsPage(next); window.scrollTo(0, 0); }} live={live} wallet={walletOf} pushReady={pushReady}
+          pay={fromApp ? null : { price: <Money amount={money(availability.pay.usd)} />, enabled: availability.pay.enabled && accountReady && !busy }}
+          store={playStore}
+          onAppearance={(appearance) => update((s) => ({ ...s, ...appearance, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))}
+          offlineAlerts={{ monitors: activeMonitors, status: watchStatus, denied: permission === "denied", window: !!state.window, remindOnce: t("remindOnce"), remindAfter: t("remindAfter"),
+            setAfter: (m, seconds) => { if (!seconds) { if (m.alert) toggleMonitorAlert(m); } else { if (!m.alert) toggleMonitorAlert(m); setMonitorAlert(m, { after: seconds }); } },
+            setAgain: (m, seconds) => setMonitorAlert(m, { again: seconds || undefined }) }}
+          onInfo={setAndroidInfo} onAccount={() => setPanel("account")} onBuy={buy} onAlerts={() => setPage("alerts")}
+          onSecurity={() => setPanel("security")} onWidgets={() => setPanel("widgets")} onWallet={() => { setPanel(null); setPage("wallet"); }}
+          trade={{ guideTitle: a.tradeGuide, render: (p) => TradeSettings && <Suspense fallback={<Skeleton label={t("loading")} />}><TradeSettings lang={state.lang} page={p} onGuide={() => { setSettingsPage("tradeGuide"); window.scrollTo(0, 0); }} /></Suspense> }} />}
+        {!ANDROID && <footer className="main-foot">
           <span>Pearl Hub</span>
           <div className="main-foot-links">
             <button className="main-foot-link" onClick={() => setPanel("security")}>
@@ -1254,8 +1526,11 @@ function App() {
             <a href="https://t.me/prl_hub" target="_blank" rel="noreferrer">
               {t("support")} <Icon name="external" />
             </a>
+            <a href="mailto:support@pearlhub.net">
+              <Icon name="mail" /> support@pearlhub.net
+            </a>
           </div>
-        </footer>
+        </footer>}
       </main>
       {message && (
         <div className="toast" role="status">
@@ -1276,7 +1551,7 @@ function App() {
         <div className={`dialog-content ${panel === "payment" ? "payment-content" : ""}`}>
           <div className="dialog-heading">
             <h2>
-              {panel === "txlookup" ? t(txTab === "broadcast" ? "txBroadcast" : "txLookup") : panel === "appqr" ? t("appShowQR") : panel === "walletqr" ? t("receive") : panel === "extension" ? t("extensionBadge") : panel === "payment" || panel === "pro"
+              {ANDROID && panel === "widgets" ? a.widget : panel === "txlookup" ? t(txTab === "broadcast" ? "txBroadcast" : "txLookup") : panel === "appqr" ? t("appShowQR") : panel === "walletqr" ? t("receive") : panel === "extension" ? t("extensionBadge") : panel === "payment" || panel === "pro"
                 ? t("pro")
                 : panel === "monitor"
                   ? t(editingMonitor ? "editMonitor" : "addMonitor")
@@ -1289,58 +1564,33 @@ function App() {
             </button>
           </div>
           {panel === "pro" && proOffer}
-          {panel === "appqr" && <div className="app-qr-content"><QR value={appStoreURL} /><p>{t("appScanDownload")}</p></div>}
+          {ANDROID && panel === "widgets" && <AndroidWidgets a={a} add={t("add")} pro={!!me?.pro} onPro={showPro} onPin={(kind) => void nativeCall("widgets.pin", { kind }).catch(() => setMessage(a.widgetSteps))} />}
+          {panel === "appqr" && <div className="app-qr-content"><QR value={downloadLink} /><p>{t("appScanDownload")}</p></div>}
           {panel === "extension" && <WalletExtension t={t} copy={copy} lang={state.lang} />}
           {panel === "txlookup" && <TxTools tab={txTab} onTab={setTxTab} known={knownAddresses} refresh={refreshEpoch} onCopy={copy} t={t} lang={state.lang} />}
           {panel === "walletqr" && qrWallet && <div className="app-qr-content wallet-qr"><strong>{qrWallet.label}</strong><QR value={qrWallet.addr} alt={t("receiveQR")} /><PaymentAddress address={qrWallet.addr} t={t} onCopy={(value) => void copy(value)} /><p>{t("receiveMainnetOnly")}</p></div>}
           {panel === "settings" && (
             <>
-              <div className="setting-section appearance-settings">
-                <label className="form-field">
-                  {t("language")}
-                  <select
-                    aria-label={t("language")}
-                    value={state.followBrowserLanguage ? "system" : state.lang}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      update((s) => ({
-                        ...s,
-                        lang: value === "system" ? browserLanguage() : value as Lang,
-                        followBrowserLanguage: value === "system",
-                        settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1),
-                      }));
-                    }}
-                  >
-                    <option value="system">{t("browserLanguage")}</option>
-                    {langs.map((l) => (
-                      <option key={l} value={l}>
-                        {languageNames[l]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">{t("secondaryCurrency")}<select aria-label={t("secondaryCurrency")} value={state.secondary || (state.secondary === "" ? "" : "__auto__")} onChange={(e) => update((s) => ({ ...s, secondary: e.target.value, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))}><option value="__auto__">{t("followLanguage")}</option><option value="">{t("hideCurrency")}</option>{currencies.map(([code, symbol]) => <option key={code} value={code}>{code} · {symbol}</option>)}</select></label>
-                {secondaryCode(state.secondary, state.lang) && <p className="muted currency-rate">{fx?.rates[secondaryCode(state.secondary, state.lang)] ? rateLine(secondaryCode(state.secondary, state.lang), fx.rates[secondaryCode(state.secondary, state.lang)], state.lang) : "—"}<br />{t("updated")} · {fx ? new Date(fx.ts * 1000).toLocaleString(state.lang) : "—"}{fx?.stale && <> · {t("stale")}</>}</p>}
-                <label className="settings-toggle"><span>{t("autoRefresh")}</span><input type="checkbox" className="switch" checked={state.autoRefresh !== false} onChange={(e) => update((s) => ({ ...s, autoRefresh: e.target.checked, settingsUpdated: Math.max(fresh(), s.settingsUpdated + 1) }))} /></label>
-              </div>
+              {generalSettings}
               <p className="settings-saved muted">{t("settingsSaved")}</p>
               <button className="security-entry" onClick={() => { dialog.current?.scrollTo({ top: 0 }); setPanel("security"); }}><Icon name="shield" /><span>{securityCopy(state.lang).title}</span><Icon name="chevron" className="security-entry-chevron" /></button>
               <div className="settings-links">
                 <a href="https://t.me/prl_hub" target="_blank" rel="noreferrer">{t("support")} <Icon name="external" /></a>
+                <a href="mailto:support@pearlhub.net"><Icon name="mail" /> support@pearlhub.net</a>
                 <a href="/privacy.html" target="_blank" rel="noreferrer">{t("privacy")} <Icon name="external" /></a>
               </div>
             </>
           )}
           {panel === "security" && <>
-            <button className="security-back" onClick={() => { dialog.current?.scrollTo({ top: 0 }); setPanel("settings"); }}><Icon name="chevron" />{securityCopy(state.lang).back}</button>
-            <SecurityOverview lang={state.lang} sections={webSecurity} />
+            <button className="security-back" onClick={() => { dialog.current?.scrollTo({ top: 0 }); setPanel(ANDROID ? null : "settings"); }}><Icon name="chevron" />{securityCopy(state.lang).back}</button>
+            {ANDROID ? <SecurityOverview lang={state.lang} sections={androidSecurity} copy={androidSecurityCopy(state.lang)} /> : <SecurityOverview lang={state.lang} sections={webSecurity} />}
           </>}
           {(panel === "account" || panel === "restore") && (
             <AccountPanel restore={panel === "restore" && !canSync} accountId={accountReady ? state.accountId : ""} lang={state.lang} auth={availability.auth} onLogin={(a) => adoptAccount(a)} onLogout={leaveAccount} onEmail={setAccountEmail} purchases={(
                 <div className="setting-section">
                   <div className="card-heading">
                     <div>
-                      <h3>{t("pro")}</h3>
+                      <span className="label-tip"><h3>{t("pro")}</h3>{!me?.pro && !fromApp && <InfoTip label={t("pro")} text={t("appPurchaseLink")} />}</span>
                       <p className="muted">
                         {me?.pro
                           ? `${me.pro_scope==="device"?accountCopy(state.lang).guestPro:t("proActive")} · ${me.pro_src === "apple" ? t("appleSource") : me.pro_src} · ${new Date(me.pro_at! * 1000).toLocaleDateString(state.lang)}`
@@ -1353,7 +1603,6 @@ function App() {
                       </button>
                     )}
                   </div>
-                  {!me?.pro && !fromApp && <p className="muted">{t("appPurchaseLink")}</p>}
                   {!fromApp && order && order.status !== "paid" && (
                     <button onClick={() => setPanel("payment")}>
                       {t("order")} · {order.id.slice(0, 8)}
@@ -1364,7 +1613,8 @@ function App() {
             >
               <div className="setting-section">
                 <div className="card-heading">
-                  <h3>{t("sync")}</h3>
+                  {/* iOS WebLinkView.syncTip: what syncs, what never leaves the device, and without Pro that nothing syncs yet. */}
+                  <span className="label-tip"><h3>{t("sync")}</h3><InfoTip label={t("sync")} text={[canSync ? t("proSyncNote") : t("syncRequiresPro"), ...canSync ? [accountCopy(state.lang).syncNote] : [], accountCopy(state.lang).privacy].join("\n\n")} /></span>
                   <input
                     type="checkbox" className="switch"
                     aria-label={t("sync")}
@@ -1376,15 +1626,13 @@ function App() {
                     }}
                   />
                 </div>
-                <p className="muted">{canSync ? t("proSyncNote") : t("syncRequiresPro")}</p>
-                {canSync && <p className="muted">{accountCopy(state.lang).syncNote}</p>}
                 {!canSync && <button className="primary" onClick={showPro}>{t(fromApp ? "learnMore" : "buy")}</button>}
                 {canSync && state.sync && (
                   <div className="actions">
                     <button disabled={syncing} onClick={() => void sync()}>
                       {syncing ? t("loading") : t("syncNow")}
                     </button>
-                    <small role="status">{syncStatus}</small>
+                    <small role="status">{ANDROID ? syncing ? a.syncing : syncedAt && syncStatus === t("synced") ? `${a.synced} · ${relativeTime(syncedAt, state.lang)}` : syncStatus : syncStatus}</small>
                   </div>
                 )}
               </div>
@@ -1404,6 +1652,7 @@ function App() {
               initial={draftAddress}
               initialMonitor={editingMonitor}
               lang={state.lang}
+              extras={ANDROID ? { walletAddress: walletControl(walletFrame)?.state().address || undefined, useWallet: a.useWalletAddress, badAddress: a.badAddress, badF2Pool: a.badF2Pool, f2Guide: a.f2poolGuide } : undefined}
               onSave={(label, target, pool) => {
                 const parsed =
                   pool === "F2Pool"
@@ -1439,12 +1688,8 @@ function App() {
               }}
             />
           )}
-          {panel === "rule" && (
-            <RuleForm
-              key={editingRule?.id || "new"}
-              initialRule={editingRule}
-              t={t}
-              onSave={(kind, value, window, repeat) => {
+          {panel === "rule" && (() => {
+            const saveRule = (kind: Rule["kind"], value: number, window: number, repeat: boolean) => {
                 if (
                   !(
                     value >= (kind === "move" ? 0.5 : 0.01) &&
@@ -1472,9 +1717,12 @@ function App() {
                   ],
                 }));
                 setPanel(null);
-              }}
-            />
-          )}
+            };
+            return ANDROID
+              ? <AndroidRuleForm key={editingRule?.id || "new"} a={a} initialRule={editingRule} current={price.data?.usd} onSave={saveRule}
+                  onDelete={editingRule ? () => { const id = editingRule.id; setPanel(null); remove("rules", id); } : undefined} />
+              : <RuleForm key={editingRule?.id || "new"} initialRule={editingRule} t={t} onSave={saveRule} />;
+          })()}
           {panel === "payment" && order && !fromApp && (
             <>
               <div className="payment-body">
@@ -1562,21 +1810,27 @@ function Empty({
     </section>
   );
 }
+// The Android app's additions from the iOS add-monitor sheet (PoolView.swift): the wallet's own address,
+// the F2Pool tutorial link, and the reason a target is refused, shown as it is typed.
+type TargetExtras = { walletAddress?: string; useWallet: string; badAddress: string; badF2Pool: string; f2Guide: string };
 function TargetForm({
   t,
   onSave,
   initial = "",
   initialMonitor,
   lang,
+  extras,
 }: {
   t: (k: TextKey) => string;
   lang: State["lang"];
   initial?: string;
   initialMonitor?: Monitor | null;
   onSave: (name: string, target: string, pool: string) => void;
+  extras?: TargetExtras;
 }) {
   const [pool, setPool] = useState(initialMonitor?.pool || pools[0]);
   const [target, setTarget] = useState(initial);
+  const refused = extras && target.trim() ? pool === "F2Pool" ? !f2ref(target.trim()) && extras.badF2Pool : !/^prl1[0-9a-z]{20,100}$/.test(cleanAddress(target)) && extras.badAddress : "";
   return (
     <form
       onSubmit={(e) => {
@@ -1603,24 +1857,31 @@ function TargetForm({
         {t("name")}
         <input name="label" maxLength={40} autoComplete="off" defaultValue={initialMonitor?.label || ""} />
       </label>
-      <label className="form-field">
-        {t(pool === "F2Pool" ? "link" : "address")}
-        <textarea
+      {(() => {
+        const field = <textarea
           name="target"
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           required
           autoComplete="off"
           rows={3}
+          aria-label={pool === "F2Pool" ? t("link") : undefined}
           placeholder={
             pool === "F2Pool"
               ? "https://www.f2pool.com/mining-user/…"
               : "prl1…"
           }
-        />
-      </label>
-      {pool === "F2Pool" && <details className="help" open><summary>{t("f2Help")}</summary><ol>{(["f2Step1", "f2Step2", "f2Step3", "f2Step4"] as const).map((k) => <li key={k}>{t(k)}</li>)}</ol><p>{t("f2Permission")}</p><p>{t("f2ReadOnly")}</p></details>}
-      <div className="actions form-actions"><PasteButton t={t} onPaste={setTarget} /><button className="primary">{t("save")}</button></div>
+        />;
+        // iOS WatchSheet: the read-only link's safety note is an ⓘ beside its title (outside the <label>, whose
+        // clicks a button inside would take).
+        return pool === "F2Pool"
+          ? <div className="form-field"><span className="label-tip">{t("link")}<InfoTip label={t("link")} text={t("f2ReadOnly")} /></span>{field}</div>
+          : <label className="form-field">{t("address")}{field}</label>;
+      })()}
+      {refused && <small className="field-error">{refused}</small>}
+      {extras?.walletAddress && pool !== "F2Pool" && <button type="button" className="text-button use-wallet" onClick={() => setTarget(extras.walletAddress!)}>{extras.useWallet}</button>}
+      {pool === "F2Pool" && <details className="help" open><summary>{t("f2Help")}</summary><ol>{(["f2Step1", "f2Step2", "f2Step3"] as const).map((k) => <li key={k}>{t(k)}{k === "f2Step3" && <> <InfoTip label={t("f2Help")} text={t("f2Permission")} /></>}</li>)}</ol>{extras && <a href="https://f2pool.zendesk.com/hc/en-us/articles/360058722231" target="_blank" rel="noreferrer">{extras.f2Guide}</a>}</details>}
+      <div className="actions form-actions"><PasteButton t={t} onPaste={setTarget} /><button className="primary" disabled={!!refused}>{t("save")}</button></div>
     </form>
   );
 }

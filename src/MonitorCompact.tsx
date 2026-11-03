@@ -138,7 +138,7 @@ export function MonitorCompactList({ monitors, snapshot, selected, h24, usd, mon
   const items = running.map((m) => compactMonitor(m, snapshot(m), selected));
   const [showPaused, setShowPaused] = useState(false);
   const [menu, setMenu] = useState<string | null>(null);
-  // Reordering by drag is for a mouse or pen; on a touch screen a long press opens the actions instead.
+  // Mouse/pen use native drag. Touch uses a small grip, leaving the tile free to scroll and long-press.
   const [finePointer] = useState(() => typeof matchMedia !== "function" || matchMedia("(pointer: fine)").matches);
   const row = { menu, setMenu, draggable: finePointer, monitors, t, ...actions };
   return <div className="compact-monitors">
@@ -194,6 +194,19 @@ function Entry({ monitor, className, label, children, menu, setMenu, draggable, 
 }) {
   const open = menu === monitor.id, wrap = useRef<HTMLDivElement>(null), target = useRef<HTMLDivElement>(null);
   const press = useRef<{ timer: number; x: number; y: number } | null>(null), pressed = useRef(false);
+  const touchDrag = useRef<{ pointer: number; destination: string | null; over: HTMLElement | null } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const finishDrag = (commit: boolean) => {
+    const drag = touchDrag.current;
+    touchDrag.current = null;
+    drag?.over?.removeAttribute("data-touch-over");
+    setDragging(false);
+    if (commit && drag?.destination && drag.destination !== monitor.id) {
+      const index = monitors.findIndex((m) => m.id === drag.destination);
+      if (index >= 0) onMove(monitor.id, index);
+    }
+  };
+  useEffect(() => () => { touchDrag.current?.over?.removeAttribute("data-touch-over"); }, []);
   const close = (refocus: boolean) => { setMenu(null); if (refocus) target.current?.focus(); };
   useEffect(() => {
     if (!open) return;
@@ -224,7 +237,7 @@ function Entry({ monitor, className, label, children, menu, setMenu, draggable, 
     else if (e.key === "Tab") close(false);
   };
   const act = (run: () => void) => () => { close(false); run(); };
-  return <div ref={wrap} className={`compact-entry${open ? " menu-open" : ""}`} draggable={draggable}
+  return <div ref={wrap} data-monitor-id={monitor.id} className={`compact-entry${open ? " menu-open" : ""}${dragging ? " touch-dragging" : ""}`} draggable={draggable}
     onDragStart={(e) => { e.dataTransfer.setData("text/plain", monitor.id); e.dataTransfer.effectAllowed = "move"; }}
     onDragOver={(e) => e.preventDefault()}
     onDrop={(e) => { e.preventDefault(); onMove(e.dataTransfer.getData("text/plain"), monitors.findIndex((x) => x.id === monitor.id)); }}>
@@ -234,6 +247,35 @@ function Entry({ monitor, className, label, children, menu, setMenu, draggable, 
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPress} onPointerCancel={endPress}>
       {children}
     </div>
+    {monitors.length > 1 && <button type="button" className="tile-drag" aria-label={`${t("sort")}: ${monitor.label}`} title={t("sort")}
+      onClick={(e) => { e.stopPropagation(); }} onContextMenu={(e) => e.preventDefault()}
+      onKeyDown={(e) => {
+        const index = monitors.findIndex((m) => m.id === monitor.id);
+        if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); onMove(monitor.id, Math.max(0, index - 1)); }
+        else if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); onMove(monitor.id, Math.min(monitors.length - 1, index + 1)); }
+      }}
+      onPointerDown={(e) => {
+        if (!e.isPrimary || e.button !== 0) return;
+        e.preventDefault(); e.stopPropagation(); endPress(); setMenu(null);
+        e.currentTarget.setPointerCapture(e.pointerId);
+        touchDrag.current = { pointer: e.pointerId, destination: null, over: null }; setDragging(true);
+      }}
+      onPointerMove={(e) => {
+        const drag = touchDrag.current;
+        if (!drag || drag.pointer !== e.pointerId) return;
+        e.preventDefault();
+        const hit = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>("[data-monitor-id]") ?? null;
+        const over = hit?.closest(".compact-monitors") === wrap.current?.closest(".compact-monitors") ? hit : null;
+        drag.over?.removeAttribute("data-touch-over");
+        drag.over = over; drag.destination = over?.dataset.monitorId ?? null;
+        if (over && drag.destination !== monitor.id) over.setAttribute("data-touch-over", "true");
+        if (e.clientY < 70) window.scrollBy(0, -12);
+        else if (e.clientY > window.innerHeight - 90) window.scrollBy(0, 12);
+      }}
+      onPointerUp={(e) => { if (touchDrag.current?.pointer === e.pointerId) finishDrag(true); }}
+      onPointerCancel={() => finishDrag(false)} onLostPointerCapture={() => finishDrag(false)}>
+      <span aria-hidden="true">⠿</span>
+    </button>}
     {open && <div className="tile-menu" role="menu" aria-label={t("manage")} onKeyDown={menuKeys}>
       <button type="button" role="menuitem" onClick={act(() => onPause(monitor, !monitor.paused))}><Icon name={monitor.paused ? "play" : "pause"} />{t(monitor.paused ? "resume" : "pause")}</button>
       <button type="button" role="menuitem" onClick={act(() => onEdit(monitor))}><Icon name="edit" />{t("edit")}</button>

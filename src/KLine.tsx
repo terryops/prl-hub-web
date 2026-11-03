@@ -11,23 +11,28 @@ type Series = { candles: Candle[]; ts: number };
 /// SafeTrade candles for `period`, read while `enabled` (the K-line view is on screen) and
 /// again on each refresh. Periods already read stay on screen while the next read runs.
 /// See kline.ts for why the browser asks SafeTrade directly.
+/// A read still under way is left to finish (or time out) rather than restarted: the page
+/// refreshes every 5 s, and cancelling on each tick meant a SafeTrade slower than that never
+/// drew a chart, and one that stopped answering showed the loading state for good.
+export const KLINE_TIMEOUT_MS = 15000;
 export function useKline(period: KlinePeriod, refresh: number, enabled: boolean) {
   const [series, setSeries] = useState<Partial<Record<KlinePeriod, Series>>>({});
   const [failed, setFailed] = useState<Partial<Record<KlinePeriod, boolean>>>({});
+  const reading = useRef<Partial<Record<KlinePeriod, AbortController>>>({});
+  useEffect(() => () => { for (const abort of Object.values(reading.current)) abort?.abort(); reading.current = {}; }, []);
   useEffect(() => {
-    if (!enabled) return;
-    let disposed = false;
-    const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 15000);
+    if (!enabled || reading.current[period]) return;
+    const abort = new AbortController(), timer = setTimeout(() => abort.abort(), KLINE_TIMEOUT_MS);
+    reading.current[period] = abort;
     void fetch(klineURL(period, Date.now() / 1000), { signal: abort.signal, credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(`SafeTrade k-line: HTTP ${r.status}`); return r.json(); })
       .then((body) => {
         const candles = parseCandles(body);
         if (!candles.length) throw new Error("SafeTrade k-line: no candles");
-        if (!disposed) { setSeries((s) => ({ ...s, [period]: { candles, ts: Date.now() / 1000 } })); setFailed((f) => ({ ...f, [period]: false })); }
+        if (reading.current[period] === abort) { setSeries((s) => ({ ...s, [period]: { candles, ts: Date.now() / 1000 } })); setFailed((f) => ({ ...f, [period]: false })); }
       })
-      .catch(() => { if (!disposed) setFailed((f) => ({ ...f, [period]: true })); })
-      .finally(() => clearTimeout(timer));
-    return () => { disposed = true; clearTimeout(timer); abort.abort(); };
+      .catch(() => { if (reading.current[period] === abort) setFailed((f) => ({ ...f, [period]: true })); })
+      .finally(() => { clearTimeout(timer); if (reading.current[period] === abort) delete reading.current[period]; });
   }, [period, refresh, enabled]);
   return { data: series[period], failed: !!failed[period] };
 }

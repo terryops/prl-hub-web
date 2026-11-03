@@ -1,11 +1,12 @@
-import { useState } from "react";
-import type { Lang, Overview, PoolOverview as PoolRow } from "./types.ts";
+import { useState, type ReactNode } from "react";
+import type { Lang, Overview, PoolOverview as PoolRow, PoolPayout } from "./types.ts";
 import type { TextKey } from "./i18n/index.ts";
 import { difficulty, hashrate, unitYield, prlNumber } from "./format.ts";
-import { bestYield, netPerPH, orphanRate, ownApiMissing, payoutCost, poolPayouts, poolSparkline, rankedYield, sortPools, relativePoolBlock, weekLuck, type PoolSortKey } from "./pool-comparison.ts";
+import { bestYield, foundingFee, mergeBonus, minerReport, realCostParts, realFeePending, realFeeTiers, shareYield, netPerPH, orphanRate, ownApiMissing, payoutCost, percentRange, poolPayouts, poolSparkline, rankedYield, sortPools, relativePoolBlock, weekLuck, type PoolSortKey } from "./pool-comparison.ts";
 import { Icon } from "./Icons.tsx";
 import { Skeleton } from "./Skeleton.tsx";
 import { HelpTip, PoolCostHelp } from "./PoolCostHelp.tsx";
+import { InfoMark } from "./InfoTip.tsx";
 import { PoolSchemeGuide } from "./PoolSchemeGuide.tsx";
 export type Translate = (key: TextKey) => string;
 export const numeric = (v: number | null | undefined, digits = 2, lang: Lang = "en") => v != null && Number.isFinite(v) ? v.toLocaleString(lang, { maximumFractionDigits: digits }).replace(/-/g, "−") : "—";
@@ -30,7 +31,7 @@ function PoolShareBackground({ row }: { row: PoolRow }) {
     <rect width={Math.max(0, Math.min(1, row.share ?? 0)) * 100} height="1" />
   </svg>;
 }
-export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overview; failed?: boolean; lang: Lang; t: Translate; onUse: (r: PoolRow) => void }) {
+export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data?: Overview; failed?: boolean; lang: Lang; t: Translate; onUse: (r: PoolRow) => void; onRetry?: () => void }) {
   const [sort, setSort] = useState<{ key: PoolSortKey; ascending: boolean }>({ key: "hashrate", ascending: false });
   const rows = sortPools(data?.rows || [], sort.key, sort.ascending);
   const best = bestYield(rows);
@@ -48,6 +49,95 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
     <small>{r.share == null ? "—" : t("poolNetworkShare").replace("%@", numeric(r.share * 100, 1, lang) + "%")}</small>
     {r.solo && <small className="pool-solo">SOLO</small>}
   </div>;
+  // F2Pool's NOCK: extra income, so a quiet line under the yield (beside the fee it read as a charge); its
+  // terms in a bubble. Not part of the yield figure or Real Cost.
+  const bonus = (r: PoolRow, p: PoolPayout) => {
+    const b = mergeBonus(p);
+    if (!b) return null;
+    const range = percentRange(b.min, b.max, lang), template = t("poolMergeBonus").replace("{coin}", b.coin);
+    const label = template.replace("{range}", range), [before, after = ""] = template.split("{range}");
+    const help = t("poolMergeBonusHelp").replace("{pool}", r.name).replaceAll("{coin}", b.coin).split("{range}");
+    // Wraps between words when the cell is narrow (a long language, a small phone, larger text); the range never splits.
+    return <HelpTip label={label} className="pool-merge-bonus" mark={<small>{before}<span className="pool-merge-range">{range}</span>{after}</small>}>
+      {help.flatMap((part, i) => i ? [<span className="pool-merge-range" key={i}>{range}</span>, part] : [part])}
+    </HelpTip>;
+  };
+  // PearlHash: WildRig shows more hashrate than the pool receives, so against WildRig's own figure the cost is higher.
+  // A quiet line under the Real Cost with its sentence in a bubble; the main figure is against the pool's own.
+  const minerCost = (r: PoolRow, p: PoolPayout) => {
+    const m = minerReport(p);
+    if (!m) return null;
+    const value = "≈" + numeric(m.realFeePercent, 1, lang) + "%";
+    const help = t("poolMinerCostHelp").replaceAll("{pool}", r.name).replaceAll("{app}", m.miner)
+      .replace("{gap}", numeric((1 - m.credited) * 100, 0, lang) + "%").replace("{cost}", numeric(m.realFeePercent, 1, lang) + "%")
+      .replace("{base}", numeric(p.realFeePercent, 2, lang) + "%");
+    return <HelpTip label={`${t("poolRealCost")} ${m.miner} ${value}`} className="pool-miner-cost" mark={<><small>{m.miner} {value}</small><InfoMark /></>}>{help}</HelpTip>;
+  };
+  // A Real Cost held back while it is checked: the day it comes by in the cell, the reason in a bubble.
+  const pending = (r: PoolRow, p: PoolPayout) => {
+    const day = realFeePending(p);
+    if (!day) return null;
+    const date = day.toLocaleDateString(lang, { month: "short", day: "numeric", timeZone: "UTC" });
+    const text = t("poolRealCostPending").replace("{date}", date);
+    return <HelpTip label={`${t("poolRealCost")}: ${text}`} className="pool-cost-pending" mark={<><strong>{text}</strong><InfoMark /></>}>
+      {t("poolRealCostPendingHelp").replaceAll("{pool}", r.name).replace("{date}", date)}
+    </HelpTip>;
+  };
+  // A Real Cost that also counts the shares the pool never turns into blocks (PearlHash): the figure as usual with
+  // an ⓘ beside it, why in a bubble.
+  const yieldText = (r: PoolRow, p: PoolPayout, y: number) =>
+    t(r.name === "PearlHash" ? "poolShareYieldHelp" : "poolShareYieldShownHelp").replaceAll("{pool}", r.name).replaceAll("{loss}", numeric((1 - y) * 100, 1, lang) + "%")
+      .replace("{fee}", numeric(p.fee ?? 0, 1, lang) + "%").replace("{cost}", numeric(p.realFeePercent ?? 0, 1, lang) + "%");
+  const yieldNote = (r: PoolRow, p: PoolPayout, value: ReactNode, text: string) => {
+    const y = shareYield(p);
+    if (y == null) return null;
+    return <HelpTip label={`${t("poolRealCost")} ${text}`} className="pool-cost-note" mark={<>{value}<InfoMark /></>}>
+      {yieldText(r, p, y)}
+    </HelpTip>;
+  };
+  // PPLNS / PROP (iOS RealFeeHelpButton): the figure with an ⓘ beside it, the bubble showing what it is made of — the fee,
+  // the week's orphans and the rest, adding up to the figure. A pool that turns fewer shares into blocks keeps its sentence on top.
+  const costNote = (r: PoolRow, p: PoolPayout, value: ReactNode, text: string) => {
+    const parts = realCostParts(r, p);
+    if (!parts) return null;
+    const y = shareYield(p), period = p.realFeePeriod;
+    const percent = (x: number) => x.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/-/g, "−") + "%";
+    const part = (label: string, amount: string, detail?: string, total = false) =>
+      <div className={`pool-cost-part${total ? " total" : ""}`}><span>{label}{detail && <small>{detail}</small>}</span><span>{amount}</span></div>;
+    return <HelpTip label={`${t("poolRealCost")} ${text}`} className="pool-cost-note" mark={<>{value}<InfoMark /></>}>
+      {y != null && <p className="pool-cost-lead">{yieldText(r, p, y)}</p>}
+      {period && <p className="pool-cost-lead">{t("poolCostLuckOut").replace("{period}", `${dates.format(period.start * 1000)} – ${dates.format(period.end * 1000)}`)}</p>}
+      <div className="pool-cost-parts">
+        {part(t("poolFee"), percent(parts.fee))}
+        {parts.orphans && part(t("poolCostOrphans"), percent(parts.orphans.percent),
+          t("poolOrphanBlocks").replace("%@", numeric(parts.orphans.orphans, 0, lang)).replace("%@", numeric(parts.orphans.blocks, 0, lang)))}
+        {part(t("poolCostOther"), percent(parts.other))}
+        {part(t("poolRealCost"), "≈" + percent(parts.total), undefined, true)}
+      </div>
+      {parts.orphans && <p>{t("poolCostOrphansHelp")}</p>}
+      <p>{t("poolCostOtherHelp")}</p>
+    </HelpTip>;
+  };
+  // Real Cost measured per fee tier (Peryn's PPS+): both tiers in a bubble, the one shown first and bold.
+  const tierNote = (p: PoolPayout, value: ReactNode, text: string) => {
+    const tiers = realFeeTiers(p);
+    if (!tiers) return null;
+    return <HelpTip label={`${t("poolRealCost")} ${text}`} className="pool-cost-note" mark={<>{value}<InfoMark /></>}>
+      <div className="pool-cost-parts">{tiers.map((x) => <div className={`pool-cost-part${x.shown ? " shown" : ""}`} key={x.tier}>
+        <span>{t(x.tier === "founding" ? "poolCostTierFounding" : "poolCostTierStandard")}</span>
+        <span>{x.percent == null ? "—" : "≈" + numeric(x.percent, 2, lang) + "%"}</span>
+      </div>)}</div>
+    </HelpTip>;
+  };
+  // Founding members' fee (Peryn's Founding Miners) in a bubble beside the fee; the figure stays everyone's fee.
+  const foundingNote = (p: PoolPayout, value: ReactNode) => {
+    const f = foundingFee(p);
+    if (!f) return null;
+    const fee = numeric(f.fee, 1, lang) + "%";
+    const help = f.afterFP8Months == null ? t("poolFoundingFee").replace("%@", fee)
+      : t("poolFoundingFeeFP8").replace("%@", fee).replace("%@", numeric(f.afterFP8Months, 0, lang));
+    return <HelpTip label={[t("poolFoundingFeeLabel"), p.scheme].filter(Boolean).join(" · ")} className="pool-cost-note" mark={<>{value}<InfoMark /></>}>{help}</HelpTip>;
+  };
   const payouts = (r: PoolRow, kind: "earnings" | "fee" | "realFee") => <div className={`pool-metric pool-${kind}${poolPayouts(r).length > 1 ? " pool-multiple" : ""}`}>
     {poolPayouts(r).map((p, i, all) => {
       // Earnings are what a miner keeps: the gross figure less the pool's cut (see payoutCost).
@@ -56,13 +146,18 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
       const prefix = estimated && kind !== "fee" ? /^(PPS|FPPS)/i.test(p.scheme || "") || kind === "realFee" ? "≈" : "~" : "";
       const top = kind === "earnings" && best != null && rankedYield(r, p) === best;
       const formula = kind === "earnings" && amount != null ? `${numeric(p.grossPerPH, 8, lang)} × (1 − ${numeric(payoutCost(p, r), 2, lang)}%) = ` : "";
+      const held = kind === "realFee" ? pending(r, p) : null;
+      const text = amount == null ? "—" : prefix + numeric(amount, kind === "realFee" ? 2 : 1, lang) + (kind === "earnings" ? " PRL" : "%");
+      const value = <strong className={`${amount == null ? "missing-value" : ""}${top ? " pool-top-yield" : ""}`} title={amount == null ? undefined : formula + numeric(amount, 8, lang) + (kind === "earnings" ? " PRL/PH·" + t("perDay") : "%")}>
+          {text}
+        </strong>;
       return <div className="pool-payout" key={i}>
-        <strong className={`${amount == null ? "missing-value" : ""}${top ? " pool-top-yield" : ""}`} title={amount == null ? undefined : formula + numeric(amount, 8, lang) + (kind === "earnings" ? " PRL/PH·" + t("perDay") : "%")}>
-          {amount == null ? "—" : prefix + numeric(amount, kind === "realFee" ? 2 : 1, lang) + (kind === "earnings" ? " PRL" : "%")}
-        </strong>{(all.length > 1 || kind !== "earnings") && <small>{p.scheme || "—"}</small>}
+        {held ?? (kind === "realFee" ? costNote(r, p, value, text) ?? yieldNote(r, p, value, text) ?? tierNote(p, value, text) : kind === "fee" ? foundingNote(p, value) : null) ?? value}{(all.length > 1 || kind !== "earnings") && <small>{p.scheme || "—"}</small>}
       </div>;
     })}
     {kind === "earnings" && <small>{t(weekLuck(r) ? "poolPerPHDay7d" : "poolPerPHDay")}</small>}
+    {kind === "earnings" && !r.solo && poolPayouts(r).map((p) => bonus(r, p)).find(Boolean)}
+    {kind === "realFee" && !r.solo && poolPayouts(r).map((p) => minerCost(r, p)).find(Boolean)}
   </div>;
   const hash = (r: PoolRow) => <div className="pool-metric"><strong className={r.hashrate == null ? "missing-value" : undefined}>{hashrate(r.hashrate ?? undefined, lang)}</strong>
     {r.averageHashrate7d != null ? <small>{t("poolAverage7d").replace("%@", hashrate(r.averageHashrate7d, lang))}</small> : r.miners != null && <small>{numeric(r.miners, 0, lang)} {t("participants")}</small>}
@@ -95,7 +190,7 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
       </select></label>
     </div></div>
     {(failed || data?.stale) && <p className="status warn">{t("stale")}</p>}
-    {!data && !failed ? <Skeleton label={t("loading")} kind="table" /> : !rows.length ? <p className="empty-comparison">{t(failed ? "error" : "missing")}</p> : <>
+    {!data && !failed ? <Skeleton label={t("loading")} kind="table" /> : !rows.length ? <div className="empty-comparison"><p>{t(failed ? "poolsUnavailable" : "missing")}</p>{failed && onRetry && <button type="button" onClick={onRetry}><Icon name="refresh" />{t("retry")}</button>}</div> : <>
       <div className="pool-table-scroll" tabIndex={0} role="region" aria-label={t("poolComparison")}>
         <table className="pool-table"><thead><tr>{columns.map((c) => <th key={c.key} scope="col" aria-sort={c.key === "trend" ? undefined : c.key === sort.key ? sort.ascending ? "ascending" : "descending" : "none"}>
           <span className="pool-column-heading">{c.key === "trend" ? t(c.label) : <button className="pool-sort-heading" onClick={() => choose(c.key as PoolSortKey)}><span>{t(c.label)}</span>{sort.key === c.key && <Icon name={sort.ascending ? "up" : "down"} />}</button>}{c.key === "realFee" && <PoolCostHelp rows={rows} lang={lang} t={t} />}</span>
@@ -115,7 +210,7 @@ export function PoolComparison({ data, failed, t, lang, onUse }: { data?: Overvi
     <PoolSchemeGuide data={data} lang={lang} t={t} />
     <details className="card pool-data-notes"><summary>{t("comparisonMethod")}</summary>
       {(["poolYieldBasis", ...(weekly ? ["poolWeekLuckExplanation", ...(rows.some((r) => !weekLuck(r) && !r.pps && !r.solo && r.earningsPerPH != null) ? ["poolWeekLuckFallback"] as const : [])] as const : ["comparisonExplanation"] as const),
-        "ppsExplanation", "sampleExplanation", "heroExplanation", "mixedSources", "poolContractNotes", "poolHistoryNotes", "poolMissing"] as const).map((k) => <p key={k}>{t(k)}</p>)}
+        "ppsExplanation", "sampleExplanation", "heroExplanation", "mixedSources", "poolContractNotes", "poolMissing"] as const).map((k) => <p key={k}>{t(k)}</p>)}
       <footer className="data-footer"><span>{t("source")} · {data?.source || "—"}</span></footer>
     </details>
   </section>;

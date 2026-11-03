@@ -22,7 +22,8 @@ npm run dev
 The development server proxies `/v1` to `http://127.0.0.1:8787`. Point that proxy
 in `vite.config.ts` at your compatible backend when testing API-dependent features.
 The hosted service, native apps and browser wallet extension are maintained separately;
-they are not part of this repository. The Wallet page links to the official extension download.
+they are not part of this repository (the Android app's interface is this frontend, built with
+`npm run build:android`). The Wallet page links to the official extension download.
 
 ## Build and test
 
@@ -32,7 +33,11 @@ npm run build
 ```
 
 The production frontend is generated in `dist/` and expects `/v1` API endpoints on
-the same origin. Unit tests use public sample data and require no private repositories,
+the same origin.
+
+Android bundle: `npm run build:android` writes `dist-android/`, the page and wallet the
+Android app ships. It needs a [prl-hub-wallet](https://github.com/terryops/prl-hub-wallet)
+checkout next to this repository (with `npm ci` run in it). Unit tests use public sample data and require no private repositories,
 account credentials, mail delivery, payments or push subscriptions.
 
 ## Project layout
@@ -40,6 +45,7 @@ account credentials, mail delivery, payments or push subscriptions.
 - `src/`: React/TypeScript frontend, localized copy and shared calculation models.
 - `public/`: app icons, pool logos, PWA manifest, push service worker and icon license.
 - `test/`: frontend unit tests and standalone reference fixtures.
+- `scripts/`, `android-public/`: the Android app's bundle (`npm run build:android`).
 - `content/privacy.html`: the published privacy policy bundled by Vite.
 - `ICONS.md`: Ionicons provenance and the selected icon mapping.
 

@@ -145,6 +145,21 @@ export type PoolPayout = {
   /** grossPerPH is today's theory × the pool's 7-day luck, not one day of blocks. */
   weekly?: boolean;
   solo: boolean;
+  /** A merge-mined coin paid besides PRL (F2Pool's NOCK), worth about minPercent–maxPercent of the PRL income. A label only. */
+  mergeBonus?: { coin: string; minPercent: number; maxPercent: number } | null;
+  /** Founding members' fee for this payout (Peryn's Founding Miners) and, if it ends, how many months after Pearl's FP8
+   *  upgrade. A label beside the fee only. */
+  founding?: { fee: number; afterFP8Months?: number } | null;
+  /** A miner program that shows more hashrate than the pool receives (PearlHash: WildRig): the part of its figure the
+   *  pool credits, and Real Cost measured against that figure. */
+  minerReport?: { miner: string; credited: number; realFeePercent?: number | null } | null;
+  /** Real Cost held back while it is checked: the day (YYYY-MM-DD) it is published by. */
+  realFeePending?: string | null;
+  /** Blocks per accepted share when a pool turns fewer shares into blocks than they imply; Real Cost includes it. */
+  shareYield?: number | null;
+  /** Real Cost measured per fee tier (Peryn's PPS+): which tier realFeePercent is, and each tier's figure. */
+  realFeeTier?: "founding" | "standard" | null;
+  realFeeTiers?: { founding: number | null; standard: number | null } | null;
 };
 export type Overview = {
   ok: boolean;
@@ -233,6 +248,10 @@ export type Order = {
 export type Availability = {
   pay: { enabled: boolean; usd: number };
   vapid_key: string | null;
+  // Android: the server can deliver through Firebase Cloud Messaging (BRIDGE.md in the prl-hub-android repository).
+  fcm?: boolean;
+  // Android Play build: the server can verify and acknowledge Google Play purchases (prl-hub alerts play.js).
+  play?: boolean;
   auth?: { enabled: boolean; site_key: string | null };
 };
 export type Me = Availability & {

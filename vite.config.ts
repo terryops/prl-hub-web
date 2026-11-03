@@ -1,7 +1,13 @@
 import { defineConfig } from "vite";
 import { readFileSync } from "node:fs";
-export default defineConfig({
+import { touchHover } from "./scripts/touch-hover.mjs";
+// `vite build --mode android` builds the copy bundled in the Android app (scripts/build-android.mjs).
+export default defineConfig(({ mode }) => ({
   server: { proxy: { "/v1": "http://127.0.0.1:8787" } },
+  define: { __PEARL_ANDROID__: JSON.stringify(mode === "android") },
+  build: mode === "android" ? { outDir: "dist-android", emptyOutDir: true } : undefined,
+  // The app runs on touch screens: hover styles show only while pressed (scripts/touch-hover.mjs).
+  css: mode === "android" ? { postcss: { plugins: [touchHover()] } } : undefined,
   plugins: [{
     name: "privacy-page",
     generateBundle() {
@@ -17,4 +23,4 @@ export default defineConfig({
       }
     },
   }],
-});
+}));

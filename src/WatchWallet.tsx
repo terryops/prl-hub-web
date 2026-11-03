@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Address, Wallet, Price, Lang } from "./types.ts";
 import type { TextKey } from "./i18n/index.ts";
-import { api } from "./api.ts";
+import { api, ApiError } from "./api.ts";
 import { usd } from "./format.ts";
 import { relativeTime } from "./alertRules.ts";
 import { Icon } from "./Icons.tsx";
@@ -23,7 +23,7 @@ export function WatchWallet({ wallets, selected, onSelect = () => {}, price, ref
   wallets: Wallet[]; selected?: string; onSelect?: (id: string) => void; price?: Price; refresh: number; t: (k: TextKey) => string; lang: Lang;
   onAdd: () => void; onRename: (w: Wallet) => void; onRemove: (w: Wallet) => void; onReceive?: (w: Wallet) => void; onSend?: () => void; onLookup?: () => void; onCopy?: (value: string) => Promise<void>; money?: (x: number) => string;
 }) {
-  const [snapshots, setSnapshots] = useState<Record<string, { data?: Address; failed?: boolean; loading?: boolean }>>({}), [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [snapshots, setSnapshots] = useState<Record<string, { data?: Address; failed?: boolean; loading?: boolean; noHistory?: boolean }>>({}), [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const generation = useRef<Record<string, number>>({}), loading = useRef<Record<string, boolean>>({});
   const addresses = useRef(new Set<string>()); addresses.current = new Set(wallets.map((w) => w.addr));
   const switcher = useRef<HTMLDetailsElement>(null);
@@ -40,8 +40,16 @@ export function WatchWallet({ wallets, selected, onSelect = () => {}, price, ref
         const history = [...new Map([...(old?.history || []), ...data.history].map((tx) => [tx.txid, tx])).values()].sort((a, b) => b.time - a.time);
         return { ...s, [addr]: { data: { ...data, history, ...(page === 1 && (old?.page || 1) > 1 ? { page: old!.page, hasMore: old!.hasMore } : {}) } } };
       });
-    } catch {
-      if (generation.current[addr] === at && addresses.current.has(addr)) setSnapshots((s) => ({ ...s, [addr]: { ...s[addr], loading: false, failed: true } }));
+    } catch (error) {
+      if (generation.current[addr] !== at || !addresses.current.has(addr)) return;
+      // The Worker still sends the balance when it could not read the transactions.
+      const d = error instanceof ApiError ? error.data : {};
+      const part = typeof d.balance === "string" && /^\d+$/.test(d.balance) && typeof d.unconfirmed === "string" && /^-?\d+$/.test(d.unconfirmed) && typeof d.txs === "number"
+        ? { balance: d.balance, unconfirmed: d.unconfirmed, txs: d.txs } : undefined;
+      setSnapshots((s) => {
+        const old = s[addr];
+        return { ...s, [addr]: { ...old, data: part ? { history: [], ...old?.data, ...part } : old?.data, loading: false, failed: true, noHistory: !old?.data || old.noHistory } };
+      });
     } finally {
       if (generation.current[addr] === at) loading.current[addr] = false;
     }
@@ -120,15 +128,10 @@ export function WatchWallet({ wallets, selected, onSelect = () => {}, price, ref
       <a href={`${EXPLORER}/address/${encodeURIComponent(w.addr)}`} target="_blank" rel="noreferrer"><span className="action-icon"><Icon name="external" /></span><span>{t("explorer")}</span></a>
       {onLookup && <button onClick={onLookup}><span className="action-icon"><Icon name="search" /></span><span>{t("txLookupShort")}</span></button>}
     </div>
-    <section className="wallet-address-card">
-      <div className="wallet-address-head"><span>{t("address")}</span><button onClick={() => { if (onCopy) void onCopy(w.addr); }}><Icon name="copy" />{t("copy")}</button></div>
-      <code className="watch-address">{w.addr}</code>
-      <p>{t("singleAddressNote")}</p>
-    </section>
     <section className="card wallet-card">
       <h2>{t("transactions")}</h2>
       {!data ? !snap?.failed && <Skeleton label={t("loading")} /> : <>
-        {data.history.length === 0 && <p className="muted">{t("noTransactions")}</p>}
+        {data.history.length === 0 && !snap?.noHistory && <p className="muted">{t("noTransactions")}</p>}
         <div className="wallet-transactions">{(more ? data.history : data.history.slice(0, 8)).map((tx) => {
           const sent = tx.sent ?? BigInt(tx.delta) < 0n;
           const value = tx.amount == null ? tx.delta : (sent ? "-" : "") + tx.amount;
@@ -140,7 +143,7 @@ export function WatchWallet({ wallets, selected, onSelect = () => {}, price, ref
         })}</div>{(data.history.length > 8 || data.hasMore) && <div className="wallet-history-actions">{data.history.length > 8 && <button aria-expanded={!!more} onClick={() => setExpanded((s) => ({ ...s, [w.id]: !more }))}>{t(more ? "collapse" : "showMore")}</button>}
         {data.hasMore && (more || data.history.length <= 8) && <button disabled={snap?.loading} onClick={() => { setExpanded((s) => ({ ...s, [w.id]: true })); void load(w.addr, (data.page || 1) + 1); }}>{t(snap?.loading ? "loading" : "loadMore")}</button>}</div>}
       </>}
-      {snap?.failed && <p className="status warn">{t(data ? "stale" : "error")}</p>}
+      {snap?.failed && <p className="status warn">{t(data && !snap.noHistory ? "stale" : "error")}</p>}
     </section>
   </>;
 }

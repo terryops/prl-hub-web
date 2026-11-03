@@ -65,6 +65,62 @@ export function poolPayouts(pool: PoolOverview): PoolPayout[] {
  *  tells them apart. Shared-reward: the fee only — the gross figure is what the pool's blocks paid,
  *  so its luck and lost work are already in it (their Real Cost estimate takes luck out to measure the
  *  rest, and would count that rest twice here). A payout without a scheme follows the row's PPS flag. */
+/** The payout's merge-mining bonus when the service sent a sane one; yield and Real Cost leave it out. */
+export function mergeBonus(p: PoolPayout): { coin: string; min: number; max: number } | null {
+  const b = p.mergeBonus;
+  if (!b || typeof b.coin !== "string" || !/^[A-Z0-9]{2,10}$/.test(b.coin)) return null;
+  const min = b.minPercent, max = b.maxPercent;
+  if (typeof min !== "number" || typeof max !== "number" || !Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < min || max > 100) return null;
+  return { coin: b.coin, min, max };
+}
+/** The payout's founding-members fee when the service sent a sane one; the payout's own fee stays the figure. */
+export function foundingFee(p: PoolPayout): { fee: number; afterFP8Months: number | null } | null {
+  const f = p.founding;
+  if (!f || typeof f.fee !== "number" || !Number.isFinite(f.fee) || f.fee < 0 || f.fee > 100) return null;
+  const m = f.afterFP8Months;
+  return { fee: f.fee, afterFP8Months: typeof m === "number" && Number.isInteger(m) && m > 0 && m <= 60 ? m : null };
+}
+/** Real Cost against a miner program's own figure (PearlHash: WildRig shows more than the pool receives), when the
+ *  service sent a sane one and the payout has a Real Cost of its own. A second line only; sorting keeps the main figure. */
+export function minerReport(p: PoolPayout): { miner: string; credited: number; realFeePercent: number } | null {
+  const m = p.minerReport;
+  if (!m || typeof m.miner !== "string" || !/^[A-Za-z0-9][A-Za-z0-9 ._-]{1,23}$/.test(m.miner)) return null;
+  const { credited, realFeePercent: cost } = m, own = p.realFeePercent;
+  if (typeof credited !== "number" || !(credited > 0 && credited <= 1)) return null;
+  if (typeof cost !== "number" || !Number.isFinite(cost) || cost < -100 || cost > 100) return null;
+  if (typeof own !== "number" || !Number.isFinite(own)) return null;
+  return { miner: m.miner, credited, realFeePercent: cost };
+}
+/** The part of its accepted shares a pool turns into blocks, when the service sent one with a Real Cost figure. */
+export function shareYield(p: PoolPayout): number | null {
+  const y = p.shareYield, cost = p.realFeePercent;
+  if (typeof y !== "number" || !(y > 0 && y < 1)) return null;
+  return typeof cost === "number" && Number.isFinite(cost) ? y : null;
+}
+/** The day a held-back Real Cost is published by, as a UTC date, when the service sent a real one and no figure. */
+/** Real Cost per fee tier (Peryn's PPS+): the tier shown first, then the other; null without both fields. */
+export function realFeeTiers(p: PoolPayout): { tier: "founding" | "standard"; percent: number | null; shown: boolean }[] | null {
+  const shown = p.realFeeTier, all = p.realFeeTiers;
+  if ((shown !== "founding" && shown !== "standard") || !all || typeof all !== "object" || p.realFeePercent == null) return null;
+  const value = (x: unknown) => typeof x === "number" && Number.isFinite(x) ? x : null;
+  return (shown === "founding" ? ["founding", "standard"] as const : ["standard", "founding"] as const)
+    .map((tier) => ({ tier, percent: value(all[tier]), shown: tier === shown }));
+}
+export function realFeePending(p: PoolPayout): Date | null {
+  const day = p.realFeePending;
+  if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day) || p.realFeePercent != null) return null;
+  const date = new Date(day + "T00:00:00Z");
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day ? null : date;
+}
+/** "1–2%", "1–2 %", "%1–2": one percent sign, where the language puts it; one figure when both ends match. */
+export function percentRange(min: number, max: number, lang: string): string {
+  const percent = new Intl.NumberFormat(lang, { style: "percent", maximumFractionDigits: 1 });
+  if (min === max) return percent.format(min / 100);
+  const plain = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 });
+  return percent.formatToParts(max / 100)[0]?.type === "percentSign"
+    ? `${percent.format(min / 100)}–${plain.format(max)}`
+    : `${plain.format(min)}–${percent.format(max / 100)}`;
+}
 export function payoutCost(p: PoolPayout, pool?: PoolOverview): number | null {
   const pps = p.scheme?.trim() ? ppsScheme(p.scheme) : !!pool?.pps;
   const cost = pps && finite(p.realFeePercent) ? p.realFeePercent : p.fee;
@@ -97,6 +153,17 @@ export function orphanRate(pool: PoolOverview) {
       o.orphans > o.blocks || !finite(o.start) || !finite(o.end) || o.end <= o.start) return null;
   return { percent: o.orphans / o.blocks * 100, orphans: o.orphans, blocks: o.blocks, start: o.start, end: o.end,
     source: o.source === "chain" ? "chain" as const : "pool" as const };
+}
+/** iOS RealFeeBreakdown: what a PPLNS / PROP Real Cost is made of, for the ⓘ beside it — the fee, the row's orphans over
+ *  the week and the rest (the work the pool loses, and measurement error). Each part is rounded to the 2 decimals the table
+ *  shows and the rest is what is left, so the parts add up to the figure. A PPS Real Cost is a settlement: no parts. */
+export function realCostParts(pool: PoolOverview, p: PoolPayout) {
+  const pps = p.scheme?.trim() ? ppsScheme(p.scheme) : !!pool.pps;
+  if (pps || pool.solo || p.solo || !finite(p.realFeePercent) || !finite(p.fee)) return null;
+  const round = (x: number) => { const r = Math.round(x * 100) / 100; return r === 0 ? 0 : r; };
+  const o = orphanRate(pool), total = round(p.realFeePercent), fee = round(p.fee);
+  const orphans = o ? { percent: round(o.percent), orphans: o.orphans, blocks: o.blocks } : null;
+  return { fee, orphans, other: round(total - fee - (orphans?.percent ?? 0)), total };
 }
 /** The payout families the scheme guide explains. PPS+ and FPPS are PPS variants. */
 export const schemeFamilies = ["PPS", "PROP", "PPLNS", "SOLO"] as const;

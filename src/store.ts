@@ -222,6 +222,12 @@ export const configOf = (state: State): Config => {
 };
 export function mergeItems<T extends Item>(local: T[], remote: T[]): T[] {
   const map = new Map<string, T>();
+  // The loser only fills fields the winner lacks; the winner alone decides deletion.
+  const combine = (winner: T, loser: T) => {
+    const merged = { ...loser, ...winner };
+    if (!("deleted" in winner)) delete merged.deleted;
+    return merged;
+  };
   for (const x of [...local, ...remote]) {
     const old = map.get(x.id);
     if (
@@ -232,8 +238,8 @@ export function mergeItems<T extends Item>(local: T[], remote: T[]): T[] {
           (!!x.deleted === !!old.deleted &&
             JSON.stringify(x) > JSON.stringify(old))))
     )
-      map.set(x.id, old ? { ...old, ...x } : x);
-    else if (old) map.set(x.id, { ...x, ...old });
+      map.set(x.id, old ? combine(x, old) : x);
+    else if (old) map.set(x.id, combine(old, x));
   }
   return [...map.values()].sort((a, b) => a.id.localeCompare(b.id));
 }

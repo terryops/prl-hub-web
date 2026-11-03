@@ -1492,6 +1492,8 @@ form {
   text-align: center;
   color: var(--muted);
 }
+.empty-comparison p { margin: 0; }
+.empty-comparison button { margin-top: 14px; }
 .calculator-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1743,8 +1745,7 @@ form {
 
 .fleet-page { min-width:0; }
 .fleet-nav { display:flex; flex-wrap:wrap; gap:.6rem 1.2rem; margin-bottom:1rem; font-size: var(--font-14); }
-.fleet-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin:1.25rem 0; }
-.fleet-summary > div, .fleet-page .money-grid > div { display:flex; min-width:0; flex-direction:column; gap:.35rem; }
+.fleet-page .money-grid > div { display:flex; min-width:0; flex-direction:column; gap:.35rem; }
 .fleet-page strong, .fleet-page dd { overflow-wrap:anywhere; }
 .fleet-net { display:block; font-size: var(--font-28); margin-bottom:1.5rem; }
 .fleet-page h3 { margin-top:1.4rem; }
@@ -1754,35 +1755,11 @@ form {
 .fleet-page progress.over-budget { accent-color:var(--red); }
 .fleet-page .list-toolbar { flex-wrap:wrap; gap:.7rem; }
 .fleet-page .actions { flex-wrap:wrap; gap:.5rem; }
-.device-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr)); gap:12px; }
-.device-card { min-width:0; }
-.device-card .card-heading { gap:.5rem; }
-.device-name { min-width:0; width:100%; flex:1; padding:.45rem; font-weight:600; }
-.device-card .card-heading select { max-width:40%; padding:.4rem; font-size: var(--font-13); }
-.device-total { border-top:1px solid var(--line); padding-top:1rem; display:flex; flex-wrap:wrap; gap:.5rem; justify-content:space-between; }
-.gpu-table { width:100%; border-collapse:collapse; font-size: var(--font-13); table-layout:fixed; }
-.gpu-table th, .gpu-table td { text-align:right; padding:.8rem .3rem; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
-.gpu-table th:first-child { text-align:left; width:22%; }
-.gpu-table .text-button { text-align:left; overflow-wrap:anywhere; max-width:100%; }
-.gpu-table .selected-gpu { background:var(--soft); }
-.gpu-detail { margin-top:1.5rem; border-top:1px solid var(--line); }
-.rental-analysis { margin-top:1rem; padding:1rem; background:var(--soft); border-radius:12px; }
 .fleet-parameters > summary { cursor:pointer; font-weight:600; }
 .fleet-parameters[open] > summary { margin-bottom:20px; }
 .fleet-parameters .compact-check { display:flex; align-items:flex-start; white-space:normal; margin:.9rem 0; line-height:1.5; }
 .fleet-page .calculation-lines dt { overflow-wrap:anywhere; }
 .fleet-page .card-heading { flex-wrap:wrap; }
-.device-card .card-heading { flex-wrap:nowrap; }
-@media (max-width:700px) {
-  .device-grid { grid-template-columns:minmax(0,1fr); }
-  .fleet-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .gpu-table, .gpu-table tbody { display:block; }
-  .gpu-table thead { display:none; }
-  .gpu-table tr { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; padding:.8rem 0; border-bottom:1px solid var(--line); }
-  .gpu-table th, .gpu-table td { text-align:left; padding:.3rem; width:auto; border:0; min-width:0; }
-  .gpu-table th:first-child { grid-column:1/-1; width:auto; }
-  .gpu-table td::before { content:attr(data-label); display:block; color:var(--muted); font-size: var(--font-12); margin-bottom:.3rem; }
-}
 
 /* Section 17: shared type scale and semantic colors for every appearance. */
 :root {
@@ -1834,7 +1811,7 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .missing-value { font-weight: 400; color: var(--muted); }
 .form-field { gap: 8px; font-size: var(--font-14); } form { gap: 20px; }
 .form-actions { justify-content: flex-end; } .appearance-settings { display: grid; gap: 20px; }
-.appearance-settings p { margin: 0; } .device-card > .form-field { margin-top: 20px; }
+.appearance-settings p { margin: 0; }
 .dialog-heading { margin-bottom: 20px; } .dialog-content { padding: 24px; } dialog { box-shadow: none; }
 .skeleton { display: grid; gap: 12px; padding: 16px 0; min-width: 0; }
 .skeleton > span:not(.sr-only) { display: block; height: 16px; border-radius: 6px; background: var(--skeleton); animation: skeleton-pulse 1.8s ease-in-out infinite; }
@@ -1974,23 +1951,7 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .fleet-detail[open] > summary { margin-bottom: 20px; }
 .fleet-empty { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 20px; }
 .fleet-power .card-heading { margin-bottom: 16px; } .fleet-power .card-heading h3 { margin: 0; }
-.device-grid { align-items: stretch; }
-.device-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; margin-bottom: 0; }
-.device-card .card-heading { gap: 6px; flex-wrap: nowrap; }
-.device-card :is(input, select) { min-height: 36px; padding: 6px 8px; border-radius: 7px; font-size: var(--font-13); }
-.device-card .card-heading select { flex-shrink: 0; max-width: 40%; font-size: var(--font-12); }
-.device-fields { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(0,.8fr) minmax(0,1.2fr); align-items: end; gap: 8px; }
-.device-card .form-field { gap: 4px; font-size: var(--font-12); }
-.device-card > .form-field { grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: center; gap: 8px; margin-top: 0; }
-.device-card > .help { margin: 0; font-size: var(--font-12); }
-.device-card > .text-button { align-self: flex-start; min-height: 36px; padding: 4px 0; font-size: var(--font-12); }
-.device-expand { margin-top: 12px; }
-.device-card .device-name { border-color: transparent; background: transparent; padding: 6px 2px; margin-left: -3px; font-size: var(--font-14); }
-.device-name:hover, .device-name:focus-visible { border-color: var(--line); background: var(--surface); }
-.device-total { margin-top: auto; padding-top: 8px; align-items: baseline; }
-.device-total strong { font-size: var(--font-14); }
-.gpu-mobile-list { display: none; } .gpu-detail .calculation-lines dd, .calculation-lines dd { min-width: 0; }
-.gpu-table .money { justify-content: flex-end; } .gpu-table .money-primary { white-space: normal; }
+.calculation-lines dd { min-width: 0; }
 .calculator-results .calc-net { font-size: 36px; } .calc-net .money-block { align-items: flex-start; }
 /* The default auto minimum propagates long text through nested grid/flex items.
    Keep every calculator descendant shrinkable; wrap content instead of clipping it. */
@@ -2008,11 +1969,6 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
   .fleet-nav { max-width: none; margin-bottom: 16px; } .fleet-nav button { padding: 8px 2px; font-size: var(--font-12); }
   .fleet-resource-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 20px; padding-top: 16px; }
   .fleet-net, .calculator-results .calc-net { font-size: 32px; }
-  .gpu-table { display: none; } .gpu-mobile-list { display: grid; }
-  .gpu-mobile-row { display: grid; justify-content: stretch; text-align: left; gap: 6px; padding: 12px 0; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
-  .gpu-mobile-heading { display: flex; justify-content: space-between; align-items: start; gap: 10px; min-width: 0; } .gpu-mobile-heading > span { text-align: right; font-size: var(--font-12); min-width: 0; }
-  .gpu-mobile-heading strong { font-size: var(--font-14); } .gpu-mobile-row small { font-size: var(--font-12); line-height: 1.6; }
-  .gpu-mobile-row.selected-gpu { background: var(--soft); } .gpu-mobile-list > button:last-child { margin-top: 12px; }
   .calculation-lines > div { gap: 12px; } .calculation-lines dt, .calculation-lines dd { flex: 1; overflow-wrap: anywhere; }
 }
 
@@ -2077,7 +2033,6 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 .rule-label { display: grid; min-width: 0; gap: 6px; } .rule-label button { text-align: left; justify-content: flex-start; color: var(--text); font-size: var(--font-14); overflow-wrap: anywhere; }
 .rule-label small { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: var(--font-12); } .rule-controls { display: flex; align-items: center; gap: 8px; }
 .empty > span .icon, .empty > .icon { width: 40px; height: 40px; color: var(--blue-text); }
-.offline-intro .help + button { margin-top: 12px; }
 .payment-content { padding: 12px 20px; } .payment-content .dialog-heading { margin-bottom: 8px; }
 .payment-head .badge { display: inline-flex; align-items: center; gap: 4px; } .payment-head .badge .icon { width: 16px; height: 16px; }
 .payment-head p { margin: 6px 0; }
@@ -2209,7 +2164,8 @@ input.switch:focus-visible, button:focus-visible, summary:focus-visible, a:focus
 }
 
 /* Pool overview: shared native hierarchy, readable metrics and source-backed trends. */
-main.pool-page { max-width: 1200px; padding-inline: 24px; }
+/* The table spreads into the room a wide screen has; past 1800 px rows grow too long to read across. */
+main.pool-page { max-width: 1800px; padding-inline: 24px; }
 .pool-comparison { container-type: inline-size; min-width: 0; }
 .pool-comparison-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
 .pool-comparison-heading h2 { font-size: 26px; font-weight: 700; }
@@ -2225,13 +2181,15 @@ main.pool-page { max-width: 1200px; padding-inline: 24px; }
 .pool-comparison .pool-table tr { display: table-row; position: relative; background: transparent; border: 0; }
 .pool-comparison .pool-table th, .pool-comparison .pool-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; overflow-wrap: normal; vertical-align: middle; position: static; }
 .pool-comparison .pool-table th { height: 38px; font-size: 12px; font-weight: 500; color: var(--muted); background: var(--soft); }
-.pool-comparison .pool-table th:first-child, .pool-comparison .pool-table .pool-cell { width: 18%; text-align: left; }
-.pool-comparison .pool-table th:nth-child(2) { width: 13%; }
-.pool-comparison .pool-table th:nth-child(3) { width: 10%; text-align: center; }
+.pool-comparison .pool-table th:first-child, .pool-comparison .pool-table .pool-cell { width: 17%; text-align: left; }
+.pool-comparison .pool-table th:nth-child(2) { width: 12%; }
+.pool-comparison .pool-table th:nth-child(3) { width: 9%; text-align: center; }
 .pool-comparison .pool-table th:nth-child(4) { width: 13%; }
-.pool-comparison .pool-table th:nth-child(5) { width: 10%; }
-.pool-comparison .pool-table th:nth-child(6) { width: 7%; }
-.pool-comparison .pool-table th:nth-child(7) { width: 10%; }
+.pool-comparison .pool-table th:nth-child(5) { width: 9%; }
+/* Peryn's fee has an ⓘ beside it (its Founding Miners' fee): "1% ⓘ PPS+" needs 9%. */
+.pool-comparison .pool-table th:nth-child(6) { width: 9%; }
+/* Real Cost has an ⓘ beside each PPLNS / PROP figure: PF's two payouts side by side need 12%. */
+.pool-comparison .pool-table th:nth-child(7) { width: 12%; }
 .pool-comparison .pool-table th:nth-child(8) { width: 8%; }
 .pool-comparison .pool-table th:nth-child(9) { width: 11%; }
 .pool-comparison .pool-table tbody tr { height: 64px; }
@@ -2258,6 +2216,15 @@ main.pool-page { max-width: 1200px; padding-inline: 24px; }
 .pool-cost-tooltip dt { color: var(--muted); }
 .pool-cost-tooltip dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .pool-cost-tooltip .pool-cost-note { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+/* What a PPLNS / PROP Real Cost is made of: each part's name left, its figure right, the total under a rule. */
+.pool-cost-tooltip p.pool-cost-lead { color: var(--text); }
+.pool-cost-tooltip p.pool-cost-lead:first-child { margin-top: 0; }
+.pool-cost-parts { display: grid; gap: 4px; margin: 10px 0 4px; font-size: 13px; }
+.pool-cost-part { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.pool-cost-part small { margin-inline-start: 6px; color: var(--muted); font-size: 12px; }
+.pool-cost-part > span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pool-cost-part.shown { font-weight: 650; }
+.pool-cost-part.total { margin-top: 2px; padding-top: 6px; border-top: 1px solid var(--line); font-weight: 650; }
 .pool-table th[aria-sort="ascending"], .pool-table th[aria-sort="descending"] { color: var(--text); }
 .pool-row-share { position: absolute; inset: 0; width: 100%; height: 100%; fill: #009fc8; opacity: .07; pointer-events: none; z-index: 0; }
 :root[data-theme="dark"] .pool-row-share { opacity: .12; }
@@ -2277,6 +2244,29 @@ main.pool-page { max-width: 1200px; padding-inline: 24px; }
 .pool-payout { display: grid; justify-items: end; gap: 2px; }
 .pool-multiple .pool-payout { display: flex; align-items: baseline; justify-content: flex-end; gap: 5px; }
 .pool-top-yield { color: var(--green); }
+.pool-comparison .pool-merge-bonus { max-width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--muted); text-align: end; cursor: help; }
+.pool-comparison .pool-merge-bonus small { display: block; text-decoration: underline dotted; text-underline-offset: 2px; overflow-wrap: normal; }
+/* The table sizes its columns to the label (measured: no extra table width); only phone cards wrap it. */
+.pool-comparison .pool-table .pool-merge-bonus small { white-space: nowrap; }
+.pool-merge-range { white-space: nowrap; }
+:root .pool-comparison .pool-merge-bonus:hover, :root .pool-comparison .pool-merge-bonus[aria-expanded="true"] { background: transparent; }
+.pool-comparison .pool-merge-bonus:hover small, .pool-comparison .pool-merge-bonus[aria-expanded="true"] small { color: var(--blue-text); }
+/* PearlHash's WildRig line under its Real Cost: quiet like the NOCK line, the ⓘ says it opens a bubble. */
+.pool-comparison .pool-miner-cost { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; max-width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: help; }
+.pool-comparison .pool-miner-cost small { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pool-comparison .pool-miner-cost .icon { width: 14px; height: 14px; flex: none; }
+:root .pool-comparison .pool-miner-cost:hover, :root .pool-comparison .pool-miner-cost[aria-expanded="true"] { background: transparent; color: var(--blue-text); }
+/* A held-back Real Cost: the day it comes by, in the column's colour, smaller than a figure; the ⓘ opens why. */
+.pool-comparison .pool-cost-pending { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; max-width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--pool-cost-accent); cursor: help; text-align: end; }
+.pool-comparison .pool-metric .pool-cost-pending strong { font-size: 13px; font-weight: 600; white-space: normal; color: inherit; }
+.pool-comparison .pool-cost-pending .icon { width: 14px; height: 14px; flex: none; }
+/* One line in the table (the column takes its width, as with the NOCK line); phone cards may wrap it. */
+.pool-comparison .pool-table .pool-cost-pending strong { white-space: nowrap; }
+:root .pool-comparison .pool-cost-pending:hover, :root .pool-comparison .pool-cost-pending[aria-expanded="true"] { background: transparent; color: var(--blue-text); }
+/* A Real Cost with a note: the figure as in every other row, an ⓘ beside it; the bubble says why. */
+.pool-comparison .pool-cost-note { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; max-width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--pool-cost-accent); cursor: help; text-align: end; }
+.pool-comparison .pool-cost-note .icon { width: 14px; height: 14px; flex: none; }
+:root .pool-comparison .pool-cost-note:hover, :root .pool-comparison .pool-cost-note[aria-expanded="true"] { background: transparent; color: var(--blue-text); }
 /* Real Cost stays prominent across themes; unavailable values remain muted. */
 .pool-comparison { --pool-cost-accent: color-mix(in srgb, var(--blue-text) 80%, var(--text)); }
 .pool-comparison .pool-table th:nth-child(7) { color: var(--pool-cost-accent); background: color-mix(in srgb, var(--blue) 9%, var(--soft)); }
@@ -2406,8 +2396,6 @@ main.pool-page { max-width: 1200px; padding-inline: 24px; }
 .app-download-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
 .app-download-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 18px; border: 1px solid transparent; border-radius: 12px; font-size: var(--font-14); font-weight: 600; text-align: center; text-decoration: none; }
 .app-download-button .icon { flex-shrink: 0; width: 18px; height: 18px; }
-.app-coming-soon { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 0; font-size: var(--font-13); font-weight: 600; line-height: 1.4; }
-.app-coming-soon span { padding: 3px 9px; border-radius: 999px; background: var(--soft); color: var(--muted); font-size: var(--font-12); font-weight: 550; }
 .app-download-qr { display: grid; align-self: stretch; align-content: center; justify-items: center; gap: 14px; padding-left: 48px; border-left: 1px solid var(--line); text-align: center; }
 .app-download-qr .qr { width: auto; height: auto; margin: 0; background: #fff; border-radius: 14px; box-shadow: 0 0 0 1px var(--line); }
 .app-download-qr p { max-width: 160px; margin: 0; color: var(--muted); font-size: var(--font-12); line-height: 1.5; text-wrap: balance; }
@@ -2496,6 +2484,7 @@ details.card[open] > summary::after { margin-top: 4px; transform: rotate(225deg)
   .nav-item:not(.active):hover { color: var(--text); }
   .sidebar-actions { gap: 8px; padding-top: 12px; }
   main, main.pool-page { max-width: 1200px; padding: 32px 32px 24px; }
+  main.pool-page { max-width: 1800px; }
 }
 @media (min-width: 641px) and (max-width: 900px) {
   .app { grid-template-columns: 188px minmax(0, 1fr); }
@@ -2534,8 +2523,8 @@ select { appearance: none; padding-right: 34px; background-image: var(--chevron)
 input:not([type="checkbox"]):focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: 0; border-color: var(--blue); }
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.7; }
 /* Compact fields keep the chevron clear of their text. */
-.device-card :is(input, select), .inline-controls select, .pool-comparison .sort-control select { min-height: 36px; }
-.device-card select, .device-card .card-heading select, .inline-controls select, .sort-control select, .pool-comparison .sort-control select { padding-right: 28px; background-position: right 7px center; }
+.inline-controls select, .pool-comparison .sort-control select { min-height: 36px; }
+.inline-controls select, .sort-control select, .pool-comparison .sort-control select { padding-right: 28px; background-position: right 7px center; }
 .inline-controls select { max-width: 132px; padding-left: 10px; }
 input.switch::before { background: var(--switch-off); transition: background 0.15s; }
 .icon-button { border-color: transparent; background: transparent; color: var(--muted); }
@@ -2603,13 +2592,11 @@ input.switch::before { background: var(--switch-off); transition: background 0.1
   .fleet-resource-metrics { margin-top: 8px; padding-top: 0; }
   .fleet-resource-metrics > div:last-child { grid-column: 1 / -1; }
 }
-.gpu-table thead th { color: var(--muted); font-size: var(--font-12); font-weight: 600; vertical-align: bottom; }
-.device-card { border-radius: 14px; }
 .fleet-page .sort-control select { max-width: 240px; }
 
 /* Phones: the remaining small controls reach the 36px touch size. */
 @media (max-width: 640px) {
-  .segments button, .extension-security summary { min-height: 36px; }
+  .segments button, .extension-security-source { min-height: 36px; }
   .pool-comparison .pool-calculate { min-width: 36px; min-height: 36px; }
 }
 /* On a phone the palette button sits left of two other header buttons, so a popover anchored to its right edge
@@ -2705,12 +2692,6 @@ main.narrow-page { max-width: 904px; }
 .wallet-actions > button:hover, .wallet-actions > a:hover { background: var(--hover); }
 .wallet-actions .action-icon { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--badge-rim); border-radius: 12px; background: var(--wallet-badge-fill, var(--badge-fill)); color: var(--badge-glyph); box-shadow: var(--badge-shadow); }
 .wallet-actions .action-icon .icon { width: 19px; height: 19px; }
-.wallet-address-card { margin: 0 0 16px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
-.wallet-address-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; color: var(--muted); font-size: var(--font-13); }
-.wallet-address-head button { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 10px; border: 0; border-radius: 8px; background: var(--soft); color: var(--blue-text); font-size: var(--font-12); font-weight: 600; }
-.wallet-address-head button .icon { width: 15px; height: 15px; }
-.wallet-address-card .watch-address { display: block; padding: 10px 12px; border-radius: 10px; background: var(--soft); color: var(--text); overflow-wrap: anywhere; }
-.wallet-address-card p { margin: 10px 0 0; color: var(--muted); font-size: var(--font-12); line-height: 1.5; }
 .wallet-card > h2 { margin: 0 0 8px; }
 .transaction-info small { font-size: var(--font-12); }
 .transaction-meta > * { white-space: nowrap; }
@@ -2758,6 +2739,21 @@ main.narrow-page { max-width: 904px; }
 .kline-panel > .skeleton-chart { margin-top: 44px; }
 @media (max-width: 640px) {
   .kline-plot, .kline-panel > .chart-empty, .kline-panel > .skeleton-chart { height: 220px; }
+}
+
+/* Market page: a closable announcement above the price card. */
+.market-banner { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px 16px; margin-bottom: 20px; padding: 14px 56px 14px 16px; background: radial-gradient(80% 160% at 0% 0%, color-mix(in srgb, var(--blue) 14%, transparent), transparent 65%), radial-gradient(60% 140% at 100% 100%, color-mix(in srgb, var(--purple) 12%, transparent), transparent 60%), var(--surface); }
+.market-banner img { width: 48px; height: 48px; }
+.market-banner h2 { margin: 0; font-size: var(--font-16); line-height: 1.35; text-wrap: balance; }
+.market-banner-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 8px 16px; border: 1px solid transparent; border-radius: var(--radius-control); white-space: nowrap; text-decoration: none; }
+.market-banner-action .icon { width: 18px; height: 18px; }
+.market-banner-close { position: absolute; top: 50%; right: 10px; width: 32px; height: 32px; min-height: 32px; padding: 6px; border-radius: 8px; transform: translateY(-50%); }
+.market-banner-close .icon { width: 18px; height: 18px; }
+@media (max-width: 640px) {
+  .market-banner { grid-template-columns: auto minmax(0, 1fr); padding: 14px 44px 14px 14px; }
+  .market-banner img { width: 40px; height: 40px; }
+  .market-banner-action { grid-column: 1 / -1; }
+  .market-banner-close { top: 8px; right: 8px; transform: none; }
 }
 
 /* Wallet page: the extension leads, with its download and the full guide one click away. */
@@ -2899,8 +2895,7 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
 
 /* The app's corner radii: 20 for cards (Radius.md), 14 for stat cards (Radius.sm), 12 for tiles inside a card. */
 :root { --radius-card: 20px; }
-.card, .wallet-address-card { border-radius: var(--radius-card); }
-.device-card { border-radius: 14px; }
+.card { border-radius: var(--radius-card); }
 .earning, .fleet-key-metrics > div, .fleet-resource-metrics > div { border-radius: 12px; }
 
 /* Toolbar buttons are round, filled and faintly lifted, with an accent glyph, like the app's navigation-bar buttons. */
@@ -3026,6 +3021,12 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
 @media (max-width: 480px) { .monitor-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .compact-entry { position: relative; min-width: 0; }
 .compact-entry.menu-open { z-index: 6; }
+.compact-entry.touch-dragging { opacity: .65; }
+.compact-entry[data-touch-over="true"] > [role="button"] { outline: 2px solid var(--blue); outline-offset: 2px; }
+.tile-drag { position: absolute; right: 2px; bottom: 2px; z-index: 2; display: grid; place-items: center; width: 32px; min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 22px; cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; }
+.tile-drag:active { cursor: grabbing; }
+.compact-entry:has(.tile-drag) > .monitor-tile { padding-bottom: 32px; }
+.compact-entry:has(.tile-drag) > .paused-line { padding-inline-end: 38px; }
 .monitor-tile { display: grid; align-content: start; gap: 2px; height: 100%; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); cursor: pointer; transition: background-color .12s; }
 .monitor-tile, .paused-line { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 .monitor-tile:hover { background: color-mix(in srgb, var(--text) 3.5%, var(--surface)); }
@@ -3173,3 +3174,126 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
   .hash-axis-left, .hash-axis-block { padding-right: 6px; } .hash-axis-right { padding-left: 6px; }
   .hash-axis-labels { width: calc(100% - 6px); }
 }
+
+/* iOS PearlInfoTip: an ⓘ beside a title or label; the explanation lives in its bubble, not on the page. */
+.info-tip { display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; min-height: 0; margin: -4px 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); vertical-align: middle; }
+.info-tip .icon { width: 17px; height: 17px; }
+.info-tip.warn { color: var(--warn); }
+:root .info-tip:hover, :root .info-tip[aria-expanded="true"] { background: transparent; color: var(--text); }
+.info-tip-bubble { width: 300px; font-size: var(--font-13); }
+.info-tip-bubble p { color: var(--text); white-space: pre-line; }
+.info-tip-bubble > p:first-child { margin: 0; }
+
+/* 挖矿 (iOS 6a1e720): short labels with their ⓘ, read-first device rows with an editor sheet, one GPU table. */
+.field-label { display: inline-flex; align-items: center; gap: 4px; }
+.summary-tip { display: inline-flex; margin-left: 4px; vertical-align: middle; }
+.fleet-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+.fleet-section-head h2 { margin: 0; font-size: var(--font-16); }
+.fleet-section-head button { min-height: 36px; padding: 6px 12px; font-size: var(--font-14); }
+.fleet-data-line { margin: 12px 0 0; color: var(--muted); font-size: var(--font-12); font-variant-numeric: tabular-nums; }
+.fleet-data-line + .fleet-data-line { margin-top: 4px; }
+.fleet-parameters .fleet-check { display: flex; align-items: center; gap: 4px; margin: .9rem 0; }
+.fleet-parameters .fleet-check .compact-check { margin: 0; }
+.fleet-parameters .compact-check { align-items: center; }
+.fleet-parameters > .form-field { margin-top: 18px; }
+/* A field label with its ⓘ: the ⓘ follows the label's last word, even when the label wraps. */
+.form-field > .field-label { display: block; }
+.form-field > .field-label > :first-child { display: inline; }
+.form-field > .field-label > .info-tip { margin-left: 4px; }
+.fleet-devices-empty { display: grid; justify-items: center; gap: 12px; max-width: 420px; margin: 0 auto 16px; padding: 28px 24px; text-align: center; }
+.fleet-devices-empty > .icon { width: 44px; height: 44px; margin-bottom: 4px; color: var(--blue-text); }
+.fleet-devices-empty p { margin: 0; color: var(--muted); font-size: var(--font-14); line-height: 1.5; }
+.fleet-devices-empty button { width: 100%; }
+.fleet-sum { padding: 20px; container: fleet-sum / inline-size; }
+.fleet-sum-body > div > small { color: var(--muted); font-size: var(--font-14); }
+.fleet-sum-net { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; margin-top: 2px; }
+.fleet-sum-net strong { font-size: 32px; font-weight: 700; letter-spacing: -.5px; }
+.fleet-sum-net > span { color: var(--muted); font-size: var(--font-14); }
+.fleet-sum-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px 16px; margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+.fleet-sum-stats dt { color: var(--muted); font-size: var(--font-12); }
+.fleet-sum-stats dd { margin: 2px 0 0; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Wide: the daily net and its figures share one row. */
+@container fleet-sum (min-width: 820px) {
+  .fleet-sum-body { display: grid; grid-template-columns: minmax(180px, auto) minmax(0, 1fr); align-items: center; gap: 28px; }
+  .fleet-sum-stats { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); margin: 0; padding: 4px 0 4px 28px; border-top: 0; border-left: 1px solid var(--line); }
+  .fleet-sum-stats dd { font-size: var(--font-16); }
+}
+.fleet-list-head { display: flex; align-items: center; gap: 16px; margin: 4px 4px 8px; }
+.fleet-list-head > span { flex: 1; color: var(--muted); font-size: var(--font-14); font-weight: 600; }
+.fleet-list-head .text-button { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; font-size: var(--font-14); font-weight: 600; }
+.fleet-list-head .text-button .icon { width: 16px; height: 16px; }
+/* As many columns as fit: one on a phone, two or three on a desktop. Each cell draws its top and left
+   divider 1px outside itself; the card clips the ones on its outer edge. */
+.card.device-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); margin: 0 0 16px; padding: 0; overflow: hidden; list-style: none; }
+.device-list li { margin: -1px 0 0 -1px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.device-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 60px; padding: 10px 14px; border: 0; border-radius: 0; background: transparent; color: inherit; font-weight: inherit; text-align: left; }
+.device-row:hover { background: var(--soft); }
+.device-row-main { display: grid; flex: 1; gap: 3px; min-width: 0; }
+.device-row-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.device-row-name strong { overflow: hidden; font-size: var(--font-14); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.device-row-name .badge { flex: none; }
+.device-row-main small { overflow: hidden; color: var(--muted); font-size: var(--font-12); font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.warn-text { color: var(--warn); }
+.device-row-net { display: grid; flex: none; justify-items: end; gap: 1px; }
+.device-row-net strong { font-size: var(--font-14); font-weight: 650; }
+.device-row-net small { color: var(--muted); font-size: 11px; }
+.device-row > .icon, .gpu-compare td > .icon { flex: none; width: 13px; height: 13px; color: var(--muted); }
+.dialog-heading .fleet-sheet-done { flex: none; padding: 6px 4px; border: 0; background: transparent; color: var(--blue-text); font-size: var(--font-16); font-weight: 600; white-space: nowrap; }
+.fleet-unit { margin-left: 2px; color: var(--muted); font-size: var(--font-12); font-weight: 400; }
+.fleet-sheet .dialog-heading { margin-bottom: 18px; }
+.fleet-sheet .dialog-heading h2 { overflow: hidden; margin: 0; font-size: var(--font-20); text-overflow: ellipsis; white-space: nowrap; }
+.device-editor { display: grid; gap: 14px; }
+.device-editor .segments { display: grid; grid-template-columns: 1fr 1fr; margin: 0; }
+.device-editor .segments button { justify-content: center; }
+.fleet-line { display: flex; justify-content: space-between; gap: 12px; font-size: var(--font-14); }
+.fleet-line span { color: var(--muted); }
+.device-default-rent { justify-self: start; min-height: 32px; font-size: var(--font-13); }
+.device-editor-figures { margin: 0; }
+.device-delete { width: 100%; }
+.device-delete-confirm { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.device-delete-confirm .danger { border-color: var(--red); background: var(--red); color: #fff; }
+.fleet-catalog-bar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.gpu-split { display: grid; grid-template-columns: minmax(360px, 1fr) 380px; align-items: start; gap: 16px; }
+.card.gpu-list { padding: 0; overflow: hidden; }
+.gpu-split .card { margin-bottom: 0; }
+.gpu-compare { width: 100%; border-collapse: collapse; font-size: var(--font-14); }
+.gpu-compare thead th { padding: 10px 4px 8px; color: var(--muted); font-size: var(--font-12); font-weight: 600; text-align: right; white-space: nowrap; }
+.gpu-compare thead th:first-child { padding-left: 14px; text-align: left; }
+.gpu-compare tbody tr { position: relative; }
+.gpu-compare tbody th, .gpu-compare tbody td { border-top: 1px solid var(--line); }
+.gpu-compare tbody th { padding: 0; font-weight: inherit; text-align: left; }
+.gpu-pick { display: grid; justify-content: start; gap: 2px; width: 100%; min-height: 0; padding: 10px 4px 10px 14px; border: 0; border-radius: 0; background: transparent; color: inherit; font-weight: inherit; text-align: left; }
+.gpu-pick::after { content: ""; position: absolute; inset: 0; }
+.gpu-pick:hover { background: transparent; }
+.gpu-pick strong { font-size: var(--font-14); font-weight: 650; }
+.gpu-pick small { color: var(--muted); font-size: var(--font-12); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gpu-compare td { padding: 10px 4px; font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; white-space: nowrap; }
+.gpu-compare td:last-child { width: 26px; padding-right: 12px; }
+.gpu-compare td.muted, .gpu-compare td.muted .money.negative { color: var(--muted); font-size: inherit; }
+.gpu-compare td .money { justify-content: flex-end; }
+.gpu-compare tbody tr:hover { background: var(--soft); }
+.gpu-compare tbody tr.selected-gpu { background: color-mix(in srgb, var(--blue-text) 12%, transparent); }
+.gpu-detail-form h3 { margin: 0 0 12px; font-size: var(--font-20); }
+.gpu-detail-form h4 { margin: 18px 0 6px; color: var(--muted); font-size: var(--font-13); font-weight: 600; }
+.gpu-detail-form .calculation-lines { margin: 0; }
+.gpu-detail-key dd { font-weight: 700; }
+.gpu-rent-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.gpu-rent-head span { font-size: var(--font-12); font-weight: 650; }
+.gpu-detail-form > .form-field, .gpu-detail-form > .compact-check { margin-top: 12px; }
+@media (max-width: 640px) {
+  .fleet-sum { padding: 16px; }
+  .fleet-sum-net strong { font-size: 28px; }
+  .gpu-compare thead th:first-child, .gpu-pick { padding-left: 12px; }
+  .gpu-compare td:last-child { padding-right: 10px; }
+}
+
+/* A field's title with its ⓘ (InfoTip) beside it; the control below carries its own accessible name. */
+.label-tip { display: inline-flex; align-items: center; gap: 4px; }
+/* Signed out: one row naming what the account is for (iOS WebLinkView.syncSummary). */
+.account-sync-summary { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+.account-sync-summary > .icon { width: 18px; height: 18px; color: var(--blue-text); }
+.account-sync-summary > span:first-of-type { font-weight: 600; }
+.account-sync-summary .badge { margin: 0; }
+.label-tip > h2, .label-tip > h3 { margin: 0; }
+/* 提醒 → 掉线提醒: the title with its ⓘ, and the way to 矿机 on the same line. */
+.offline-intro { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
