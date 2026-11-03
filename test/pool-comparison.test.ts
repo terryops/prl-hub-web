@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sortPools, poolSparkline, poolPayouts, realCostPeriods, hasPpsRealCost, ppsWindowEnd, weekLuck, estimatedYield, yieldTrustworthy, netPerPH, payoutCost, netYield, bestYield, rankedYield, orphanRate, schemeFamily, poolsByScheme, ownApiMissing, foundingFee, mergeBonus, minerReport, realFeePending, shareYield, percentRange, realCostParts, realFeeTiers } from "../src/pool-comparison.ts";
+import { sortPools, poolSparkline, poolPayouts, realCostPeriods, hasPpsRealCost, ppsWindowEnd, weekLuck, estimatedYield, yieldTrustworthy, netPerPH, payoutCost, netYield, bestYield, rankedYield, orphanRate, schemeFamily, poolsByScheme, ownApiMissing, foundingFee, mergeBonus, minerReport, realFeePending, shareYield, percentRange, realCostParts, realFeeTiers, realCostFewBlocks, REAL_COST_MIN_BLOCKS } from "../src/pool-comparison.ts";
 import type { PoolPayout } from "../src/types.ts";
 import type { PoolOverview } from "../src/types.ts";
 
@@ -284,4 +284,19 @@ test("Peryn's Real Cost per fee tier: the shown tier first, the other after it, 
   assert.deepEqual(realFeeTiers(pay({ realFeeTier: "founding", realFeeTiers: { founding: 0.78, standard: "1.26" } }))![1].percent, null);
   for (const bad of [{}, { realFeeTier: "gold", realFeeTiers: {} }, { realFeeTier: "founding" }, { realFeeTier: "founding", realFeeTiers: {}, realFeePercent: null }])
     assert.equal(realFeeTiers(pay(bad)), null);
+});
+test("Real Cost too few blocks: a PPLNS / PROP dash whose week is worth under 100 blocks says how many", () => {
+  const row = (expectedBlocks: unknown, extra: Partial<PoolOverview> = {}) => ({ name: "Jetski", luck: { "7d": { expectedBlocks } }, ...extra }) as PoolOverview;
+  const pay = (scheme: string | null, realFeePercent: number | null = null, extra: Partial<PoolPayout> = {}) =>
+    ({ scheme, fee: 1, grossPerPH: 8.8, realFeePercent, estimated: true, solo: false, ...extra }) as PoolPayout;
+  // Jetski, 2026-11-03: 7-day luck window worth 47.8 blocks, no figure.
+  assert.equal(realCostFewBlocks(row(47.82405635451607), pay("PPLNS")), 47.82405635451607);
+  assert.equal(realCostFewBlocks(row(3.8), pay("PROP")), 3.8);
+  assert.equal(REAL_COST_MIN_BLOCKS, 100);
+  // A figure, a held-back date, a big enough week, no week, PPS, SOLO or an unnamed scheme: something else explains it.
+  for (const [r, p] of [[row(47.8), pay("PPLNS", 1)], [row(47.8), pay("PPLNS", null, { realFeePending: "2026-11-05" })],
+    [row(100), pay("PPLNS")], [row(279), pay("PROP")], [row(undefined), pay("PPLNS")], [row(0), pay("PPLNS")], [row(Number.NaN), pay("PPLNS")],
+    [{ name: "Peryn" } as PoolOverview, pay("PPLNS")], [row(47.8), pay("PPS+")], [row(47.8), pay("SOLO", null, { solo: true })],
+    [row(47.8, { solo: true }), pay("PPLNS")], [row(47.8), pay(null)]] as const)
+    assert.equal(realCostFewBlocks(r, p), null, JSON.stringify([r, p]));
 });

@@ -395,6 +395,7 @@
   "poolShareYieldShownHelp": "{pool} 網站顯示的算力比它記帳的 share 低約 {loss}，實際出塊跟的是這個更低的數，而不是 share。它按實際出的塊分錢，所以到手也少約 {loss}；手續費 {fee}，真實費用約 {cost}。",
   "poolRealCostPending": "{date}前公布",
   "poolRealCostPendingHelp": "{pool} 出的塊比它收到的 share 應出的少，原因正在用我們自己的顯卡實測，{date}前公布它的真實費用。",
+  "poolRealCostFewBlocksHelp": "{pool} 近 7 天的算力只夠出約 {blocks} 塊，塊太少，扣不準出塊運氣。滿 {min} 塊才顯示真實費用。",
   "poolRealCostPeriodMissing": "暫無可用的統計區間。 PPLNS 與 PROP 需要最近 7 天內至少 5 天的資料、礦池自己公布的這段時間每個塊的工作量（effort），且這段時間按礦池算力應出至少 100 個塊；否則顯示「—」。",
   "poolRealCostPpsUpdate": "PPS 統計區間每天 %@ 截止，礦池結算完當天後才會順延，通常要晚幾個小時；在此之前顯示上一個統計區間。",
   "poolLastBlock": "最近出塊",

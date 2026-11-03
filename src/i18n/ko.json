@@ -395,6 +395,7 @@
   "poolShareYieldShownHelp": "{pool} 사이트에 표시되는 해시레이트는 풀이 기록한 셰어보다 약 {loss} 낮고, 실제로 찾는 블록 수도 셰어가 아니라 이 낮은 수치를 따라갑니다. {pool}은(는) 실제로 찾은 블록 기준으로 보상을 나누므로 수령액도 약 {loss} 줄어듭니다. 수수료는 {fee}이며 실질 비용은 약 {cost}입니다.",
   "poolRealCostPending": "{date}까지 공개",
   "poolRealCostPendingHelp": "{pool}은(는) 승인한 셰어로 예상되는 것보다 블록을 적게 찾습니다. 자체 GPU로 원인을 측정하고 있으며 {date}까지 실질 비용을 공개합니다.",
+  "poolRealCostFewBlocksHelp": "{pool}의 최근 7일 해시레이트로는 블록을 약 {blocks}개만 찾을 수 있어 블록 발견 운을 제외하기에 너무 적습니다. 실질 비용은 {min}개부터 표시합니다.",
   "poolRealCostPeriodMissing": "아직 측정 기간이 없습니다. PPLNS와 PROP는 최근 7일 중 최소 5일의 데이터, 그 기간에 대해 풀이 직접 공개한 블록별 effort, 그리고 그 기간 풀 해시레이트로 100블록 이상이 기대되어야 합니다. 그렇지 않으면 “—”로 표시합니다.",
   "poolRealCostPpsUpdate": "PPS 측정 기간은 매일 %@에 마감되며, 풀이 그날의 정산을 마친 뒤(보통 몇 시간 후) 하루 앞으로 이동합니다. 그전까지는 이전 측정 기간이 표시됩니다.",
   "poolLastBlock": "최근 블록",

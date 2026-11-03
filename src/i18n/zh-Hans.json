@@ -395,6 +395,7 @@
   "poolShareYieldShownHelp": "{pool} 网站显示的算力比它记账的 share 低约 {loss}，实际出块跟的是这个更低的数，而不是 share。它按实际出的块分钱，所以到手也少约 {loss}；手续费 {fee}，真实费用约 {cost}。",
   "poolRealCostPending": "{date}前公布",
   "poolRealCostPendingHelp": "{pool} 出的块比它收到的 share 应出的少，原因正在用我们自己的显卡实测，{date}前公布它的真实费用。",
+  "poolRealCostFewBlocksHelp": "{pool} 近 7 天的算力只够出约 {blocks} 块，块太少，扣不准出块运气。满 {min} 块才显示真实费用。",
   "poolRealCostPeriodMissing": "暂无可用的统计区间。 PPLNS 与 PROP 需要最近 7 天内至少 5 天的数据、矿池自己公布的这段时间每个块的工作量（effort），且这段时间按矿池算力应出至少 100 个块；否则显示「—」。",
   "poolRealCostPpsUpdate": "PPS 统计区间每天 %@ 截止，矿池结算完当天后才会顺延，通常要晚几个小时；在此之前显示上一个统计区间。",
   "poolLastBlock": "最近出块",

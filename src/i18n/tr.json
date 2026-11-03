@@ -395,6 +395,7 @@
   "poolShareYieldShownHelp": "{pool} sitesi hashrate’i kaydettiği share’lerden yaklaşık {loss} düşük gösterir ve bulunan bloklar share’leri değil bu düşük rakamı izler. {pool} gerçekten bulduğu bloklara göre ödeme yaptığı için kazanç da yaklaşık {loss} düşer; ücret {fee}, gerçek maliyet yaklaşık {cost}.",
   "poolRealCostPending": "{date} tarihine kadar",
   "poolRealCostPendingHelp": "{pool}, kabul ettiği share’lerin gerektirdiğinden daha az blok buluyor. Nedenini kendi GPU’larımızla ölçüyoruz; gerçek maliyeti {date} tarihine kadar yayımlayacağız.",
+  "poolRealCostFewBlocksHelp": "{pool} havuzunun son 7 günlük hashrate’i yalnızca yaklaşık {blocks} bloğa yetiyor; blok bulma şansını çıkarmak için çok az. Gerçek maliyet {min} bloktan itibaren gösterilir.",
   "poolRealCostPeriodMissing": "Henüz bir ölçüm dönemi yok. PPLNS ve PROP için son 7 gün içinde en az 5 günlük veri, havuzun bu süre için kendi yayımladığı blok başına effort değeri ve en az 100 blok beklenmesine yetecek havuz hashrate değeri gerekir; aksi halde “—” gösterilir.",
   "poolRealCostPpsUpdate": "PPS dönemleri her gün %@ itibarıyla biter ve havuz o günün gelirini kesinleştirdikten sonra, genellikle birkaç saat içinde, bir gün ileri kayar. O zamana kadar önceki dönem gösterilir.",
   "poolLastBlock": "Son blok",

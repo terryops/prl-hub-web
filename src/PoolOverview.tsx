@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { Lang, Overview, PoolOverview as PoolRow, PoolPayout } from "./types.ts";
 import type { TextKey } from "./i18n/index.ts";
 import { difficulty, hashrate, unitYield, prlNumber } from "./format.ts";
-import { bestYield, foundingFee, mergeBonus, minerReport, realCostParts, realFeePending, realFeeTiers, shareYield, netPerPH, orphanRate, ownApiMissing, payoutCost, percentRange, poolPayouts, poolSparkline, rankedYield, sortPools, relativePoolBlock, weekLuck, type PoolSortKey } from "./pool-comparison.ts";
+import { bestYield, foundingFee, mergeBonus, minerReport, realCostFewBlocks, realCostParts, realFeePending, REAL_COST_MIN_BLOCKS, realFeeTiers, shareYield, netPerPH, orphanRate, ownApiMissing, payoutCost, percentRange, poolPayouts, poolSparkline, rankedYield, sortPools, relativePoolBlock, weekLuck, type PoolSortKey } from "./pool-comparison.ts";
 import { Icon } from "./Icons.tsx";
 import { Skeleton } from "./Skeleton.tsx";
 import { HelpTip, PoolCostHelp } from "./PoolCostHelp.tsx";
@@ -83,6 +83,15 @@ export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data
       {t("poolRealCostPendingHelp").replaceAll("{pool}", r.name).replace("{date}", date)}
     </HelpTip>;
   };
+  // A Real Cost left out because the week is worth too few blocks to take luck out (Jetski): the dash with an ⓘ, why in a bubble.
+  const fewBlocks = (r: PoolRow, p: PoolPayout, value: ReactNode) => {
+    const blocks = realCostFewBlocks(r, p);
+    if (blocks == null) return null;
+    return <HelpTip label={`${t("poolRealCost")}: —`} className="pool-cost-note" mark={<>{value}<InfoMark /></>}>
+      {t("poolRealCostFewBlocksHelp").replaceAll("{pool}", r.name).replace("{blocks}", numeric(blocks, 0, lang))
+        .replace("{min}", numeric(REAL_COST_MIN_BLOCKS, 0, lang))}
+    </HelpTip>;
+  };
   // A Real Cost that also counts the shares the pool never turns into blocks (PearlHash): the figure as usual with
   // an ⓘ beside it, why in a bubble.
   const yieldText = (r: PoolRow, p: PoolPayout, y: number) =>
@@ -146,11 +155,11 @@ export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data
       const prefix = estimated && kind !== "fee" ? /^(PPS|FPPS)/i.test(p.scheme || "") || kind === "realFee" ? "≈" : "~" : "";
       const top = kind === "earnings" && best != null && rankedYield(r, p) === best;
       const formula = kind === "earnings" && amount != null ? `${numeric(p.grossPerPH, 8, lang)} × (1 − ${numeric(payoutCost(p, r), 2, lang)}%) = ` : "";
-      const held = kind === "realFee" ? pending(r, p) : null;
       const text = amount == null ? "—" : prefix + numeric(amount, kind === "realFee" ? 2 : 1, lang) + (kind === "earnings" ? " PRL" : "%");
       const value = <strong className={`${amount == null ? "missing-value" : ""}${top ? " pool-top-yield" : ""}`} title={amount == null ? undefined : formula + numeric(amount, 8, lang) + (kind === "earnings" ? " PRL/PH·" + t("perDay") : "%")}>
           {text}
         </strong>;
+      const held = kind === "realFee" ? pending(r, p) ?? fewBlocks(r, p, value) : null;
       return <div className="pool-payout" key={i}>
         {held ?? (kind === "realFee" ? costNote(r, p, value, text) ?? yieldNote(r, p, value, text) ?? tierNote(p, value, text) : kind === "fee" ? foundingNote(p, value) : null) ?? value}{(all.length > 1 || kind !== "earnings") && <small>{p.scheme || "—"}</small>}
       </div>;

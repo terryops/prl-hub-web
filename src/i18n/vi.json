@@ -395,6 +395,7 @@
   "poolShareYieldShownHelp": "Trang của {pool} hiển thị hashrate thấp hơn khoảng {loss} so với số share mà pool ghi nhận, và số khối tìm được bám theo con số thấp hơn đó chứ không theo share. {pool} chia thưởng theo số khối thực sự tìm được, nên thu nhập cũng thấp hơn khoảng {loss}; phí là {fee}, nên chi phí thực vào khoảng {cost}.",
   "poolRealCostPending": "Công bố trước {date}",
   "poolRealCostPendingHelp": "{pool} tìm được ít khối hơn so với số share đã nhận. Chúng tôi đang đo nguyên nhân bằng GPU của mình và sẽ công bố Chi phí thực trước {date}.",
+  "poolRealCostFewBlocksHelp": "Hashrate của {pool} trong 7 ngày qua chỉ đủ cho khoảng {blocks} khối, quá ít để loại bỏ may mắn tìm khối. Chi phí thực hiển thị từ {min} khối.",
   "poolRealCostPeriodMissing": "Chưa có khoảng đo. PPLNS và PROP cần ít nhất 5 ngày dữ liệu trong 7 ngày gần nhất, effort của từng khối do chính pool công bố cho khoảng đó, và hashrate của pool đủ để kỳ vọng ít nhất 100 khối; nếu không sẽ hiển thị “—”.",
   "poolRealCostPpsUpdate": "Khoảng đo PPS kết thúc lúc %@ mỗi ngày và chỉ chuyển sang ngày mới khi pool đã quyết toán xong ngày đó, thường sau vài giờ. Trước đó, khoảng đo trước vẫn được hiển thị.",
   "poolLastBlock": "Khối gần nhất",

@@ -395,6 +395,7 @@
   "poolShareYieldShownHelp": "Situs {pool} menampilkan hashrate sekitar {loss} di bawah share yang dicatatnya, dan blok yang ditemukan mengikuti angka yang lebih rendah itu, bukan share. {pool} membayar berdasarkan blok yang benar-benar ditemukan, jadi pendapatan sekitar {loss} lebih rendah; biayanya {fee}, sehingga biaya nyata sekitar {cost}.",
   "poolRealCostPending": "Terbit sebelum {date}",
   "poolRealCostPendingHelp": "{pool} menemukan lebih sedikit blok daripada yang tersirat dari share yang diterimanya. Kami sedang mengukur penyebabnya dengan GPU kami sendiri dan akan menerbitkan Biaya nyata sebelum {date}.",
+  "poolRealCostFewBlocksHelp": "Hashrate {pool} dalam 7 hari terakhir hanya setara sekitar {blocks} blok, terlalu sedikit untuk menghilangkan keberuntungan menemukan blok. Biaya nyata ditampilkan mulai {min} blok.",
   "poolRealCostPeriodMissing": "Periode pengukuran belum tersedia. PPLNS dan PROP memerlukan setidaknya 5 hari data dalam 7 hari terakhir, effort per blok yang dipublikasikan pool sendiri untuk periode itu, dan hashrate pool yang cukup untuk mengharapkan setidaknya 100 blok; jika tidak, “—” ditampilkan.",
   "poolRealCostPpsUpdate": "Periode PPS berakhir setiap hari pukul %@ dan bergeser setelah pendapatan hari itu diselesaikan oleh pool, biasanya beberapa jam kemudian. Sebelum itu, periode sebelumnya yang ditampilkan.",
   "poolLastBlock": "Blok terakhir",

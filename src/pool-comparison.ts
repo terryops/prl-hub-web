@@ -112,6 +112,17 @@ export function realFeePending(p: PoolPayout): Date | null {
   const date = new Date(day + "T00:00:00Z");
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day ? null : date;
 }
+/** The blocks a PPLNS / PROP Real Cost needs the week's work to be worth before the service estimates it (its
+ *  MIN_PPLNS_BLOCKS in alerts/src/pplns.js): luck over N blocks swings about ±1/√N. */
+export const REAL_COST_MIN_BLOCKS = 100;
+/** Why a PPLNS / PROP Real Cost is "—" when the week is the reason: the blocks the pool's hashrate was worth over its
+ *  7-day luck window, for the ⓘ beside the dash. Null with a figure, a held-back date, or a week big enough. */
+export function realCostFewBlocks(pool: PoolOverview, p: PoolPayout): number | null {
+  const name = p.scheme?.trim().toUpperCase() || "";
+  if (pool.solo || p.solo || (name !== "PPLNS" && name !== "PROP") || finite(p.realFeePercent) || realFeePending(p)) return null;
+  const blocks = pool.luck?.["7d"]?.expectedBlocks;
+  return finite(blocks) && blocks > 0 && blocks < REAL_COST_MIN_BLOCKS ? blocks : null;
+}
 /** "1–2%", "1–2 %", "%1–2": one percent sign, where the language puts it; one figure when both ends match. */
 export function percentRange(min: number, max: number, lang: string): string {
   const percent = new Intl.NumberFormat(lang, { style: "percent", maximumFractionDigits: 1 });

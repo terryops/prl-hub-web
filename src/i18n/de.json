@@ -395,6 +395,7 @@
   "poolShareYieldShownHelp": "Die Website von {pool} zeigt die Hashrate etwa {loss} niedriger als die gutgeschriebenen Shares, und die gefundenen Blöcke folgen diesem niedrigeren Wert, nicht den Shares. {pool} zahlt nach den tatsächlich gefundenen Blöcken aus, die Erträge sind also etwa {loss} geringer; die Gebühr beträgt {fee}, die realen Kosten liegen bei etwa {cost}.",
   "poolRealCostPending": "Folgt bis {date}",
   "poolRealCostPendingHelp": "{pool} findet weniger Blöcke, als die angenommenen Shares erwarten lassen. Bis {date} veröffentlichen wir die realen Kosten; den Grund messen wir mit eigenen GPUs.",
+  "poolRealCostFewBlocksHelp": "Die Hashrate von {pool} der letzten 7 Tage reicht nur für etwa {blocks} Blöcke – zu wenige, um das Glück beim Finden von Blöcken herauszurechnen. Reale Kosten erscheinen ab {min} Blöcken.",
   "poolRealCostPeriodMissing": "Noch kein Messzeitraum verfügbar. PPLNS und PROP benötigen Daten aus mindestens 5 der letzten 7 Tage, den vom Pool selbst veröffentlichten Effort jedes Blocks in dieser Zeit und genug Pool-Hashrate, um mindestens 100 Blöcke zu erwarten; andernfalls wird „—“ angezeigt.",
   "poolRealCostPpsUpdate": "PPS-Messzeiträume enden täglich um %@ und rücken erst weiter, wenn der Pool den Tag abgerechnet hat – meist einige Stunden später. Bis dahin wird der vorherige Zeitraum angezeigt.",
   "poolLastBlock": "Letzter Block",

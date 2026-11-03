@@ -395,6 +395,7 @@
   "poolShareYieldShownHelp": "Il sito di {pool} mostra un hashrate inferiore di circa il {loss} rispetto agli share che accredita, e i blocchi trovati seguono questo valore più basso, non gli share. {pool} paga in base ai blocchi effettivamente trovati, quindi i guadagni sono inferiori di circa il {loss}; la commissione è del {fee}, quindi il costo reale è di circa {cost}.",
   "poolRealCostPending": "Entro il {date}",
   "poolRealCostPendingHelp": "{pool} trova meno blocchi di quanti ne indichino gli share che accetta. Stiamo misurando il motivo con le nostre GPU e pubblicheremo il suo costo reale entro il {date}.",
+  "poolRealCostFewBlocksHelp": "Negli ultimi 7 giorni l’hashrate di {pool} vale solo circa {blocks} blocchi, troppo pochi per togliere la fortuna nel trovare blocchi. Il costo reale compare da {min} blocchi.",
   "poolRealCostPeriodMissing": "Nessun periodo di misurazione è ancora disponibile. PPLNS e PROP richiedono almeno 5 giorni di dati negli ultimi 7 giorni, l’effort per blocco pubblicato dal pool stesso per quel periodo e un hashrate del pool sufficiente ad attendersi almeno 100 blocchi; altrimenti viene mostrato “—”.",
   "poolRealCostPpsUpdate": "I periodi PPS terminano ogni giorno alle %@ e avanzano quando il pool ha liquidato quella giornata, di solito qualche ora dopo. Fino ad allora viene mostrato il periodo precedente.",
   "poolLastBlock": "Ultimo blocco",

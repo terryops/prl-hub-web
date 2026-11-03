@@ -395,6 +395,7 @@
   "poolShareYieldShownHelp": "{pool} shows its hashrate on its own site about {loss} below the shares it credits, and the blocks it finds keep pace with the lower figure, not with the shares. It pays out by the blocks it finds, so earnings are about {loss} lower; its fee is {fee}, so Real Cost is about {cost}.",
   "poolRealCostPending": "Published by {date}",
   "poolRealCostPendingHelp": "{pool} finds fewer blocks than the shares it accepts imply. We are measuring why on our own GPUs and will publish its Real Cost by {date}.",
+  "poolRealCostFewBlocksHelp": "{pool}'s hashrate over the last 7 days is worth only about {blocks} blocks, too few to take block luck out. Real Cost shows from {min} blocks.",
   "poolRealCostPeriodMissing": "No measurement period is available yet. PPLNS and PROP require at least 5 days of data within the last 7 days, the pool’s own per-block effort for that time, and enough pool hashrate to expect at least 100 blocks; otherwise “—” is shown.",
   "poolRealCostPpsUpdate": "PPS periods end at %@ each day and move forward once the pool has settled that day, usually a few hours later. Until then, the previous period is shown.",
   "poolLastBlock": "Last block",
