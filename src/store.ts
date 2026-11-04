@@ -24,6 +24,7 @@ export const pools = [
   "PearlHash",
   "Kryptex",
   "Jetski",
+  "Peryn",
   "F2Pool",
 ];
 export const alive = <T extends Item>(items: T[]) =>

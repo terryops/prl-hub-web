@@ -57,6 +57,12 @@ test("Jetski: its monitors are valid config entries, and its 6-hour window sits 
   assert.equal(nearestWindow("h3", ["hour", "h6"]), "hour");
   assert.equal(nearestWindow("h6", ["live", "hour", "h6"]), "h6");
 });
+test("Peryn: its monitors are valid config entries, and its hour stands in for the live rate it doesn't publish", () => {
+  const c = normalizeConfig({ ...configOf(defaults()), monitors: [{ ...monitor("p"), pool: "Peryn" }] });
+  assert.equal(c.monitors[0].pool, "Peryn");
+  assert.equal(nearestWindow("live", ["hour", "day"]), "hour");
+  assert.equal(nearestWindow("h6", ["hour", "day"]), "day");
+});
 test("A2: paused/deleted watches never register alerts; worker sums, shared addresses and reorder bounds", () => {
   const items = [monitor("A"), { ...monitor("B"), pool: "Lucky Pool" }, { ...monitor("C"), paused: true }, { ...monitor("D"), deleted: true }, { ...monitor("F"), pool: "F2Pool", addr: "a".repeat(32) }];
   assert.deepEqual(alertMonitors(items).map((m) => m.id), ["A", "B", "F"]);

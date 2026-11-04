@@ -2996,8 +2996,9 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
 .pool-icon-pearlhash { background-image: url(/pools/pearlhash.png); }
 .pool-icon-kryptex { background-image: url(/pools/kryptex.png); }
 .pool-icon-jetski { background-image: url(/pools/jetski.png); }
+.pool-icon-peryn { background-image: url(/pools/peryn.png); }
 .pool-icon-f2pool { background-image: url(/pools/f2pool.png); }
-/* The same logos on a dark plate; Lucky Pool's and Jetski's tiles serve both appearances. */
+/* The same logos on a dark plate; Lucky Pool's, Jetski's and Peryn's tiles serve both appearances. */
 :root[data-theme="dark"] .pool-icon { background-color: #1c1c1e; }
 :root[data-theme="dark"] .pool-icon-alphapool { background-image: url(/pools/alphapool-dark.png); }
 :root[data-theme="dark"] .pool-icon-herominers { background-image: url(/pools/herominers-dark.png); }
