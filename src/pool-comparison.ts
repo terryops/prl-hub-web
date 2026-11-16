@@ -1,6 +1,6 @@
 import type { PoolOverview, PoolPayout } from "./types.ts";
 
-export type PoolSortKey = "name" | "hashrate" | "earnings" | "blocks" | "fee" | "realFee" | "lastBlock";
+export type PoolSortKey = "name" | "hashrate" | "earnings" | "blocks" | "fee" | "realFee" | "orphans" | "lastBlock";
 export function realCostPeriods(rows: PoolOverview[]) {
   const periods = new Map<string, { start: number; end: number; names: string[] }>();
   for (const row of rows) {
@@ -16,22 +16,248 @@ export function realCostPeriods(rows: PoolOverview[]) {
   }
   return [...periods.values()].sort((a, b) => a.start - b.start || a.end - b.end);
 }
+/** Whether any shown Real Cost is a PPS-family measurement. Those windows end at 00:00 UTC and
+ * only move forward after the pool settles the day, so they lag by a few hours each morning. */
+export function hasPpsRealCost(rows: PoolOverview[]) {
+  return rows.some((row) => poolPayouts(row).some((p) => p.realFeePercent != null && Number.isFinite(p.realFeePercent) &&
+    ppsScheme(p.scheme ?? row.realFeeMeasurement?.scheme)));
+}
+/** 00:00 UTC of the current UTC day, when PPS Real Cost windows end. */
+export const ppsWindowEnd = (now = Date.now()) => Math.floor(now / 86400000) * 86400000;
 export function relativePoolBlock(ts: number, lang: string, now = Date.now() / 1000): string {
   const seconds = ts - now, magnitude = Math.abs(seconds);
   const unit = magnitude >= 86400 ? "day" : magnitude >= 3600 ? "hour" : magnitude >= 60 ? "minute" : "second";
   const scale = unit === "day" ? 86400 : unit === "hour" ? 3600 : unit === "minute" ? 60 : 1;
   return new Intl.RelativeTimeFormat(lang, { style: "short", numeric: "auto" }).format(Math.round(seconds / scale), unit);
 }
+export const ppsScheme = (scheme: string | null | undefined) => /^(PPS|FPPS)/i.test(scheme?.trim() || "");
+const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+/** The pool's 7-day block luck, when the service has a week of samples for a shared-reward row. */
+export function weekLuck(pool: PoolOverview) {
+  const week = pool.luck?.["7d"], theory = pool.theoreticalEarningsPerPH;
+  if (pool.pps || pool.solo || !week || !finite(week.ratio) || week.ratio < 0 || week.ratio >= 100 ||
+      !finite(week.expectedBlocks) || week.expectedBlocks <= 0 || !finite(theory) || theory <= 0) return null;
+  return { ratio: week.ratio, expectedBlocks: week.expectedBlocks, estimate: week.ratio * theory };
+}
+/** 预估收益 per PH·day, gross of fee. With a week of samples: today's theoretical yield × the
+ *  pool's 7-day luck — the luck reaches a PPLNS miner, the price is today's difficulty, the one
+ *  PPS rows are quoted at. One day of ~20 blocks swings ±20% on luck alone. Otherwise 24h. */
+export function estimatedYield(pool: PoolOverview): number | null {
+  return weekLuck(pool)?.estimate ?? pool.earningsPerPH;
+}
+/** A week's sample is the blocks the pool's work should have found, not the ones it got. */
+export function yieldTrustworthy(pool: PoolOverview): boolean {
+  const week = weekLuck(pool);
+  return week ? week.expectedBlocks >= 20 : pool.trustworthy;
+}
 export function poolPayouts(pool: PoolOverview): PoolPayout[] {
-  return pool.payouts?.length ? pool.payouts : [{
+  let payouts: PoolPayout[] = pool.payouts?.length ? pool.payouts : [{
     scheme: pool.scheme, fee: pool.fee, grossPerPH: pool.earningsPerPH,
     realFeePercent: null, estimated: pool.pps || (pool.blocksSample ?? 0) < 20, solo: pool.solo,
   }];
+  const week = weekLuck(pool);
+  if (!week) return payouts;
+  return payouts.map((p) => p.solo || ppsScheme(p.scheme) ? p
+    : { ...p, grossPerPH: week.estimate, estimated: week.expectedBlocks < 20, weekly: true });
 }
+export function verifiedMinerCost(p: PoolPayout) {
+  const period = p.realFeePeriod;
+  return !p.solo && p.realFeeStatus === "verified" && p.realFeeBasis === "miner_reported_work" &&
+    p.realFeeLuckExcluded === true &&
+    finite(p.realFeePercent) && p.realFeePercent >= -100 && p.realFeePercent <= 100 &&
+    !!period && finite(period.start) && finite(period.end) && period.start > 0 && period.end - period.start >= 21600;
+}
+export function settlementCost(p: PoolPayout) {
+  const o = p.settlementCost;
+  if (!o || p.solo || o.basis !== "pool_recorded_work" || o.luckExcluded !== true ||
+      o.verified !== true || o.component !== "allocation_deduction" || o.estimated !== false ||
+      !finite(o.percent) || o.percent < -100 || o.percent > 100 || !finite(o.start) || !finite(o.end) ||
+      o.start <= 0 || o.end <= o.start || o.end * 1000 > 8.64e15) return null;
+  return o;
+}
+/** The percentage the pool keeps from a payout. PPS-family: the measured Real Cost, or the tariff
+ *  until one is measured; every PPS pool is quoted at the same network figure, so this is all that
+ *  tells them apart. Shared-reward: the fee only — the gross figure is what the pool's blocks paid,
+ *  so its luck and lost work are already in it (their Real Cost estimate takes luck out to measure the
+ *  rest, and would count that rest twice here). A payout without a scheme follows the row's PPS flag. */
+/** The payout's merge-mining bonus when the service sent a sane one; yield and Real Cost leave it out. */
+export function mergeBonus(p: PoolPayout): { coin: string; min: number; max: number } | null {
+  const b = p.mergeBonus;
+  if (!b || typeof b.coin !== "string" || !/^[A-Z0-9]{2,10}$/.test(b.coin)) return null;
+  const min = b.minPercent, max = b.maxPercent;
+  if (typeof min !== "number" || typeof max !== "number" || !Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < min || max > 100) return null;
+  return { coin: b.coin, min, max };
+}
+/** A real YYYY-MM-DD day as midnight UTC. */
+function utcDay(day: unknown): Date | null {
+  if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const date = new Date(day + "T00:00:00Z");
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day ? null : date;
+}
+/** Real Cost against a miner program's own figure (PearlHash: WildRig shows more than the pool receives), when the
+ *  service sent a sane one and the payout has a Real Cost of its own. A second line only; sorting keeps the main figure. */
+export function minerReport(p: PoolPayout): { miner: string; credited: number; realFeePercent: number } | null {
+  const m = p.minerReport;
+  if (!m || typeof m.miner !== "string" || !/^[A-Za-z0-9][A-Za-z0-9 ._-]{1,23}$/.test(m.miner)) return null;
+  const { credited, realFeePercent: cost } = m, own = p.realFeePercent;
+  if (typeof credited !== "number" || !(credited > 0 && credited <= 1)) return null;
+  if (typeof cost !== "number" || !Number.isFinite(cost) || cost < -100 || cost > 100) return null;
+  if (typeof own !== "number" || !Number.isFinite(own)) return null;
+  return { miner: m.miner, credited, realFeePercent: cost };
+}
+/** The part of its accepted shares a pool turns into blocks, when the service sent one with a Real Cost figure. */
+export function shareYield(p: PoolPayout): number | null {
+  const y = p.shareYield, cost = p.realFeePercent;
+  if (typeof y !== "number" || !(y > 0 && y < 1)) return null;
+  return typeof cost === "number" && Number.isFinite(cost) ? y : null;
+}
+/** HeroMiners' Real Cost: its blocks against the share work it credits over up to 30 days (iOS RollingPoolCost.validated),
+ *  when the service sent a sane one that is the figure shown. Block luck stays in, as the 95% count interval. */
+export function rollingRealCost(p: PoolPayout) {
+  const o = p.realFeeEstimate, percent = p.realFeePercent, period = p.realFeePeriod;
+  const pair = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(finite) && v[0] <= v[1];
+  if (!o || p.solo || ppsScheme(p.scheme) || !finite(percent) || !period ||
+      o.id !== "https://pearl.herominers.com/" || o.pool !== "HeroMiners" || o.theoryBasis !== "accepted_share_rounds" ||
+      o.sourceVersion !== 2 || o.confidenceMethod !== "poisson_count_only" || o.confidence !== .95 || o.targetDays !== 30 ||
+      !Number.isSafeInteger(o.start) || o.start <= 0 || o.start % 86400 || !Number.isSafeInteger(o.end) || o.end % 86400 ||
+      o.end - o.start < 5 * 86400 || o.end - o.start > 30 * 86400 || period.start !== o.start || period.end !== o.end ||
+      !Number.isSafeInteger(o.poolBlocks) || o.poolBlocks < 100 || o.poolBlocks > 3000 ||
+      !Number.isSafeInteger(o.orphans) || o.orphans < 0 || o.orphans > o.poolBlocks || o.blocksSample !== o.poolBlocks - o.orphans ||
+      !finite(o.work) || o.work <= 0 || !finite(o.feePercent) || o.feePercent < 0 || o.feePercent > 100 ||
+      !finite(o.foundYield) || Math.abs(o.foundYield - o.poolBlocks / o.work) > 1e-9 ||
+      !finite(o.ratio) || Math.abs(o.ratio - (1 - o.feePercent / 100) * o.blocksSample / o.work) > 1e-9 ||
+      Math.abs(percent - (1 - o.ratio) * 100) > 1e-6 ||
+      !pair(o.foundYield95) || o.foundYield95[0] < 0 || o.foundYield95[0] > o.foundYield || o.foundYield95[1] < o.foundYield ||
+      !pair(o.cost95) || o.cost95[0] > percent || o.cost95[1] < percent) return null;
+  return { ...o, days: (o.end - o.start) / 86400, lossUnconfirmed: o.foundYield95[1] >= 1 };
+}
+/** Diagnostic block output only; never a Real Cost or a ranking input. */
+export function rollingOutputObservation(p: PoolPayout) {
+  const o = p.outputObservation;
+  const pair = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(finite) && v[0] <= v[1];
+  if (!o || o.id !== "https://pearl.herominers.com/" || o.pool !== "HeroMiners" ||
+      o.theoryBasis !== "accepted_share_rounds" || o.sourceVersion !== 2 || o.confidenceMethod !== "poisson_count_only" || o.luckExcluded !== false ||
+      o.confidence !== .95 || o.targetDays !== 30 || p.solo || ppsScheme(p.scheme) ||
+      !Number.isSafeInteger(o.start) || o.start <= 0 || o.start % 86400 || !Number.isSafeInteger(o.end) || o.end % 86400 ||
+      o.end - o.start < 5 * 86400 || o.end - o.start > 30 * 86400 || o.end * 1000 > 8.64e15 ||
+      !finite(o.measuredAt) || o.measuredAt < o.end || !Number.isSafeInteger(o.poolBlocks) || o.poolBlocks < 100 || o.poolBlocks > 3000 ||
+      !Number.isSafeInteger(o.orphans) || o.orphans < 0 || o.orphans > o.poolBlocks ||
+      o.blocksSample !== o.poolBlocks - o.orphans || !finite(o.work) || o.work <= 0 ||
+      !finite(o.foundYield) || Math.abs(o.foundYield - o.poolBlocks / o.work) > 1e-9 ||
+      !pair(o.foundYield95) || o.foundYield95[0] < 0 || o.foundYield95[0] > o.foundYield || o.foundYield95[1] < o.foundYield) return null;
+  return { ...o, days: (o.end - o.start) / 86400 };
+}
+/** The day a held-back Real Cost is published by, as a UTC date, when the service sent a real one and no figure. */
+/** Real Cost per fee tier (Peryn's PPS+): the tier shown first, then the other; null without both fields. */
+export function realFeeTiers(p: PoolPayout): { tier: "founding" | "standard"; percent: number | null; shown: boolean }[] | null {
+  const shown = p.realFeeTier, all = p.realFeeTiers;
+  if ((shown !== "founding" && shown !== "standard") || !all || typeof all !== "object" || p.realFeePercent == null) return null;
+  const value = (x: unknown) => typeof x === "number" && Number.isFinite(x) ? x : null;
+  return (shown === "founding" ? ["founding", "standard"] as const : ["standard", "founding"] as const)
+    .map((tier) => ({ tier, percent: value(all[tier]), shown: tier === shown }));
+}
+export function realFeePending(p: PoolPayout): Date | null {
+  return p.realFeePercent != null ? null : utcDay(p.realFeePending);
+}
+/** The blocks a PPLNS / PROP Real Cost needs the week's work to be worth before the service estimates it (its
+ *  MIN_PPLNS_BLOCKS in alerts/src/pplns.js): luck over N blocks swings about ±1/√N. */
+export const REAL_COST_MIN_BLOCKS = 100;
+/** Why a PPLNS / PROP Real Cost is "—" when the week is the reason: the blocks the pool's hashrate was worth over its
+ *  7-day luck window, for the ⓘ beside the dash. Null with a figure, a held-back date, or a week big enough. */
+export function realCostFewBlocks(pool: PoolOverview, p: PoolPayout): number | null {
+  const name = p.scheme?.trim().toUpperCase() || "";
+  if (pool.solo || p.solo || (name !== "PPLNS" && name !== "PROP") || finite(p.realFeePercent) || realFeePending(p)) return null;
+  const blocks = pool.luck?.["7d"]?.expectedBlocks;
+  return finite(blocks) && blocks > 0 && blocks < REAL_COST_MIN_BLOCKS ? blocks : null;
+}
+/** "1–2%", "1–2 %", "%1–2": one percent sign, where the language puts it; one figure when both ends match. */
+export function percentRange(min: number, max: number, lang: string): string {
+  const percent = new Intl.NumberFormat(lang, { style: "percent", maximumFractionDigits: 1 });
+  if (min === max) return percent.format(min / 100);
+  const plain = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 });
+  return percent.formatToParts(max / 100)[0]?.type === "percentSign"
+    ? `${percent.format(min / 100)}–${plain.format(max)}`
+    : `${plain.format(min)}–${percent.format(max / 100)}`;
+}
+export function payoutCost(p: PoolPayout, pool?: PoolOverview): number | null {
+  const pps = p.scheme?.trim() ? ppsScheme(p.scheme) : !!pool?.pps;
+  const cost = pps && finite(p.realFeePercent) ? p.realFeePercent : p.fee;
+  return finite(cost) ? cost : null;
+}
+/** 预估收益 a miner keeps, PRL per PH·day: the gross figure less `payoutCost`. Unknown when the
+ *  gross figure or the cost is missing, or for SOLO. */
+export function netPerPH(p: PoolPayout, pool?: PoolOverview): number | null {
+  const cost = payoutCost(p, pool);
+  return p.solo || pool?.solo || !finite(p.grossPerPH) || cost == null ? null : p.grossPerPH * (1 - cost / 100);
+}
+/** A row's best take-home yield across its payout schemes, for sorting. */
+export function netYield(pool: PoolOverview): number | null {
+  const values = poolPayouts(pool).map((p) => netPerPH(p, pool)).filter(finite);
+  return values.length ? Math.max(...values) : null;
+}
+/** The green mark: the highest take-home yield among trustworthy shared-reward payouts. PPS
+ *  (a network figure) and SOLO (a lottery) are never ranked. */
+export const rankedYield = (pool: PoolOverview, p: PoolPayout) =>
+  yieldTrustworthy(pool) && !pool.pps && !pool.solo && !p.solo && !ppsScheme(p.scheme) ? netPerPH(p, pool) : null;
+export function bestYield(rows: PoolOverview[]): number | null {
+  const values = rows.flatMap((r) => poolPayouts(r).map((p) => rankedYield(r, p))).filter(finite);
+  return values.length ? Math.max(...values) : null;
+}
+/** The share of a pool's blocks over the last week that were orphaned, in percent, or null when no
+ *  source has it: the pool's own block list or the orphans an explorer's node saw (`source`). */
+export function orphanRate(pool: PoolOverview) {
+  const o = pool.orphans;
+  if (!o || !Number.isSafeInteger(o.blocks) || o.blocks <= 0 || !Number.isSafeInteger(o.orphans) || o.orphans < 0 ||
+      o.orphans > o.blocks || !finite(o.start) || !finite(o.end) || o.end <= o.start) return null;
+  return { percent: o.orphans / o.blocks * 100, orphans: o.orphans, blocks: o.blocks, start: o.start, end: o.end,
+    source: o.source === "chain" ? "chain" as const : "pool" as const };
+}
+/** iOS RealFeeBreakdown: what a PPLNS / PROP Real Cost is made of, for the ⓘ beside it — the fee, the row's orphans over
+ *  the week and the rest (the work the pool loses, and measurement error). Each part is rounded to the 2 decimals the table
+ *  shows and the rest is what is left, so the parts add up to the figure. A PPS Real Cost is a settlement: no parts. */
+export function realCostParts(pool: PoolOverview, p: PoolPayout) {
+  const pps = p.scheme?.trim() ? ppsScheme(p.scheme) : !!pool.pps;
+  if (pps || pool.solo || p.solo || !finite(p.realFeePercent) || !finite(p.fee)) return null;
+  const round = (x: number) => { const r = Math.round(x * 100) / 100; return r === 0 ? 0 : r; };
+  const o = orphanRate(pool), total = round(p.realFeePercent), fee = round(p.fee);
+  const orphans = o ? { percent: round(o.percent), orphans: o.orphans, blocks: o.blocks } : null;
+  return { fee, orphans, other: round(total - fee - (orphans?.percent ?? 0)), total };
+}
+/** The payout families the scheme guide explains. PPS+ and FPPS are PPS variants. */
+export const schemeFamilies = ["PPS", "PROP", "PPLNS", "SOLO"] as const;
+export type SchemeFamily = typeof schemeFamilies[number];
+export function schemeFamily(scheme: string | null | undefined, solo = false): SchemeFamily | null {
+  const name = scheme?.trim().toUpperCase() || "";
+  if (solo || name === "SOLO") return "SOLO";
+  if (ppsScheme(name)) return "PPS";
+  return name === "PROP" || name === "PPLNS" ? name : null;
+}
+/** The pools on the page under each family, largest first, with the scheme each one names (a pool
+ *  with two contracts, like Pearl Fortune's PPS and PPLNS, is under both). Unnamed schemes are left out. */
+export function poolsByScheme(rows: PoolOverview[]) {
+  const out = Object.fromEntries(schemeFamilies.map((f) => [f, [] as { pool: PoolOverview; scheme: string }[]])) as
+    Record<SchemeFamily, { pool: PoolOverview; scheme: string }[]>;
+  const size = (r: PoolOverview) => finite(r.hashrate) ? r.hashrate : -1;
+  for (const pool of [...rows].sort((a, b) => size(b) - size(a) || a.name.localeCompare(b.name))) {
+    const seen = new Set<SchemeFamily>();
+    for (const p of poolPayouts(pool)) {
+      const family = schemeFamily(p.scheme, pool.solo || p.solo);
+      if (!family || seen.has(family)) continue;
+      seen.add(family);
+      out[family].push({ pool, scheme: p.scheme?.trim().toUpperCase() || family });
+    }
+  }
+  return out;
+}
+const OWN_API_POOLS = ["Kryptex", "HeroMiners", "Pearl Fortune"];
+/** True when this snapshot could not read the pool's own API, so the row shows other sources' figures. */
+export const ownApiMissing = (r: Pick<PoolOverview, "name" | "solo" | "feeFromPoolAPI">, partial: boolean | undefined) =>
+  !!partial && !r.solo && OWN_API_POOLS.includes(r.name) && !r.feeFromPoolAPI;
 export function sortPools(rows: PoolOverview[], key: PoolSortKey, ascending: boolean): PoolOverview[] {
   const value = (p: PoolOverview) => ({
-    hashrate: p.hashrate, earnings: p.solo ? null : p.earningsPerPH, blocks: p.blocksPerDay,
-    fee: p.fee, realFee: poolPayouts(p).find((c) => c.realFeePercent != null && Number.isFinite(c.realFeePercent))?.realFeePercent, lastBlock: p.lastBlockTime,
+    hashrate: p.hashrate, earnings: p.solo ? null : netYield(p), blocks: p.blocksPerDay,
+    fee: p.fee, realFee: poolPayouts(p).find((c) => c.realFeePercent != null && Number.isFinite(c.realFeePercent))?.realFeePercent,
+    orphans: orphanRate(p)?.percent, lastBlock: p.lastBlockTime,
   })[key as Exclude<PoolSortKey, "name">];
   return [...rows].sort((a, b) => {
     const tie = a.name.localeCompare(b.name);

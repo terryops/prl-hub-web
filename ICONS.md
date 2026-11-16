@@ -1,6 +1,6 @@
 # Web interface icons
 
-All 43 functional icon names use the original selected SVG drawings from
+All 52 functional icon names use the original selected SVG drawings from
 [Ionicons 8.1.0](https://www.npmjs.com/package/ionicons/v/8.1.0),
 [upstream repository](https://github.com/ionic-team/ionicons). The outlined family
 provides a consistent iOS-style appearance for the cross-platform website.
@@ -16,11 +16,11 @@ The MIT copyright and full license are retained in
 `public/licenses/ionicons.txt`, which is copied into every production build.
 Apple SF Symbols exports are not added to the Web bundle.
 
-The browser wallet (`extension/`) uses the same drawings: `extension/src/icon-symbols.tsx`
+The browser wallet (prl-hub-wallet) uses the same drawings: its `src/icon-symbols.tsx`
 spreads this table and adds four wallet-only shapes from the same package, `create`
 (`add-circle-outline.svg`), `restore` (`download-outline.svg`), `backup` (`key-outline.svg`)
 and `options` (`options-outline.svg`). The extension ships the license as
-`extension/public/licenses/ionicons.txt`; it contains no SF Symbols either.
+`public/licenses/ionicons.txt`; it contains no SF Symbols either.
 
 | Interface name | Ionicons source |
 | --- | --- |
@@ -32,13 +32,16 @@ and `options` (`options-outline.svg`). The extension ships the license as
 | `alerts` | `notifications-outline.svg` |
 | `app` | `phone-portrait-outline.svg` |
 | `mac` | `desktop-outline.svg` |
+| `android` | `logo-android.svg` |
 | `settings` | `settings-outline.svg` |
 | `appearance` | `color-palette-outline.svg` |
 | `refresh` | `refresh-outline.svg` |
 | `qr` | `qr-code-outline.svg` |
 | `send` | `paper-plane-outline.svg` |
+| `mail` | `mail-outline.svg` |
 | `history` | `time-outline.svg` |
 | `plus` | `add-outline.svg` |
+| `minus` | `remove-outline.svg` |
 | `more` | `ellipsis-horizontal.svg` |
 | `copy` | `copy-outline.svg` |
 | `external` | `open-outline.svg` |
@@ -55,6 +58,7 @@ and `options` (`options-outline.svg`). The extension ships the license as
 | `close` | `close-outline.svg` |
 | `warning` | `warning-outline.svg` |
 | `change` | `swap-vertical-outline.svg` |
+| `reach` | `chevron-expand-outline.svg` |
 | `right` | `arrow-forward-outline.svg` |
 | `lock` | `lock-closed-outline.svg` |
 | `account` | `person-circle-outline.svg` |
@@ -69,8 +73,24 @@ and `options` (`options-outline.svg`). The extension ships the license as
 | `globe` | `globe-outline.svg` |
 | `sparkles` | `sparkles-outline.svg` |
 | `cloudOff` | `cloud-offline-outline.svg` |
+| `cards` | `albums-outline.svg` |
+| `compact` | `list-outline.svg` |
+| `search` | `search-outline.svg` |
 
 To update the drawings, retrieve the pinned Ionicons npm package and select
 `dist/svg/<source>.svg` using the mapping above. Preserve all child shapes and
 attributes; React uses camelCase names for hyphenated SVG attributes. Retain
 the package LICENSE in the public license file.
+
+The Android app's 交易 tab adds seven shapes from the same package, kept out of `icon-symbols.tsx` (which the
+browser wallet shares): `trade`, the tab bar's, in `src/android-icons.tsx`, and the rest in `src/trade-icons.tsx`:
+
+| Interface name | Ionicons source |
+| --- | --- |
+| `trade` | `swap-horizontal-outline.svg` |
+| `expand` | `expand-outline.svg` |
+| `contract` | `contract-outline.svg` |
+| `help` | `help-circle-outline.svg` |
+| `info` | `information-circle-outline.svg` |
+| `deposit` | `arrow-down-circle-outline.svg` |
+| `withdraw` | `arrow-up-circle-outline.svg` |

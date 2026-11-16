@@ -1,0 +1,42 @@
+{
+  "scheme": "PROP",
+  "fee": 0,
+  "grossPerPH": 12,
+  "solo": false,
+  "estimated": true,
+  "realFeePercent": 4.327139899798215,
+  "realFeeEstimate": {
+    "id": "https://pearl.herominers.com/",
+    "pool": "HeroMiners",
+    "scheme": "PPLNS",
+    "theoryBasis": "accepted_share_rounds",
+    "start": 1791849600,
+    "end": 1794182400,
+    "measuredAt": 1794200827.620391,
+    "estimated": true,
+    "targetDays": 30,
+    "blocksSample": 652,
+    "poolBlocks": 656,
+    "orphans": 4,
+    "work": 681.4889816371497,
+    "feePercent": 0,
+    "foundYield": 0.962598101621662,
+    "foundYield95": [
+      0.8903360227046202,
+      1.0391630391138142
+    ],
+    "ratio": 0.9567286010020178,
+    "cost95": [
+      -3.30687577922415,
+      11.53085272501575
+    ],
+    "confidence": 0.95,
+    "confidenceMethod": "poisson_count_only",
+    "sourceVersion": 2
+  },
+  "realFeeEstimated": true,
+  "realFeePeriod": {
+    "start": 1791849600,
+    "end": 1794182400
+  }
+}

@@ -1,0 +1,24 @@
+/* The website's read-only 交易 page (TradeWeb.tsx): trade.css's cards on the website's chrome. android.css isn't
+   loaded on the website, so the period picker's segmented control is drawn here after style.css's .segments. */
+.trade-web { max-width: 1180px; }
+.trade-web .trade-exchange-picker, .trade-web-exchanges { justify-self: start; margin: 0; }
+.trade-web-exchanges button { min-width: 96px; min-height: 32px; font-size: var(--font-13); }
+.trade-web .android-segments { display: grid; gap: 2px; padding: 3px; border-radius: 10px; background: var(--track); }
+.trade-web .android-segments button { min-height: 30px; padding: 4px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: var(--font-13); font-weight: 600; }
+.trade-web .android-segments button:hover { background: transparent; color: var(--text); }
+.trade-web .android-segments button[aria-selected="true"] { background: var(--seg-selected); color: var(--text); box-shadow: var(--seg-shadow); }
+.trade-web-order .app-download-button { width: 100%; }
+.trade-web-chevron { width: 16px; height: 16px; color: var(--muted); }
+.trade-web .trade-promo { margin: 0; border: 1px solid var(--line); }
+/* The 24h volume card sits in the 360 px side column on wide screens: style.css lays its donut out by viewport
+   width, so stack it here by the column's own width (style.css's phone layout). */
+.trade-web .trade-side-col { container-type: inline-size; }
+@container (max-width: 480px) {
+  .trade-web .volume-donut-layout { grid-template-columns: 1fr; gap: 12px; }
+  .trade-web .volume-donut-layout svg { width: 180px; margin: auto; }
+  .trade-web .donut-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .trade-web .donut-legend > div { grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 6px; }
+  .trade-web .donut-legend > div > span:nth-child(2) { grid-column: 2 / -1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trade-web .donut-legend strong { grid-column: 2; grid-row: 2; }
+  .trade-web .donut-legend small { grid-column: 3; grid-row: 2; margin: 0; white-space: nowrap; }
+}

@@ -1,12 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { configOf, defaults, normalizeConfig, mergeConfig, orderedMonitors, deepLink } from "../src/store.ts";
-import { duplicateMonitor, enabledMonitors, alertMonitors, cleanAddress, moveIds, ownAddresses, hashrate24h, dailyAverage, nearestWindow } from "../src/monitors.ts";
+import { duplicateMonitor, enabledMonitors, alertMonitors, cleanAddress, moveIds, ownAddresses, hashrate24h, dailyAverage, nearestWindow, ALERT_AFTER, ALERT_AGAIN } from "../src/monitors.ts";
 import type { Stats } from "../src/types.ts";
 import { applyingEdit, reconcileRule, relativeTime } from "../src/alertRules.ts";
 import { currencies, dual, secondaryCode } from "../src/currency.ts";
-import { measuredHashPoints, hashChange } from "../src/market.ts";
-import { diffChange, difficultyPoints, poolShares } from "../src/market.ts";
+import { diffChange, difficultyAgo, difficultyPoints, poolShares, type NetworkPoint } from "../src/market.ts";
 import type { PoolOverview } from "../src/types.ts";
 const addr = "prl1" + "a".repeat(38);
 const monitor = (id: string) => ({ id, updated: 1, addr, pool: "AlphaPool", label: id, alert: true, after: 600 });
@@ -29,6 +28,18 @@ test("14.0: opaque settings converge at equal timestamps and malformed new order
   assert.deepEqual(mergeConfig(a, b), mergeConfig(b, a));
   assert.throws(() => normalizeConfig({ ...base, monitorOrder: { ids: "bad" as unknown as string[], updated: 1 } }), /invalid_config/);
 });
+test("掉线提醒: 10 min to 2 h, and the reminder after it, as the app and the worker offer them", () => {
+  assert.deepEqual(ALERT_AFTER, [600, 900, 1800, 3600, 5400, 7200]);
+  assert.deepEqual(ALERT_AGAIN, [1800, 3600, 7200, 14400]);
+  const base = configOf(defaults());
+  const c = normalizeConfig({ ...base, monitors: [{ ...monitor("a"), after: 7200, again: 3600 }, { ...monitor("b"), after: 5400 }, { ...monitor("c"), again: 0 }] });
+  assert.deepEqual(c.monitors.map((m) => [m.after, m.again]), [[7200, 3600], [5400, undefined], [600, 0]]);
+  // Synced with the monitor, so the app sees it (Sources/App/WebLinkMerge.swift `again`).
+  assert.equal(configOf({ ...defaults(), monitors: c.monitors }).monitors[0].again, 3600);
+  for (const bad of [{ after: 10800 }, { again: 999 }, { again: "3600" }]) {
+    assert.throws(() => normalizeConfig({ ...base, monitors: [{ ...monitor("a"), ...bad } as never] }), /invalid_config/, JSON.stringify(bad));
+  }
+});
 test("A2: pause, duplicates, smoothest hashrate and resumed-address daily average match Swift", () => {
   assert.equal(enabledMonitors([{ ...monitor("a"), paused: true }]).length, 0);
   assert.equal(duplicateMonitor([monitor("a")], "AlphaPool", addr), true);
@@ -38,6 +49,19 @@ test("A2: pause, duplicates, smoothest hashrate and resumed-address daily averag
   assert.equal(hashrate24h(s), 6); assert.equal(dailyAverage(2, 4), 2); assert.equal(dailyAverage(0, 14), 2); assert.equal(dailyAverage(3, 0), 3);
   assert.equal(nearestWindow("day", ["live", "hour"]), "hour");
   assert.equal(nearestWindow("hour", ["m30", "h3"]), "m30");
+});
+test("Jetski: its monitors are valid config entries, and its 6-hour window sits between 3h and 24h", () => {
+  const c = normalizeConfig({ ...configOf(defaults()), monitors: [{ ...monitor("j"), pool: "Jetski" }] });
+  assert.equal(c.monitors[0].pool, "Jetski");
+  assert.equal(nearestWindow("day", ["live", "hour", "h6"]), "h6");
+  assert.equal(nearestWindow("h3", ["hour", "h6"]), "hour");
+  assert.equal(nearestWindow("h6", ["live", "hour", "h6"]), "h6");
+});
+test("Peryn: its monitors are valid config entries, and its hour stands in for the live rate it doesn't publish", () => {
+  const c = normalizeConfig({ ...configOf(defaults()), monitors: [{ ...monitor("p"), pool: "Peryn" }] });
+  assert.equal(c.monitors[0].pool, "Peryn");
+  assert.equal(nearestWindow("live", ["hour", "day"]), "hour");
+  assert.equal(nearestWindow("h6", ["hour", "day"]), "day");
 });
 test("A2: paused/deleted watches never register alerts; worker sums, shared addresses and reorder bounds", () => {
   const items = [monitor("A"), { ...monitor("B"), pool: "Lucky Pool" }, { ...monitor("C"), paused: true }, { ...monitor("D"), deleted: true }, { ...monitor("F"), pool: "F2Pool", addr: "a".repeat(32) }];
@@ -106,18 +130,11 @@ test("A4: all seventeen currencies retain native symbols/decimals; palette stays
   const c = configOf({ ...defaults(), theme: "light", secondary: "HKD", palette: "mono" });
   assert.equal(c.palette, undefined); assert.equal(c.theme, "light");
 });
-test("A5: hashrate movement is measured independently of difficulty and omits distant samples", () => {
-  const n = { ts: 1000000, hashrate: 10, difficulty: 200 } as Network;
-  const points = [7, 3, 1].map((d) => ({ height: 100 - d, ts: n.ts - d * 86400, difficulty: 100, hashrate: 20, blockTime: 100 }));
-  const measured = measuredHashPoints(n, points);
-  assert.equal(hashChange(measured, 7), -50);
-  assert.equal(hashChange(measured, 1), -50);
-  assert.equal(hashChange(measuredHashPoints(n, points.filter((p) => p.height !== 93)), 7), null);
-});
 test("A5: difficulty/output change directions and native donut thresholds", () => {
   assert.equal(diffChange(20, 10), 100); assert.equal(diffChange(20, 10, true), -50);
-  const n = { ts: 1000000, difficulty: 20, difficulty7d: 10, difficulty3d: null, difficulty24h: 15, prlPerTHDay: .02 } as Network;
-  assert.equal(difficultyPoints(n, true)[0][1], 40);
+  // Means only: each window's start is 2 × mean − now (7d: 2×15−20 = 10); 3d has none.
+  const n = { ts: 1000000, difficulty: 20, difficulty7d: 15, difficulty3d: null, difficulty24h: 18, prlPerTHDay: .02 } as Network;
+  assert.deepEqual(difficultyPoints(n, true), [[1000000 - 7 * 86400, 40], [1000000 - 86400, 25], [1000000, 20]]);
   const rows = [80, .5, .5].map((hashrate, i) => ({ id: String(i), name: String(i), hashrate })) as PoolOverview[];
   const { total, slices } = poolShares(rows, 100);
   assert.equal(total, 100); assert.deepEqual(slices.map((s) => s.id), ["0", "_tail", "_other"]);
@@ -150,4 +167,28 @@ test("complete fleet preferences survive account config serialization, merge and
   assert.equal(normalizeConfig(old).fleetSettings?.sortKey, undefined);
   assert.throws(() => normalizeConfig({ ...config, fleetSettings: { ...state.fleetSettings, sortKey: "invalid" as never } }), /invalid_config/);
   assert.throws(() => normalizeConfig({ ...config, fleetSettings: { ...state.fleetSettings, selectedGPU: "x".repeat(65) } }), /invalid_config/);
+});
+
+test("A5: difficulty change is against the difficulty that long ago, not the window mean", () => {
+  const day = 86400, now = 10 * day;
+  // Climbing 1 per day from 10 (7 days back) to 17 now: the 7-day mean is 13.5, the 24h mean 16.5.
+  const points: NetworkPoint[] = Array.from({ length: 8 }, (_, i) => ({ height: i, ts: now - (7 - i) * day, difficulty: 10 + i, hashrate: null, blockTime: null }));
+  const n = { ts: now, difficulty: 17, difficulty7d: 13.5, difficulty3d: 15.5, difficulty24h: 16.5, prlPerTHDay: .02 } as Network;
+  assert.equal(difficultyAgo(n, "7d", points), 10);
+  assert.equal(difficultyAgo(n, "24h", points), 16);
+  assert.equal(Math.round(diffChange(n.difficulty, difficultyAgo(n, "7d", points))! * 1e6) / 1e6, 70);
+  // Without history the steady-trend start matches on a straight line: 2 × 13.5 − 17 = 10.
+  assert.equal(difficultyAgo(n, "7d"), 10); assert.equal(difficultyAgo(n, "3d"), 14);
+  // A sample further than a twentieth of the window from the target is not used.
+  assert.equal(difficultyAgo(n, "7d", points.slice(1)), 10);
+  assert.equal(difficultyAgo(n, "7d", [{ ...points[0], difficulty: 9 }]), 9);
+  assert.equal(difficultyAgo({ ...n, difficulty7d: 8 }, "7d"), null);
+  // The chart draws the history's samples, then the overview's current value.
+  const chart = difficultyPoints(n, false, points);
+  assert.equal(chart.length, 8); assert.deepEqual(chart[0], [now - 7 * day, 10]); assert.deepEqual(chart.at(-1), [now, 17]);
+  // A picked span keeps its own samples (all of them for "all"); without history, only the windows that fit it.
+  assert.deepEqual(difficultyPoints(n, false, points, day), [[now - day, 16], [now, 17]]);
+  assert.equal(difficultyPoints(n, false, points, null).length, 8);
+  assert.deepEqual(difficultyPoints(n, false, undefined, day), [[now - day, 16], [now, 17]]);
+  assert.equal(difficultyPoints(n, false, undefined, null).length, 4);
 });

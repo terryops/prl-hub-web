@@ -29,8 +29,15 @@ const { Money, PRLAmount } = await server.ssrLoadModule("/src/Money.tsx");
 const { WorkerList, visibleWorkers } = await server.ssrLoadModule("/src/Workers.tsx");
 const { chartRange, nearestPoint } = await server.ssrLoadModule("/src/chart.ts");
 const { NetworkSummary, PoolComparison } = await server.ssrLoadModule("/src/PoolOverview.tsx");
+const { default: PoolCostDetail } = await server.ssrLoadModule("/src/PoolCostDetail.tsx");
 const { WatchWallet } = await server.ssrLoadModule("/src/WatchWallet.tsx");
 const { PaymentAddress, PaymentHead } = await server.ssrLoadModule("/src/Payment.tsx");
+// FleetCalculator lays the GPU detail beside the table when the window is wide (iOS regular width).
+const renderWide = (element: React.ReactElement) => {
+  const had = Object.hasOwn(globalThis, "window"), old = (globalThis as { window?: unknown }).window;
+  (globalThis as { window?: unknown }).window = { innerWidth: 1400 };
+  try { return renderToStaticMarkup(element); } finally { if (had) (globalThis as { window?: unknown }).window = old; else delete (globalThis as { window?: unknown }).window; }
+};
 test("online-only worker filtering omits offline rows and handles an empty result", () => {
   const rows = [{ name: "offline", online: false }, { name: "online", online: true }];
   assert.deepEqual(visibleWorkers(rows, "en", false, true).map((w: { name: string }) => w.name), ["online"]);
@@ -42,15 +49,17 @@ const ts = 1791590400;
 const price = { usd: 1.3883, ts, source: "fixture", change5m: 1, change1h: 2, change24h: 3 };
 const points = [[ts - 86400, 1.36], [ts, 1.3883]];
 
-test("market: the initial view expands PRL price, keeps short-term changes, source and localized update/chart dates", () => {
+test("market: the initial view expands PRL price on SafeTrade candles, keeps short-term changes and localized chart dates", () => {
   for (const lang of Object.keys(dictionaries)) {
     const t = (key: string) => dictionaries[lang][key];
     const html = renderToStaticMarkup(React.createElement(MarketData, { price, history: { source: "fixture", points }, lang, t, refresh: 0, money: (v: number) => usd(v) }));
     assert.equal((html.match(/aria-expanded="true"/g) || []).length, 1);
     assert.match(html, /metric-selected/);
-    assert.ok(html.includes(`<h2>${t("prlPrice")}</h2>`));
-    assert.ok(html.includes(`${t("source")} · fixture`));
-    assert.ok(html.includes(new Date(ts * 1000).toLocaleString(lang)));
+    // The PRL Price card's title is its view switch, K-line first and selected; candles load in the browser.
+    assert.ok(html.includes(`<h2 class="chart-views" aria-label="${t("prlPrice")}"><button class="selected" aria-pressed="true">${t("kline")}</button><button class="" aria-pressed="false">${t("priceView")}</button></h2>`), lang);
+    for (const period of ["5m", "15m", "1h", "4h", "1d"]) assert.ok(html.includes(`>${period}</button>`), period);
+    assert.ok(html.includes(`${t("source")} · SafeTrade · PEARL/USDT`));
+    assert.ok(!html.includes("chart-plot") && html.includes("skeleton-chart"));
     for (const delta of ["+1.00%", "+2.00%", "+3.00%"]) assert.ok(html.includes(delta));
     const chart = renderToStaticMarkup(React.createElement(LineChart, { points, lang, label: "History", empty: "Empty" }));
     for (const [time] of points) {
@@ -62,13 +71,14 @@ test("market: the initial view expands PRL price, keeps short-term changes, sour
 
 test("calculator: default and saved hourly rents display at most four decimals without mutating stored daily rent", () => {
   const state = { ...defaults(), lang: "zh-Hans", devices: [{ id: "rent", updated: 1, name: "Rental", gpu: "RTX 5070", count: 1, rented: true, hoursPerDay: 24, rentDaily: 38 }] };
-  const html = renderToStaticMarkup(React.createElement(FleetCalculator, { state, onState: () => assert.fail("render must not write configuration"), incomes: {}, t: (key: string) => dictionaries["zh-Hans"][key] }));
-  assert.equal((html.match(/value="1\.5833"/g) || []).length, 2);
+  state.fleetSettings = { ...state.fleetSettings, selectedGPU: "RTX 5070" };
+  const html = renderWide(React.createElement(FleetCalculator, { state, onState: () => assert.fail("render must not write configuration"), incomes: {}, t: (key: string) => dictionaries["zh-Hans"][key] }));
+  // The selected GPU's rent field; the device's own rent is in its editor sheet (browser QA).
+  assert.equal((html.match(/value="1\.5833"/g) || []).length, 1);
   assert.ok(!html.includes("1.583333333"));
   assert.equal(state.devices[0].rentDaily, 38);
 });
-
-test("calculator: device previews cap four live cards, retain order and localize totals without changing configuration", () => {
+test("calculator: 我的设备 lists every live device as one row, in order, with a localized count and no configuration change", () => {
   for (const lang of Object.keys(dictionaries)) for (const count of [0, 3, 4, 5, 115]) {
     const devices = Array.from({ length: count }, (_, i) => ({ id: `rig-${i + 1}`, updated: 1, name: `Rig-${i + 1}`, gpu: "RTX 4090", count: 1, rented: false, hoursPerDay: 24 }));
     const tombstone = { id: "deleted", updated: 2, name: "Deleted rig", gpu: "RTX 4090", count: 1, rented: false, hoursPerDay: 24, deleted: true };
@@ -76,25 +86,46 @@ test("calculator: device previews cap four live cards, retain order and localize
     const state = { ...defaults(), lang, devices }, original = JSON.stringify(state), t = (key: string) => dictionaries[lang][key];
     const html = renderToStaticMarkup(React.createElement(FleetCalculator, { state, onState: () => assert.fail("preview must not write configuration"), incomes: {}, t }));
     const section = html.slice(html.indexOf('id="fleet-devices"'), html.indexOf('id="fleet-catalog"'));
-    assert.equal((section.match(/class="card device-card"/g) || []).length, Math.min(count, 4), `${lang}/${count}`);
-    assert.ok(!section.includes('value="Deleted rig"'));
-    for (let i = 1; i <= Math.min(count, 4); i++) assert.ok(section.includes(`value="Rig-${i}"`));
-    assert.ok(!section.includes('value="Rig-5"'));
-    assert.equal(section.includes('class="device-expand"'), count > 4);
-    if (count > 4) {
-      const total = count.toLocaleString(lang);
-      assert.ok(section.includes(`<h2>${t("myDevices")} · ${total}</h2>`));
-      assert.ok(section.includes(`aria-controls="fleet-device-list" aria-expanded="false">${t("showAll")} (${total})</button>`));
+    assert.equal((section.match(/class="device-row"/g) || []).length, count, `${lang}/${count}`);
+    assert.ok(!section.includes("Deleted rig"));
+    const names = [...section.matchAll(/<strong>(Rig-\d+)<\/strong>/g)].map((m) => m[1]);
+    assert.deepEqual(names, devices.filter((d) => !d.deleted).map((d) => d.name));
+    // Read first, edit in the sheet: the list has no inputs, steppers or delete buttons.
+    assert.ok(!/<input|<select|class="danger/.test(section));
+    if (count) {
+      assert.ok(section.includes(`<span>${t("fleetUnits").replace("%@", count.toLocaleString(lang))}</span>`));
+      assert.ok(section.includes(`aria-label="${t("addDevice")}"`));
     } else {
-      assert.ok(section.includes(`<h2>${t("myDevices")}</h2>`));
-      if (!count) assert.ok(section.includes(t("noDevices")));
+      assert.ok(section.includes('class="card fleet-devices-empty"'));
+      assert.ok(section.includes(t("poolSync")) && section.includes(t("addDevice")));
+      const escape = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+      assert.ok(section.includes(escape(t("fleetSyncNeedsMonitor").replace("{page}", t("workers")))), lang);
     }
     assert.ok(!/\sstyle=|<style(?:\s|>)/.test(html));
     assert.equal(JSON.stringify(state), original);
   }
 });
 
-test("calculator: hidden devices still contribute to overview hashrate, output, net profit and cabinet power", () => {
+test("calculator: 我的设备 rows say what a device runs on, its hours and daily net; synced rigs without a chip say so", () => {
+  const t = (key: string) => dictionaries.en[key];
+  const state = { ...defaults(), lang: "en", secondary: "USD" };
+  state.calculator = { ...state.calculator, price: 2, yield: .01, fee: 0, electricity: .1 };
+  state.devices = [
+    { id: "own", updated: 1, name: "Box", gpu: "RTX 4090", count: 2, rented: false, hoursPerDay: 12 },
+    { id: "rent", updated: 1, name: "Cloud", gpu: "RTX 5090", count: 1, rented: true, hoursPerDay: 24 },
+    { id: "sync", updated: 1, name: "AlphaPool·w1", gpu: "", customPearl: 50, count: 1, rented: false, hoursPerDay: 24 },
+  ];
+  const html = renderToStaticMarkup(React.createElement(FleetCalculator, { state, onState: () => {}, incomes: {}, t }));
+  const section = html.slice(html.indexOf('id="fleet-devices"'), html.indexOf('id="fleet-catalog"'));
+  assert.ok(section.includes("RTX 4090 × 2 · 12h"));
+  assert.ok(section.includes(`<strong>Cloud</strong><span class="badge">${t("rented")}</span>`));
+  assert.ok(section.includes(`50.00 TH/s · <span class="warn-text">${t("fleetNoChip")}</span>`));
+  assert.equal((section.match(new RegExp(t("fleetPerDay").replace("/", "\\/"), "g")) || []).length >= 4, true);
+  // The summary card: daily net first, then hashrate, cards and owned power.
+  const summary = section.slice(section.indexOf('class="card fleet-sum"'), section.indexOf('class="fleet-list-head"'));
+  assert.ok(summary.includes(t("netDay")) && summary.includes(t("hashrate")) && summary.includes(t("fleetCardCount").replace("%@", "4")) && summary.includes(t("fleetOwnedPower")));
+});
+test("calculator: every device contributes to overview hashrate, output, net profit and cabinet power", () => {
   const state = { ...defaults(), lang: "en", secondary: "USD" };
   state.calculator = { ...state.calculator, price: 2, yield: .01, fee: 0, electricity: .1 };
   state.fleetSettings = { ...state.fleetSettings, syncWPerTH: 1.8, powerBudgetW: 500, powerBudgetEnabled: true, selfDilution: false };
@@ -106,11 +137,11 @@ test("calculator: hidden devices still contribute to overview hashrate, output, 
   assert.ok(overview.includes('title="1.06000000 PRL"'));
   assert.ok(overview.includes('class="money-primary">$1.66</span>'));
   assert.ok(html.includes("191 / 500 W"));
-  assert.equal((html.match(/class="card device-card"/g) || []).length, 4);
-  assert.ok(!html.includes('value="Rig-5"'));
-  assert.ok(!html.includes('value="Rig-7"'));
+  assert.equal((html.match(/class="device-row"/g) || []).length, 7);
+  // The explanations sit in ⓘ, not under the figures.
+  assert.ok(!overview.includes(`<p class="help">${dictionaries.en.fleetEstimateNote}</p>`) && overview.includes(`aria-label="${dictionaries.en.fleetEstimate}"`));
+  assert.ok(!overview.includes(`<p class="help">${dictionaries.en.actualNetNote}</p>`));
 });
-
 test("calculator: rack card, budget input and warnings require opt-in in every language", () => {
   for (const lang of Object.keys(dictionaries)) {
     const state = { ...defaults(), lang, secondary: "USD" };
@@ -166,6 +197,7 @@ test("polish: worker previews include every outage, naturally sort names and nev
 test("polish: chart padding follows each series range, flat/empty ranges are safe and inspection picks nearest point", () => {
   assert.deepEqual(chartRange([[0, 100], [1, 200]]), [92, 208]);
   const [min, max] = chartRange([[0, 100], [1, 100]]); assert.ok(min < 100 && max > 100);
+  assert.deepEqual(chartRange([[0, 1], [1, 100]]), [0, 107.92]); assert.deepEqual(chartRange([[0, -1], [1, 1]]), [-1.16, 1.16]);
   assert.deepEqual(chartRange([]), [0, 1]); assert.equal(nearestPoint([[0, 1], [10, 2], [20, 3]], 16), 2);
   const chart = renderToStaticMarkup(React.createElement(LineChart, { points, second: [[ts - 86400, 10], [ts, 12]], lang: "en", label: "Hash", empty: "Empty" }));
   assert.equal((chart.match(/<circle/g) || []).length, 0); assert.ok(chart.includes('aria-label="Hash"')); assert.ok(chart.includes('tabindex="0"'));
@@ -185,34 +217,82 @@ test("polish: six languages share network formats, mobile pool details and compa
     assert.ok(!/\sstyle=|<style(?:\s|>)/.test(pools));
     const state = { ...defaults(), lang };
     const fleet = renderToStaticMarkup(React.createElement(FleetCalculator, { state, onState: () => {}, incomes: {}, t }));
-    assert.equal((fleet.match(/class="gpu-mobile-row/g) || []).length, 8); assert.ok(fleet.includes(t("showAll"))); assert.match(fleet, /id="fleet-tab-single" role="tab" aria-selected="true"/);
+    // 显卡对比: one table, its column titles once, every GPU a row (iOS 6a1e720), no preview cap.
+    const table = fleet.slice(fleet.indexOf('class="gpu-compare"'), fleet.indexOf("</table>"));
+    assert.equal((table.match(/<thead>/g) || []).length, 1); assert.equal((table.match(/class="gpu-pick"/g) || []).length, 27);
+    assert.ok(!fleet.includes("gpu-mobile")); assert.match(fleet, /id="fleet-tab-single" role="tab" aria-selected="true"/);
   }
 });
 
 test("polish: wallet first render uses skeletons instead of missing balance or an empty transaction heading", () => {
-  const html = renderToStaticMarkup(React.createElement(WatchWallet, { wallets: [{ id: "w", label: "Watch", addr: "prl1" + "a".repeat(38) }], lang: "en", refresh: 0, t: (k: string) => dictionaries.en[k], onAdd: () => {}, onRename: () => {}, onRemove: () => {} }));
-  assert.match(html, /skeleton-balance/); assert.ok(!html.includes("Recent transactions")); assert.ok(!html.includes("— PRL")); assert.match(html, /address-short/);
+  const addr = "prl1" + "a".repeat(38);
+  const html = renderToStaticMarkup(React.createElement(WatchWallet, { wallets: [{ id: "w", label: "Watch", addr }], lang: "en", refresh: 0, t: (k: string) => dictionaries.en[k], onAdd: () => {}, onRename: () => {}, onRemove: () => {} }));
+  // The transactions card keeps its place while loading: its heading always has a skeleton under it.
+  assert.match(html, /skeleton-balance/); assert.match(html, /<h2>Recent transactions<\/h2><div class="skeleton skeleton-card"/); assert.ok(!html.includes("— PRL"));
+  // No address card on the wallet home (the extension dropped it too): Receive shows and copies the address.
+  assert.ok(!html.includes("wallet-address-card")); assert.ok(html.includes(`/address/${addr}"`)); assert.match(html, /aria-label="Select wallet: Watch"/);
+});
+test("wallet shows the selected watch address, falling back to the first", () => {
+  const wallets = [{ id: "a", label: "First", addr: "prl1" + "a".repeat(38) }, { id: "b", label: "Second", addr: "prl1" + "b".repeat(38) }];
+  const render = (selected?: string) => renderToStaticMarkup(React.createElement(WatchWallet, { wallets, selected, lang: "en", refresh: 0, t: (k: string) => dictionaries.en[k], onAdd: () => {}, onRename: () => {}, onRemove: () => {} }));
+  assert.match(render("b"), /aria-label="Select wallet: Second"/); assert.ok(render("b").includes(`/address/${wallets[1].addr}"`));
+  for (const html of [render(), render("gone")]) { assert.match(html, /aria-label="Select wallet: First"/); assert.ok(html.includes(`/address/${wallets[0].addr}"`)); }
+  assert.equal((render("b").match(/aria-current="true"/g) || []).length, 1);
 });
 
-test("pool comparison renders PPLNS real cost estimates and separate Fortune schemes on desktop and phones", () => {
+test("pool comparison shows one icon-only link per audited pool and none without data on desktop and phones", () => {
   for (const lang of Object.keys(dictionaries)) {
     const t = (key: string) => dictionaries[lang][key];
-    const data = { ts, rows: [{ id: "fortune", name: "Pearl Fortune", hashrate: 1e15,
+    const data = { ts, rows: [{ id: "https://pearlfortune.org/", name: "Pearl Fortune", hashrate: 1e15,
       payouts: [{ scheme: "PPS", fee: 5, grossPerPH: 100, realFeePercent: 5, realFeeEstimated: true },
         { scheme: "PPLNS", fee: 2, grossPerPH: 80, realFeePercent: 21.6, realFeeEstimated: true }] },
-      { id: "lucky", name: "Lucky", hashrate: 1e14,
-        payouts: [{ scheme: "PPLNS", fee: 0, grossPerPH: 120, realFeePercent: -20, realFeeEstimated: true }] }] };
+      { id: "https://pearl.luckypool.io/", name: "Lucky", hashrate: 1e14,
+        payouts: [{ scheme: "PROP", fee: 0, grossPerPH: 120, realFeePercent: -20, realFeeEstimated: true }] },
+      { id: "https://unknown.example/", name: "Unknown", payouts: [{ scheme: "PPLNS" }] },
+      { id: "https://peryn.ai/", name: "Peryn", payouts: [{ scheme: "PPLNS" }] },
+      { id: "https://solo.example/", name: "Solo", solo: true, payouts: [{ scheme: "SOLO", solo: true }] }] };
     const html = renderToStaticMarkup(React.createElement(PoolComparison, { data, t, lang, onUse: () => {} }));
     const cost = "≈" + (21.6).toLocaleString(lang, { maximumFractionDigits: 2 }) + "%";
     const negative = "≈−" + (20).toLocaleString(lang) + "%";
     for (const view of [html.slice(html.indexOf("<tbody"), html.indexOf("</tbody>")), html.slice(html.indexOf('class="pool-mobile-list"'))]) {
       assert.ok(view.includes(cost), lang);
       assert.ok(view.includes(negative), lang);
+      const links = [...view.matchAll(/<a class="pool-cost-detail-link"[^>]*>(.*?)<\/a>/g)];
+      assert.equal(links.length, 2, lang);
+      for (const link of links) {
+        assert.match(link[0], /aria-label=/);
+        assert.equal(link[1].replace(/<[^>]*>/g, ""), "", lang);
+      }
+      assert.equal((view.match(/href="#pools\/real-cost\/pearl-fortune\?/g) || []).length, 1, lang);
+      assert.ok(!view.includes('href="#pools/real-cost/peryn'), lang);
+      assert.ok(!view.includes('href="#pools/real-cost/unknown'), lang);
       assert.match(view, /<small>PPS<\/small>/);
       assert.match(view, /<small>PPLNS<\/small>/);
     }
     assert.ok(html.includes(t("poolContractNotes")), lang);
   }
+});
+
+test("pool comparison shows take-home yield: PPS pools quoted alike differ by Real Cost, PPLNS loses its fee", () => {
+  const t = (key: string) => dictionaries.en[key];
+  const pps = (id: string, scheme: string, fee: number, realFeePercent: number | null) => ({ id, name: id, hashrate: 1e15, pps: true, trustworthy: false,
+    payouts: [{ scheme, fee, grossPerPH: 100, realFeePercent, realFeeEstimated: true, estimated: true, solo: false,
+      realFeeStatus: "verified", realFeeBasis: "miner_reported_work", realFeeLuckExcluded: true, realFeePeriod: { start: ts - 86400, end: ts } }] });
+  const shared = (id: string, fee: number, grossPerPH: number) => ({ id, name: id, hashrate: 1e14, pps: false, trustworthy: true,
+    payouts: [{ scheme: "PPLNS", fee, grossPerPH, realFeePercent: null, estimated: false, solo: false }] });
+  const data = { ts, rows: [pps("Kryptex", "PPS+", 3, 6), pps("F2Pool", "PPS", 1, 3.5), pps("Tariff", "PPS", 4, null),
+    shared("Hero", 0, 96.3), shared("Pearl", 1, 97)] };
+  const html = renderToStaticMarkup(React.createElement(PoolComparison, { data, t, lang: "en", onUse: () => {} }));
+  const table = html.slice(html.indexOf("<tbody"), html.indexOf("</tbody>"));
+  for (const value of ["≈94 PRL", "≈96.5 PRL", "≈96 PRL", ">96.3 PRL<", ">96 PRL<"]) assert.ok(table.includes(value), value);
+  assert.ok(!table.includes(">≈100 PRL<"));
+  // The hover title shows how the figure was reached.
+  assert.ok(table.includes('title="100 × (1 − 6%) = 94 PRL/PH·day"'));
+  assert.ok(table.includes('title="97 × (1 − 1%) = 96.03 PRL/PH·day"'));
+  // The green mark goes to the best measured take-home yield: Hero's 0% fee beats Pearl's higher gross.
+  assert.equal((table.match(/pool-top-yield/g) || []).length, 1);
+  assert.match(table, /class=" pool-top-yield" title="96.3 × \(1 − 0%\) = 96.3 PRL\/PH·day">96.3 PRL</);
+  for (const k of ["poolYieldBasis", "comparisonExplanation", "ppsExplanation"]) assert.ok(html.includes(t(k).replace(/'/g, "&#x27;")), k);
 });
 
 test("review: a single-axis chart uses no right slot; only a network companion can reserve shared bounds", () => {
@@ -248,13 +328,59 @@ test("calculator: the catalog displays sort and selection received from the acco
   for (const [sortKey, selectedGPU] of [["efficiency", "RTX 5090"], ["rentNet", "RTX 4090"]]) {
     const state = defaults();
     state.fleetSettings = { ...state.fleetSettings, sortKey, selectedGPU };
-    const html = renderToStaticMarkup(React.createElement(FleetCalculator, {
+    const html = renderWide(React.createElement(FleetCalculator, {
       state, incomes: {}, t: (key: string) => dictionaries.en[key],
       onState: () => assert.fail("receiving account preferences must not edit them"),
     }));
     const catalog = html.slice(html.indexOf('id="fleet-catalog"'), html.indexOf('id="fleet-single"'));
     assert.ok(catalog.includes(`<option value="${sortKey}" selected="">`));
-    assert.ok(catalog.includes(`aria-pressed="true">${selectedGPU}</button>`));
+    assert.ok(catalog.includes(`aria-pressed="true"><strong>${selectedGPU}</strong>`));
+    assert.ok(catalog.includes(`<h3>${selectedGPU}</h3>`));
     assert.equal(state.fleetSettings.selectedGPU, selectedGPU);
+  }
+});
+
+test("calculator: 显卡对比 shows losses in grey, gains in green, and the rent columns only when enabled", () => {
+  const t = (key: string) => dictionaries.en[key];
+  for (const rentEnabled of [true, false]) {
+    const state = { ...defaults(), lang: "en", secondary: "USD" };
+    // A price this low makes every owned card lose money; one this high makes them all pay.
+    for (const [price, cls] of [[.0001, "muted"], [1000, "positive"]] as const) {
+      state.calculator = { ...state.calculator, price, yield: .01, fee: 0, electricity: .1 };
+      state.fleetSettings = { ...state.fleetSettings, rentEnabled };
+      const html = renderWide(React.createElement(FleetCalculator, { state, onState: () => {}, incomes: {}, t }));
+      const table = html.slice(html.indexOf('class="gpu-compare"'), html.indexOf("</table>"));
+      assert.equal((table.match(/<td class="negative"/g) || []).length, 0, "no red column");
+      assert.ok((table.match(new RegExp(`<td class="${cls}"`, "g")) || []).length >= 27);
+      assert.equal(table.includes(`${t("rented")}${t("fleetPerDay")}`), rentEnabled);
+      const detail = html.slice(html.indexOf('class="card gpu-aside"'));
+      assert.ok(detail.includes(t("fleetBreakEvenRent")));
+      assert.equal(detail.includes(t("fleetBreakEvenPrice")), rentEnabled);
+    }
+  }
+});
+
+test("cost pages: one heading, the figure, then how it is worked out, how to check it and what is open; none of the audit bundle", () => {
+  const cases = [
+    ["pearl-fortune", "PPLNS"], ["pearl-fortune", "PPS"], ["lucky", "PROP"],
+    ["kryptex", "PPS+"], ["f2pool", "PPS"], ["peryn", "PPS+"], ["pearlhash", "PROP"], ["herominers", "PROP"],
+  ];
+  for (const lang of ["zh-Hans", "en"]) for (const [slug, scheme] of cases) {
+    const html = renderToStaticMarkup(React.createElement(PoolCostDetail, { route: { slug, scheme, tier: null }, lang }));
+    assert.equal((html.match(/<h1\b/g) || []).length, 1);
+    assert.match(html, /class="card cost-result"/);
+    for (const heading of lang === "en" ? ["Method", "How to verify", "Glossary", "Sources"] : ["计算方法", "复核方法", "术语", "数据来源"])
+      assert.ok(html.includes(`<h2>${heading}</h2>`), `${slug}:${scheme}:${heading}`);
+    for (const gone of ["evidence.zip", "verify.py", "证据覆盖", "Evidence coverage", "1.40%", "cost-toc"])
+      assert.ok(!html.includes(gone), `${slug}:${scheme}:${gone}`);
+    if (slug === "peryn") assert.match(html, /tier=founding" aria-current="page"/);
+  }
+});
+
+test("a pool without a page shows a dash, not another pool's explanation", () => {
+  for (const scheme of ["PPLNS", "SOLO"]) {
+    const html = renderToStaticMarkup(React.createElement(PoolCostDetail, { route: { slug: "unknown-pool", scheme, tier: null }, lang: "en" }));
+    assert.match(html, /cost-result-none/);
+    assert.ok(!html.includes("<h2>Method</h2>"));
   }
 });

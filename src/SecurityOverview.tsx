@@ -1,9 +1,14 @@
 import { Icon } from "./Icons.tsx";
-import { securityCopy, type SecuritySection } from "./security-overview.ts";
+import type { IconName } from "./icon-symbols.tsx";
+import { securityCopy, type SecurityCopy } from "./security-overview.ts";
 import type { Lang } from "./types.ts";
 
-export function SecurityOverview({ lang, sections }: { lang: Lang; sections: SecuritySection[] }) {
-  const c = securityCopy(lang);
+// Sections name keys of `copy`, the shared Security Overview copy unless a caller passes a
+// wider one (the Android app's, android-security.ts).
+type Section<K> = { title?: K; rows: { icon: IconName; title: K; text: K }[]; repos?: { title: K; url: string }[] };
+
+export function SecurityOverview<C extends SecurityCopy>({ lang, sections, copy }: { lang: Lang; sections: Section<keyof NoInfer<C> & string>[]; copy?: C }) {
+  const c = (copy || securityCopy(lang)) as SecurityCopy & Record<keyof C, string>;
   return <div className="security-overview">
     {sections.map((s, i) => <section key={i} className="security-group">
       {s.title && <h3>{c[s.title]}</h3>}

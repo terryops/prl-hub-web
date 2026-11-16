@@ -38,7 +38,7 @@ account credentials, mail delivery, payments or push subscriptions.
 ## Project layout
 
 - `src/`: React/TypeScript frontend, localized copy and shared calculation models.
-- `public/`: app icons, PWA manifest, push service worker and icon license.
+- `public/`: app icons, pool logos, PWA manifest, push service worker and icon license.
 - `test/`: frontend unit tests and standalone reference fixtures.
 - `content/privacy.html`: the published privacy policy bundled by Vite.
 - `ICONS.md`: Ionicons provenance and the selected icon mapping.
@@ -49,5 +49,7 @@ The frontend code is available under the [MIT license](LICENSE).
 Bundled Ionicons retain their own MIT notice in `public/licenses/ionicons.txt`.
 The Pearl Hub name and branding images in `public/icon-*.png` remain the publisher's
 branding assets and are not licensed under the MIT code license.
+Mining pool logos in `public/pools/` are the pools' own marks, shown to identify them;
+they are not licensed under the MIT code license either.
 
 Support: [Pearl Hub community](https://t.me/prl_hub).

@@ -1,5 +1,5 @@
 export type Lang = "en" | "ru" | "zh-Hans" | "zh-Hant" | "vi" | "id" | "es" | "pt-BR" | "fr" | "de" | "it" | "tr" | "ja" | "ko" | "hi" | "th";
-export type WindowName = "live" | "m15" | "m30" | "hour" | "h3" | "day";
+export type WindowName = "live" | "m15" | "m30" | "hour" | "h3" | "h6" | "day";
 export type Item = { id: string; updated: number; deleted?: boolean; [key: string]: unknown };
 export type Monitor = Item & {
   pool: string;
@@ -8,11 +8,14 @@ export type Monitor = Item & {
   label: string;
   alert: boolean;
   after: number;
+  /// Seconds after the offline push to remind once more if still offline; absent or 0 = never.
+  again?: number;
   paused?: boolean;
 };
 export type Wallet = Item & { addr: string; label: string };
 export type Rule = Item & {
-  kind: "above" | "below" | "move";
+  /// reach = 到达目标价: the price gets to `value` from either side.
+  kind: "above" | "below" | "reach" | "move";
   value: number;
   window: number;
   enabled: boolean;
@@ -104,6 +107,8 @@ export type PoolOverview = {
   earningsPerPH: number | null;
   trustworthy: boolean;
   source: string;
+  /** "prlscan" when the block count is prlscan.com's 24h count (the row's own source otherwise). */
+  blocksSource?: "prlscan";
   hashFromPoolAPI: boolean;
   feeFromPoolAPI: boolean;
   devFee: number | null;
@@ -114,11 +119,22 @@ export type PoolOverview = {
   lastBlockTime?: number | null;
   lifetimeBlocks?: number | null;
   payouts?: PoolPayout[];
+  /** Block luck the service measured from five-minute samples, by window ("24h", "7d", "14d"). */
+  luck?: Partial<Record<string, PoolLuck>> | null;
+  /** Orphaned blocks over the last week: from the pool's own block list or seen on chain, whichever is higher; or null. */
+  orphans?: PoolOrphans | null;
   realFeeMeasurement?: {
     pool: string; scheme: string; netPRL: number; expectedPRL: number;
     start: number; end: number; measuredAt: number; estimated: boolean;
     sampleCount: number; theoryBasis: string;
   } | null;
+};
+/** Blocks from `start` to `end` and how many were orphaned; `source` says whose count it is. */
+export type PoolOrphans = { start: number; end: number; blocks: number; orphans: number; source?: "pool" | "chain" };
+/** One window: the pool's blocks ÷ the blocks its reported work should have found. */
+export type PoolLuck = {
+  ratio: number; blocks: number; expectedBlocks: number;
+  grossPerPH: number; theoreticalPerPH: number; start: number; end: number; covered: number;
 };
 export type PoolPayout = {
   scheme: string | null;
@@ -127,9 +143,51 @@ export type PoolPayout = {
   realFeePercent: number | null;
   realFeeEstimated?: boolean | null;
   realFeePeriod?: { start: number; end: number } | null;
+  realFeeStatus?: "verified" | "partial" | "unverified";
+  realFeeBasis?: "miner_reported_work" | null;
+  /** Explicit treatment of block luck and share-count sampling; this does not require zero estimation error. */
+  realFeeLuckExcluded?: boolean;
+  settlementCost?: { percent: number; start: number; end: number; basis: "pool_recorded_work";
+    verified?: boolean; component?: "allocation_deduction";
+    luckExcluded: true; estimated: boolean; tier?: "founding" | "standard";
+    tiers?: { founding: number | null; standard: number | null } } | null;
+  outputObservation?: RollingOutputObservation | null;
+  /** Count-based output estimate against accepted pool share work; block luck remains in its interval. */
+  realFeeEstimate?: RollingRealCost | null;
   estimated: boolean;
+  /** grossPerPH is today's theory × the pool's 7-day luck, not one day of blocks. */
+  weekly?: boolean;
   solo: boolean;
+  /** A merge-mined coin paid besides PRL (F2Pool's NOCK), worth about minPercent–maxPercent of the PRL income. A label only. */
+  mergeBonus?: { coin: string; minPercent: number; maxPercent: number } | null;
+  /** Founding members' fee for this payout (Peryn's Founding Miners) while sign-ups are open, if it ends how many months
+   *  after Pearl's FP8 upgrade, and the day (YYYY-MM-DD, UTC) sign-ups close. A label beside the fee only. */
+  founding?: { fee: number; afterFP8Months?: number; closes?: string } | null;
+  /** The same terms once sign-ups have closed: addresses registered before keep them. */
+  foundingClosed?: { fee: number; afterFP8Months?: number } | null;
+  /** A miner program that shows more hashrate than the pool receives (PearlHash: WildRig): the part of its figure the
+   *  pool credits, and Real Cost measured against that figure. */
+  minerReport?: { miner: string; credited: number; realFeePercent?: number | null } | null;
+  /** Real Cost held back while it is checked: the day (YYYY-MM-DD) it is published by. */
+  realFeePending?: string | null;
+  /** Blocks per accepted share when a pool turns fewer shares into blocks than they imply; Real Cost includes it. */
+  shareYield?: number | null;
+  /** Real Cost measured per fee tier (Peryn's PPS+): which tier realFeePercent is, and each tier's figure. */
+  realFeeTier?: "founding" | "standard" | null;
+  realFeeTiers?: { founding: number | null; standard: number | null } | null;
 };
+export type RollingRealCost = {
+  id: string; pool: string; scheme: string; theoryBasis: "accepted_share_rounds";
+  start: number; end: number; measuredAt: number; targetDays: number;
+  poolBlocks: number; blocksSample: number; orphans: number; work: number; feePercent: number;
+  foundYield: number; foundYield95: [number, number]; ratio: number; cost95: [number, number];
+  confidence: number; confidenceMethod: "poisson_count_only"; estimated: true;
+  sourceVersion: 2;
+};
+export type RollingOutputObservation = Pick<RollingRealCost,
+  "id" | "pool" | "theoryBasis" | "start" | "end" | "measuredAt" | "targetDays" |
+  "poolBlocks" | "blocksSample" | "orphans" | "work" | "foundYield" | "foundYield95" |
+  "confidence" | "confidenceMethod" | "sourceVersion"> & { luckExcluded: false };
 export type Overview = {
   ok: boolean;
   ts: number;
@@ -182,6 +240,26 @@ export type Address = {
   }[];
 };
 export type Income = { ok: boolean; ts: number; h24: number; d7: number; total: number };
+/// One input or output of a looked-up transaction. `address` is null for OP_RETURN data
+/// (`data`) and other scripts without an address.
+export type TxRow = { address: string | null; value: string; data?: boolean };
+/// POST /v1/tx: a transaction by txid. Amounts are atomic units (1 PRL = 10^8).
+export type TxDetail = {
+  txid: string;
+  confirmations: number;
+  height: number | null;
+  blockHash: string | null;
+  time: number | null;
+  size: number | null;
+  vsize: number | null;
+  value: string;
+  fee: string;
+  coinbase: boolean;
+  inputCount: number;
+  outputCount: number;
+  inputs: TxRow[];
+  outputs: TxRow[];
+};
 export type Order = {
   id: string;
   address: string;
@@ -197,6 +275,10 @@ export type Order = {
 export type Availability = {
   pay: { enabled: boolean; usd: number };
   vapid_key: string | null;
+  // Android: the server can deliver through Firebase Cloud Messaging (BRIDGE.md in the prl-hub-android repository).
+  fcm?: boolean;
+  // Android Play build: the server can verify and acknowledge Google Play purchases (prl-hub alerts play.js).
+  play?: boolean;
   auth?: { enabled: boolean; site_key: string | null };
 };
 export type Me = Availability & {

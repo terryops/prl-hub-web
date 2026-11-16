@@ -49,7 +49,7 @@ export function AppearanceMenu({ state, t, onChange }: {
           {t("palette")}
           <select aria-label={t("palette")} value={state.palette === "mono" ? "mono" : "classic"} onChange={(e) => onChange({ palette: e.target.value })}>
             <option value="classic">{t("classicBlue")}</option>
-            <option value="mono">{t("monochrome")}</option>
+            <option value="mono">{t("modernSilver")}</option>
           </select>
         </label>
       </div>

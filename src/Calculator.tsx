@@ -4,6 +4,7 @@ import { calculate, normalizeCalculator, scenarioUnit } from "./calculator.ts";
 import { NetworkSummary, numeric, type Translate } from "./PoolOverview.tsx";
 import { useGPUs } from "./gpus.ts";
 import { usd, roundRent } from "./format.ts";
+import { InfoTip } from "./InfoTip.tsx";
 export function Calculator({
   value,
   onChange,
@@ -89,7 +90,7 @@ export function Calculator({
     <>
       <div className="calculator-layout">
         <section className="card calculator-inputs">
-          <h2>{t("deviceInputs")}</h2>
+          <h2 className="field-label">{t("deviceInputs")}<InfoTip label={t("deviceInputs")} text={t("referenceNote")} /></h2>
           <label className="form-field">
             {t("gpuReference")}
             <select
@@ -168,11 +169,10 @@ export function Calculator({
               {t("resetLive")}
             </button>
           </details>
-          <p className="help">{t("referenceNote")}</p>
         </section>
         <section className="card calculator-results" aria-live="polite">
           <div className="card-heading">
-            <h2>{t("estimatedResult")}</h2>
+            <h2 className="field-label">{t("estimatedResult")}<InfoTip label={t("estimatedResult")} text={t("calculationExplanation")} /></h2>
             <span className="badge">USD</span>
           </div>
           {(failed || price?.stale || data?.stale) && (
@@ -181,15 +181,14 @@ export function Calculator({
           {(p == null || unit == null) && (
             <p className="status warn">{t("waitingNetwork")}</p>
           )}
-          <small>{t("netDay")}</small>
+          <small className="field-label">{t("netDay")}<InfoTip label={t("netDay")} text={t("fleetEstimateNote")} /></small>
           <div
             className={`calc-net ${r.net != null && r.net >= 0 ? "positive" : "negative"}`}
           >
             {money(r.net, true)}
           </div>
-          <p className="help calc-net-note">{t("fleetEstimateNote")}</p>
           <div className="break-even">
-            <small>{t("costPrice")}</small>
+            <small className="field-label">{t("costPrice")}<InfoTip label={t("costPrice")} text={t("costExplanation")} /></small>
             <strong>
               {money(r.costPerPRL)}
               <small> / PRL</small>
@@ -226,8 +225,6 @@ export function Calculator({
                 </div>
               ))}
             </dl>
-            <p className="help">{t("costExplanation")}</p>
-            <p className="help">{t("calculationExplanation")}</p>
           </details>
           <footer className="data-footer">
             <span>
@@ -236,7 +233,7 @@ export function Calculator({
             <span>
               {value.price != null || value.yield != null || value.networkHash != null
                 ? t("scenario")
-                : data?.network?.source || "—"}
+                : `${t("source")} · ${data?.network?.source || "—"}`}
             </span>
           </footer>
         </section>

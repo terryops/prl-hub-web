@@ -7,7 +7,7 @@ import type { Lang } from "./types.ts";
 // 设置 → 安全性说明 (prl-hub Sources/Settings/SecurityInfoView.swift). Same sections and
 // wording where the facts match; each platform states only what its own code does.
 // Keep in step with site/privacy.html, web/public/_headers (CSP), the extension manifest
-// and the requests in api.ts, main.tsx, extension/src/background.ts and account.ts.
+// and the requests in api.ts, main.tsx, account.ts and the wallet's src/background.ts.
 export type SecurityCopy = typeof localized.en;
 type Text = keyof SecurityCopy;
 export type SecurityRow = { icon: IconName; title: Text; text: Text };
@@ -21,7 +21,13 @@ export const repositories = {
   server: "https://github.com/terryops/prl-hub-server",
 };
 
+// Open source leads on the Web: the page footer links here instead of to the repository.
 export const webSecurity: SecuritySection[] = [
+  { title: "openSource", rows: [{ icon: "code", title: "allPublicTitle", text: "allPublic" }], repos: [
+    { title: "repoApp", url: repositories.app },
+    { title: "repoWeb", url: repositories.web },
+    { title: "repoServer", url: repositories.server },
+  ] },
   { rows: [{ icon: "shield", title: "webHeadTitle", text: "webHead" }] },
   { title: "neverReceive", rows: [
     { icon: "key", title: "keys", text: "webKeys" },
@@ -38,14 +44,10 @@ export const webSecurity: SecuritySection[] = [
   ] },
   { title: "webDirect", rows: [
     { icon: "globe", title: "turnstileTitle", text: "webTurnstile" },
+    { icon: "market", title: "safetradeTitle", text: "webSafeTrade" },
     { icon: "server", title: "webOthersTitle", text: "webOthers" },
   ] },
   { title: "inBrowser", rows: [{ icon: "mac", title: "thisBrowser", text: "webLocal" }] },
-  { title: "openSource", rows: [{ icon: "code", title: "allPublicTitle", text: "allPublic" }], repos: [
-    { title: "repoApp", url: repositories.app },
-    { title: "repoWeb", url: repositories.web },
-    { title: "repoServer", url: repositories.server },
-  ] },
 ];
 
 export const extensionSecurity: SecuritySection[] = [
@@ -53,15 +55,19 @@ export const extensionSecurity: SecuritySection[] = [
   { title: "neverReceive", rows: [
     { icon: "key", title: "keys", text: "extKeys" },
     { icon: "globe", title: "extPagesTitle", text: "extPages" },
-    { icon: "history", title: "history", text: "extHistory" },
     { icon: "eyeOff", title: "tracking", text: "extTracking" },
   ] },
   { title: "toServer", rows: [
+    // Balances and history: our own index (pearlhub.net/node) first, the official one as fallback; the
+    // wallet's indexers() in prl-hub-wallet src/chain.ts.
+    { icon: "history", title: "history", text: "extHistory" },
     { icon: "market", title: "publicData", text: "extPublic" },
     { icon: "account", title: "account", text: "extAccount" },
   ] },
   { title: "extDirect", rows: [
     { icon: "cube", title: "explorer", text: "extExplorer" },
+    // The same seed's NOCK side: prl-hub-wallet src/nock/client.ts (rpc.nockbox.org) and nock/price.ts.
+    { icon: "server", title: "nockTitle", text: "extNock" },
     { icon: "lock", title: "extOthersTitle", text: "extOthers" },
   ] },
   { title: "inBrowser", rows: [

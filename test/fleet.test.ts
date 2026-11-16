@@ -60,8 +60,19 @@ test("A6: thirty/ninety day projections match independent daily summation and na
     let expected = 0; for (let day = 0; day < days; day++) expected += 5 * (1 + growth / 100) ** (-day / 30) - 2;
     close(projection(5, 2, growth, days), expected);
   }
-  const c = ctx(), n = { difficulty: 2, difficulty7d: 1 } as Network;
+  const c = ctx(), n = { difficulty: 2, difficulty7d: 1.5 } as Network;
   assert.equal(effectiveGrowth(c.settings, c.input, n), 200);
+  // difficulty7d is the 7-day mean: 41.58M against 45.92M now starts near 37.24M, so +23.3% a week, ×30/7.
+  close(effectiveGrowth(c.settings, c.input, { difficulty: 45.92e6, difficulty7d: 41.58e6 } as Network), (45.92 / 37.24 - 1) * 30 / 7 * 100);
+  // Prefer the measured sample from seven days ago over 2 × mean − now.
+  const ts = 1_800_000_000;
+  const measured = [{ height: 1, ts: ts - 7 * 86400, difficulty: 37.5e6, hashrate: null, blockTime: null }];
+  close(effectiveGrowth(c.settings, c.input, { ts, difficulty: 45.92e6, difficulty7d: 41.58e6 } as Network, measured), (45.92 / 37.5 - 1) * 30 / 7 * 100);
+  close(effectiveGrowth(c.settings, c.input, { ts, difficulty: 45.92e6, difficulty7d: null } as Network, measured), (45.92 / 37.5 - 1) * 30 / 7 * 100);
+  // At twice the mean or more there is no steady-trend start: still the cap, not the manual growth.
+  c.input.growth = 5;
+  assert.equal(effectiveGrowth(c.settings, c.input, { difficulty: 2, difficulty7d: 1 } as Network), 200);
+  assert.equal(effectiveGrowth(c.settings, c.input, { difficulty: 2, difficulty7d: null } as Network), 5);
   c.settings.growthMode = "manual"; c.input.growth = -20;
   assert.equal(effectiveGrowth(c.settings, c.input, n), -20);
 });
@@ -108,4 +119,11 @@ test("cabinet power defaults off for new and existing calculators and preserves 
     assert.equal(restored.fleetSettings!.powerBudgetW, 6500);
   }
   for (const powerBudgetEnabled of [1, "true", null]) assert.throws(() => normalizeFleet({ powerBudgetEnabled }), /invalid_config/);
+});
+test("到达目标价: a reach rule is a valid alert, with no window", () => {
+  const rule = { id: "UUID-REACH", updated: 100, kind: "reach" as const, value: 0.6, window: 0, enabled: true, seen_fired: 0, repeat: true };
+  const cfg = normalizeConfig({ ...configOf(defaults()), rules: [rule] });
+  assert.equal(cfg.rules[0].kind, "reach");
+  assert.throws(() => normalizeConfig({ ...configOf(defaults()), rules: [{ ...rule, window: 3600 }] }), /invalid_config/);
+  assert.throws(() => normalizeConfig({ ...configOf(defaults()), rules: [{ ...rule, kind: "nope" as "reach" }] }), /invalid_config/);
 });
