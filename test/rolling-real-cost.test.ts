@@ -68,6 +68,19 @@ test("PearlHash's rolling estimate: accepted_share_work up to 10,000 blocks with
   const r = rollingRealCost(ph)!;
   assert.equal(r.days, 26); assert.equal(r.poolBlocks, 2343); assert.equal(r.lossUnconfirmed, false);
   assert.equal(rollingRealCost({ ...ph, realFeeEstimate: { ...ph.realFeeEstimate!, orphans: 1, blocksSample: 2342 } }), null);
+
+  const df = { since: raw.start + 14 * 86400, factor: 0.9821, percent: (1 - 0.99 * 0.9821) * 100, feePercent: 1 };
+  const prior = { start: raw.start, end: raw.start + 13 * 86400, poolBlocks: 1289, blocksSample: 1289, orphans: 0,
+    work: 1420.7, factor: 0.915, feePercent: 1, foundYield: 1289 / 1420.7, foundYield95: [0.85, 0.96] as [number, number],
+    ratio: 0.99 * 1289 / 1420.7, percent: (1 - 0.99 * 1289 / 1420.7) * 100, cost95: [5.1, 15.0] as [number, number] };
+  const since = { start: raw.start + 13 * 86400, end: raw.start + 26 * 86400, poolBlocks: 1054, blocksSample: 1054, orphans: 0,
+    work: 1045.6, factor: 0.98, feePercent: 1, foundYield: 1054 / 1045.6, foundYield95: [0.95, 1.07] as [number, number],
+    ratio: 0.99 * 1054 / 1045.6, percent: (1 - 0.99 * 1054 / 1045.6) * 100, cost95: [-6.0, 5.9] as [number, number] };
+  const withDual = rollingRealCost({ ...ph, realFeeEstimate: { ...ph.realFeeEstimate!, displayFactor: df, prior, since } })!;
+  assert.ok(withDual);
+  assert.equal(withDual.displayFactor?.factor, 0.9821);
+  assert.equal(rollingRealCost({ ...ph, realFeeEstimate: { ...ph.realFeeEstimate!, displayFactor: { ...df, factor: 1.5 } } }), null);
+  assert.equal(rollingRealCost({ ...ph, realFeeEstimate: { ...ph.realFeeEstimate!, displayFactor: df, prior, since: { ...since, start: since.start - 86400 } } }), null);
 });
 
 test("a verified wire record requires explicit luck exclusion, a common basis and at least six hours", () => {
@@ -98,7 +111,11 @@ test("all 16 locales retain the rolling estimate's data placeholders", () => {
   assert.equal(Object.keys(dictionaries).length, 16);
   const keys = ["poolRollingTitle", "poolRollingSample", "poolRollingYield", "poolRollingCostRange",
     "poolRollingUnconfirmed", "poolRollingBasis", "poolRollingPending", "poolRollingPeriodIntro",
-    "poolNegativeCostWarn", "poolClosedPoolWarn"] as const;
+    "poolNegativeCostWarn", "poolClosedPoolWarn",
+    "poolWindow30d", "poolDisplayFactorTag", "poolCol30d", "poolColFactor",
+    "poolSplitDays", "poolFactorSince", "poolRowBasis", "poolBasisBlocks",
+    "poolBasisFactor", "poolRowYield", "poolSplitRange", "poolFactorNoLuck",
+    "poolPearlHashDualWarn", "poolPearlHashSinceNote", "poolPearlHashWatchNote"] as const;
   const placeholders = (s: string) => [...s.matchAll(/\{\w+\}/g)].map((m) => m[0]).sort();
   for (const [lang, dictionary] of Object.entries(dictionaries)) for (const key of keys) {
     assert.ok(dictionary[key].trim(), `${lang}:${key}`);

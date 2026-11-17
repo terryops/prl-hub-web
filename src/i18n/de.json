@@ -599,5 +599,20 @@
   "poolNegativeCostWarn": "Öffentliche Stichproben stammen von großen Auszahlungsadressen auf der Chain und können private Rabatte oder Tagesabgrenzungen ohne öffentliche Einzelabrechnung enthalten; reguläre Adressen zahlen die angegebene Gebühr, die auch für den geschätzten Ertrag gilt.",
   "poolClosedPoolWarn": "PearlHash lässt nur seine eigene Software mit geschlossenem Protokoll zu und veröffentlicht weder Blockliste noch Block-Effort oder Abrechnungsdetails; die gemeldete Share-Rate ist nicht unabhängig prüfbar.",
   "poolPerynWarn": "Peryn gewährt großen Konten nichtöffentliche Rabattstufen (Adressen über 50 PH/s oder mit Sonder-Rabattkennzeichnung sind hier ausgeschlossen) und bietet keine Historien-API; Adressseiten speichern nur 7 Tage Tages-Hashrate auf 3 signifikante Stellen gerundet, sodass ältere Zeiträume nicht nachprüfbar sind.",
-  "poolF2PoolWarn": "F2Pool veröffentlicht weder öffentliche Kontoseiten noch Blockliste oder Abrechnungsdetails; dieser Wert stammt aus den Tagessummen eines einzelnen Lesekontos und liegt aus nicht offengelegten Gründen 0,5–0,7 Prozentpunkte über dem Startseitenpreis."
+  "poolF2PoolWarn": "F2Pool veröffentlicht weder öffentliche Kontoseiten noch Blockliste oder Abrechnungsdetails; dieser Wert stammt aus den Tagessummen eines einzelnen Lesekontos und liegt aus nicht offengelegten Gründen 0,5–0,7 Prozentpunkte über dem Startseitenpreis.",
+  "poolWindow30d": "30 T. gleitend",
+  "poolDisplayFactorTag": "Anzeigeverhältnis",
+  "poolCol30d": "30 Tage gleitend",
+  "poolColFactor": "Anzeigeverhältnis",
+  "poolSplitDays": "{range} · {days} T.",
+  "poolFactorSince": "Konstant {factor} seit {day}",
+  "poolRowBasis": "Grundlage",
+  "poolBasisBlocks": "{found} / {expected} Bl.",
+  "poolBasisFactor": "Anzeige ÷ Share = {factor}",
+  "poolRowYield": "Effektive Ausbeute",
+  "poolSplitRange": "95-%-Intervall",
+  "poolFactorNoLuck": "Ohne Glücksterm (Verhältnis)",
+  "poolPearlHashDualWarn": "In PearlHashs /api/stats lag angezeigte Hashrate ÷ (akzeptierte Share-Rate × 2^48) vor dem 3. Nov. konstant bei {oldFactor} (entspricht {oldFactorCost}, passend zu 1.289 / 1.420,7 Kettenblöcken ≈ {priorCost}) und seit dem 4. Nov. konstant bei {newFactor}. Beide Werte – 30 Tage gleitend auf der Kette und nach Anzeigeverhältnis – werden gezeigt:",
+  "poolPearlHashSinceNote": "Warum beide Werte stehen: Nach dem 2. Nov. ({range} · {days} T.) liegen {blocks} Blöcke gegenüber {expected} erwarteten vor ({yield}, 95-%-KI {low}–{high}) – noch zu kurz, um ca. 1,8 % Differenz vom Blockglück zu trennen, während das 30-Tage-Fenster noch Daten vor dem 3. Nov. enthält.",
+  "poolPearlHashWatchNote": "Adressprüfung: Seit dem 11. Nov. stündlich erfasste Top-1.000-Auszahlungsadressen zeigen identische PRL pro Share und Gutschriften passend zur eigenen Share-Rate – kein Hinweis auf gezielte Kürzungen einzelner Adressen. Da PearlHash nur seinen geschlossenen Client zulässt und keine Blockliste veröffentlicht, ist die gemeldete Share-Rate extern nicht unabhängig prüfbar."
 }

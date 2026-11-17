@@ -122,9 +122,54 @@ export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data
     const w = realCostWarn(r, p);
     const warnLine = w && <p className="pool-cost-warn">{t(warnKey(w))}</p>;
     // HeroMiners & PearlHash: up to 30 days of canonical blocks against accepted share work; luck stays in, as the interval.
+    const utcDay = new Intl.DateTimeFormat(lang, { month: "2-digit", day: "2-digit", timeZone: "UTC" });
     const estimate = rollingRealCost(p);
     if (estimate) {
-      const pct = (x: number) => numeric(x, 2, lang).replace(/-/g, "−") + "%";
+      const fix = (x: number, d: number) => x.toLocaleString(lang, { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/-/g, "−");
+      const pct = (x: number) => fix(x, 2) + "%";
+      const pct1 = (x: number) => fix(x, 1) + "%";
+      if (estimate.displayFactor && estimate.prior && estimate.since) {
+        const df = estimate.displayFactor, pr = estimate.prior, sn = estimate.since;
+        const rCost = (1 - estimate.ratio) * 100, rOther = rCost - estimate.feePercent;
+        const fOther = df.percent - df.feePercent;
+        const oldFactorCost = (1 - (1 - estimate.feePercent / 100) * pr.factor) * 100;
+        const span = (a: number, b: number) => `${utcDay.format(a * 1000)}–${utcDay.format(b * 1000)}`;
+        return <HelpTip label={`${t("poolRealCost")} ${text}`} className={`pool-cost-note${w ? " warn" : ""}`} bubbleClassName="pool-cost-tooltip pool-cost-split" mark={<>{value}{w ? <WarnMark /> : <InfoMark />}</>}>
+          <p className="pool-cost-warn">{t("poolPearlHashDualWarn")
+            .replace("{oldFactor}", fix(pr.factor, 3))
+            .replace("{oldFactorCost}", pct(oldFactorCost))
+            .replace("{priorCost}", pct(pr.percent))
+            .replace("{newFactor}", fix(df.factor, 4))}</p>
+          <table className="pool-cost-split-table">
+            <thead>
+              <tr><th></th><th className="shown">{t("poolCol30d")}</th><th>{t("poolColFactor")}</th></tr>
+              <tr className="dates"><th></th>
+                <th>{t("poolSplitDays").replace("{range}", span(estimate.start, estimate.end)).replace("{days}", numeric(estimate.days, 0, lang))}</th>
+                <th>{t("poolFactorSince").replace("{day}", utcDay.format(df.since * 1000)).replace("{factor}", fix(df.factor, 4))}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>{t("poolRowBasis")}</td>
+                <td className="shown">{t("poolBasisBlocks").replace("{found}", numeric(estimate.blocksSample, 0, lang)).replace("{expected}", fix(estimate.work, 1))}</td>
+                <td>{t("poolBasisFactor").replace("{factor}", fix(df.factor, 4))}</td></tr>
+              <tr><td>{t("poolRowYield")}</td><td className="shown">{pct(estimate.foundYield * 100)}</td><td>{pct(df.factor * 100)}</td></tr>
+              <tr><td>{t("poolFee")}</td><td className="shown">{pct(estimate.feePercent)}</td><td>{pct(df.feePercent)}</td></tr>
+              <tr><td>{t("poolCostOther")}</td><td className="shown">{pct(rOther)}</td><td>{pct(fOther)}</td></tr>
+              <tr className="total"><td>{t("poolRealCost")}</td><td className="shown">≈{pct(rCost)}</td><td>≈{pct(df.percent)}</td></tr>
+              <tr className="range"><td>{t("poolSplitRange")}</td><td>{pct1(estimate.cost95[0])} ～ {pct1(estimate.cost95[1])}</td><td>{t("poolFactorNoLuck")}</td></tr>
+            </tbody>
+          </table>
+          <p className="pool-cost-lead">{t("poolPearlHashSinceNote")
+            .replace("{range}", span(sn.start, sn.end))
+            .replace("{days}", numeric((sn.end - sn.start) / 86400, 0, lang))
+            .replace("{blocks}", numeric(sn.blocksSample, 0, lang))
+            .replace("{expected}", fix(sn.work, 1))
+            .replace("{yield}", pct1(sn.foundYield * 100))
+            .replace("{low}", pct1(sn.cost95[0]))
+            .replace("{high}", pct1(sn.cost95[1]))}</p>
+          <p>{t("poolPearlHashWatchNote")}</p>
+        </HelpTip>;
+      }
       return <HelpTip label={`${t("poolRealCost")} ${text}`} className={`pool-cost-note${w ? " warn" : ""}`} mark={<>{value}{w ? <WarnMark /> : <InfoMark />}</>}>
         {warnLine}
         <p className="pool-cost-lead">{t("poolRollingTitle").replace("{days}", numeric(estimate.days, 0, lang))} · {dates.format(estimate.start * 1000)} – {dates.format(estimate.end * 1000)}</p>
@@ -179,7 +224,7 @@ export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data
     const allPayouts = poolPayouts(r);
     const detailHref = kind === "realFee" ? poolCostDetailHref(r, allPayouts) : null;
     const metric = <div className={`pool-metric pool-${kind}${allPayouts.length > 1 ? " pool-multiple" : ""}`}>
-    {allPayouts.map((p, i, all) => {
+    {allPayouts.flatMap((p, i, all) => {
       // Earnings are what a miner keeps: the gross figure less the pool's cut (see payoutCost).
       const amount = kind === "fee" ? p.fee : kind === "realFee" ? p.realFeePercent : netPerPH(p, r);
       const estimated = kind === "realFee" ? p.realFeeEstimated : p.estimated;
@@ -191,9 +236,16 @@ export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data
           {text}
         </strong>;
       const held = kind === "realFee" ? pending(r, p) ?? fewBlocks(r, p, value) : null;
-      return <div className="pool-payout" key={i}>
-        {held ?? (kind === "realFee" ? costNote(r, p, value, text) ?? yieldNote(r, p, value, text) ?? tierNote(r, p, value, text) ?? warnNote(r, p, value, text) : null) ?? value}{(all.length > 1 || kind !== "earnings") && <small>{p.scheme || "—"}</small>}
+      const df = kind === "realFee" ? rollingRealCost(p)?.displayFactor : null;
+      const tag = df ? `${t("poolWindow30d")} · ${p.scheme || "PROP"}` : (p.scheme || "—");
+      const mainRow = <div className="pool-payout" key={i}>
+        {held ?? (kind === "realFee" ? costNote(r, p, value, text) ?? yieldNote(r, p, value, text) ?? tierNote(r, p, value, text) ?? warnNote(r, p, value, text) : null) ?? value}{(all.length > 1 || df != null || kind !== "earnings") && <small>{tag}</small>}
       </div>;
+      if (!df) return [mainRow];
+      const dfText = "≈" + df.percent.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/-/g, "−") + "%";
+      return [mainRow, <div className="pool-payout pool-payout-sub" key={`${i}-factor`}>
+        <strong>{dfText}</strong><small>{t("poolDisplayFactorTag")}</small>
+      </div>];
     })}
     {kind === "earnings" && <small>{t(weekLuck(r) ? "poolPerPHDay7d" : "poolPerPHDay")}</small>}
     {kind === "earnings" && !r.solo && poolPayouts(r).map((p) => bonus(r, p)).find(Boolean)}

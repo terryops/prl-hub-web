@@ -599,5 +599,20 @@
   "poolNegativeCostWarn": "공개 표본은 온체인 대규모 수령 주소에서 수집되어 개별 리베이트나 일자 간 정산 보정이 포함될 수 있으며 일별 정산 내역이 공개되지 않습니다. 일반 주소는 공시 수수료가 적용되므로 예상 수익은 공시 수수료로 계산합니다.",
   "poolClosedPoolWarn": "PearlHash는 자체 폐쇄형 프로토콜 클라이언트만 허용하며 블록 목록, 블록별 effort, 정산 내역을 공개하지 않아 보고된 share 속도를 외부에서 독립 검증할 수 없습니다.",
   "poolPerynWarn": "Peryn은 대형 주소에 비공개 리베이트 등급을 운영하며(50 PH/s 초과 및 특별 리베이트 표시 주소는 제외됨) 과거 기록 API를 제공하지 않습니다. 주소 페이지에 유효숫자 3자리의 일별 해시레이트가 7일분만 남아 이전 구간을 사후 검증할 수 없습니다.",
-  "poolF2PoolWarn": "F2Pool은 공개 계정 페이지, 블록 목록, 정산 내역을 공개하지 않습니다. 이 수치는 단일 읽기 전용 계정의 일별 합계로 산출되며, 공시 가격보다 0.5~0.7%p 높은 원인은 공개되지 않았습니다."
+  "poolF2PoolWarn": "F2Pool은 공개 계정 페이지, 블록 목록, 정산 내역을 공개하지 않습니다. 이 수치는 단일 읽기 전용 계정의 일별 합계로 산출되며, 공시 가격보다 0.5~0.7%p 높은 원인은 공개되지 않았습니다.",
+  "poolWindow30d": "30일 롤링",
+  "poolDisplayFactorTag": "표시 해시레이트 비율",
+  "poolCol30d": "30일 롤링 실측",
+  "poolColFactor": "표시 해시레이트 비율",
+  "poolSplitDays": "{range} · {days}일",
+  "poolFactorSince": "{day}부터 {factor} 고정",
+  "poolRowBasis": "산출 근거",
+  "poolBasisBlocks": "{found} / {expected} 블록",
+  "poolBasisFactor": "표시 ÷ share = {factor}",
+  "poolRowYield": "환산 효율",
+  "poolSplitRange": "95% 구간",
+  "poolFactorNoLuck": "운 요소 없음(비율 기준)",
+  "poolPearlHashDualWarn": "PearlHash 공개 API /api/stats에서 표시 해시레이트 ÷ (승인 share 속도 × 2^48)는 11/3 이전 {oldFactor}(추산 {oldFactorCost}, 같은 기간 체인 1,289 / 1,420.7 블록 실측 ≈{priorCost}과 일치)로 고정되었고, 11/4부터 {newFactor}로 고정되었습니다. 30일 롤링 실측치와 표시 비율 추산치를 함께 표시합니다:",
+  "poolPearlHashSinceNote": "병기 이유: 11/2 이후({range} · {days}일) 체인 블록은 {blocks} / 예상 {expected}({yield}, 95% 구간 {low}–{high})로, 단기 표본만으로는 약 1.8% 차이를 블록 운에서 분리하기 어렵고 30일 창에는 아직 11/2 이전 데이터가 남아 있어 점차 수렴할 예정입니다.",
+  "poolPearlHashWatchNote": "주소별 검증: 11/11부터 상위 1,000개 수령 주소를 매시간 기록한 결과 share당 PRL 배분이 동일하고 각 주소의 정산 몫이 자체 share 속도와 일치해 특정 주소 선별 차감 정황은 확인되지 않았습니다. 다만 자체 폐쇄형 프로토콜 전용이며 블록 목록을 공개하지 않아 보고된 share 기준은 외부에서 독립 검증할 수 없습니다."
 }

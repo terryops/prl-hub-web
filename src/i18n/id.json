@@ -599,5 +599,20 @@
   "poolNegativeCostWarn": "Sampel publik berasal dari alamat penerima besar di rantai dan dapat mencakup rabat khusus atau penyesuaian lintas hari tanpa rincian harian terbuka; alamat biasa membayar biaya tertera sehingga estimasi hasil memakai biaya tertera.",
   "poolClosedPoolWarn": "PearlHash hanya menerima perangkat lunak protokol tertutup miliknya sendiri dan tidak mempublikasikan daftar blok, effort per blok, atau rincian pembagian; laju share yang dilaporkan tidak dapat diverifikasi secara independen.",
   "poolPerynWarn": "Peryn menerapkan tingkat rabat tertutup bagi alamat besar (alamat di atas 50 PH/s atau berlabel rabat khusus telah dikecualikan) dan tidak menyediakan API riwayat; halaman alamat hanya menyimpan hashrate harian 3 angka penting selama 7 hari sehingga periode lama tidak dapat diaudit ulang.",
-  "poolF2PoolWarn": "F2Pool tidak mempublikasikan halaman akun publik, daftar blok, atau rincian penyelesaian; angka ini berasal dari rekap harian satu akun baca-saja dan lebih tinggi 0,5–0,7 poin persentase dari harga halaman utamanya tanpa penjelasan terbuka."
+  "poolF2PoolWarn": "F2Pool tidak mempublikasikan halaman akun publik, daftar blok, atau rincian penyelesaian; angka ini berasal dari rekap harian satu akun baca-saja dan lebih tinggi 0,5–0,7 poin persentase dari harga halaman utamanya tanpa penjelasan terbuka.",
+  "poolWindow30d": "30h bergulir",
+  "poolDisplayFactorTag": "Rasio tampilan",
+  "poolCol30d": "30 hari bergulir",
+  "poolColFactor": "Rasio tampilan",
+  "poolSplitDays": "{range} · {days}h",
+  "poolFactorSince": "Tetap {factor} sejak {day}",
+  "poolRowBasis": "Dasar",
+  "poolBasisBlocks": "{found} / {expected} blok",
+  "poolBasisFactor": "tampilan ÷ share = {factor}",
+  "poolRowYield": "Hasil efektif",
+  "poolSplitRange": "Interval 95%",
+  "poolFactorNoLuck": "Tanpa faktor hoki (rasio)",
+  "poolPearlHashDualWarn": "Pada /api/stats PearlHash, hashrate tampilan ÷ (laju share diterima × 2^48) tetap di {oldFactor} sebelum 3 Nov (setara {oldFactorCost}, sesuai blok rantai 1.289 / 1.420,7 ≈ {priorCost}) dan tetap di {newFactor} sejak 4 Nov. Angka bergulir 30 hari di rantai dan angka rasio tampilan ditampilkan berdampingan:",
+  "poolPearlHashSinceNote": "Mengapa keduanya ditampilkan: setelah 2 Nov ({range} · {days}h), blok rantai tercatat {blocks} dari {expected} ekspektasi ({yield}, IK 95% {low}–{high}), masih terlalu singkat untuk memisahkan selisih ~1,8% dari faktor hoki blok, sementara jendela 30 hari masih memuat data sebelum 3 Nov.",
+  "poolPearlHashWatchNote": "Pemeriksaan per alamat: pemantauan per jam atas 1.000 alamat pembayaran teratas sejak 11 Nov menunjukkan PRL per share yang identik dan porsi tercatat sesuai laju share masing-masing akun — temuan saat ini tidak mendukung dugaan pemotongan acak pada alamat tertentu. Karena PearlHash mewajibkan klien protokol tertutup dan tidak mempublikasikan daftar blok, laju share yang dilaporkan tidak dapat diverifikasi secara independen."
 }

@@ -599,5 +599,20 @@
   "poolNegativeCostWarn": "公開サンプルはチェーン上の大口受取アドレスから取得しており、個別優遇や日跨ぎ調整を含む可能性があり、日次の精算内訳も非公開です。通常アドレスは公表手数料が適用されるため、予想収益は公表手数料で計算します。",
   "poolClosedPoolWarn": "PearlHash は独自の非公開プロトコル専用ソフトのみ接続可能で、ブロック一覧・ブロックごとの effort・配分明細を公開していないため、報告される share レートを外部から検証できません。",
   "poolPerynWarn": "Peryn は大口アドレス向けに非公開のリベート階層を設けており（50 PH/s 超および特別リベート表示のアドレスは除外済み）、履歴 API も非公開です。アドレスページには有効数字 3 桁の日次ハッシュレートが 7 日分しか残らないため、過去期間の事後検証ができません。",
-  "poolF2PoolWarn": "F2Pool は公開アカウントページ・ブロック一覧・精算内訳を公開していません。この数値は単一の読み取り専用アカウントの日次集計に基づくもので、公開価格より 0.5〜0.7 ポイント高い理由は非公開です。"
+  "poolF2PoolWarn": "F2Pool は公開アカウントページ・ブロック一覧・精算内訳を公開していません。この数値は単一の読み取り専用アカウントの日次集計に基づくもので、公開価格より 0.5〜0.7 ポイント高い理由は非公開です。",
+  "poolWindow30d": "30日ローリング",
+  "poolDisplayFactorTag": "表示ハッシュ比",
+  "poolCol30d": "30日ローリング実測",
+  "poolColFactor": "表示ハッシュ比",
+  "poolSplitDays": "{range} · {days}日",
+  "poolFactorSince": "{day}以降 {factor} で一定",
+  "poolRowBasis": "算出根拠",
+  "poolBasisBlocks": "{found} / {expected} ブロック",
+  "poolBasisFactor": "表示 ÷ share = {factor}",
+  "poolRowYield": "換算効率",
+  "poolSplitRange": "95% 区間",
+  "poolFactorNoLuck": "運要素なし（比率換算）",
+  "poolPearlHashDualWarn": "PearlHash の公開 API /api/stats では、表示ハッシュレート ÷（受理 share 速度 × 2^48）が 11/3 以前は {oldFactor} で一定（推算 {oldFactorCost}、同期間のチェーン実測 1,289 / 1,420.7 ブロック ≈ {priorCost} と一致）、11/4 以降は {newFactor} で一定となっています。30日ローリング実測値と表示ハッシュ比による推算値を併記します：",
+  "poolPearlHashSinceNote": "併記の理由：11/2 以降（{range} · {days}日）のブロック数は {blocks} / 理論値 {expected}（{yield}、95% 区間 {low}～{high}）で、短期サンプルでは約 1.8% の差を運の変動から切り分けられません。一方、30日ローリング期間にはまだ 11/2 以前のデータが残っており、外れるにつれて収束します。",
+  "poolPearlHashWatchNote": "アドレス別検証：11/11 から上位 1,000 受取アドレスを毎時記録した結果、share あたりの PRL 配分は同一で、各アドレスの計上 share も自身の share 速度と一致しており、一部アドレスを狙った差し引きは確認されていません。なお独自閉鎖プロトコル専用のため、報告される share 母数の外部独立検証はできません。"
 }

@@ -599,5 +599,20 @@
   "poolNegativeCostWarn": "公开样本取自链上大额收款地址，可能含大额补贴或跨日补结，且该池未公开逐日结算明细；普通地址按公示费率扣费，预估收益仍按公示费率计算。",
   "poolClosedPoolWarn": "PearlHash 仅允许自家封闭协议客户端接入，且不公开区块列表、逐块 effort 与分账明细，外部无法独立核验其上报的 share 速率。",
   "poolPerynWarn": "Peryn 对大算力地址设有非公开返点分层（重算已剔除 > 50 PH/s 及标有特殊返点身份的地址），且不提供历史 API，地址页面仅保留 7 天、3 位有效数字的每日算力，无法对早期窗口回溯复核。",
-  "poolF2PoolWarn": "F2Pool 不公开任何账户页面、区块列表或逐笔结算明细；该数值仅基于单一只读账户的每日汇总测算，且比其公布价格高约 0.5～0.7 个百分点，差额来源未公开。"
+  "poolF2PoolWarn": "F2Pool 不公开任何账户页面、区块列表或逐笔结算明细；该数值仅基于单一只读账户的每日汇总测算，且比其公布价格高约 0.5～0.7 个百分点，差额来源未公开。",
+  "poolWindow30d": "30天滚动",
+  "poolDisplayFactorTag": "按显示算力比",
+  "poolCol30d": "30 天滚动实测",
+  "poolColFactor": "按显示算力比",
+  "poolSplitDays": "{range} · {days} 天",
+  "poolFactorSince": "{day} 起恒定 {factor}",
+  "poolRowBasis": "核算依据",
+  "poolBasisBlocks": "{found} / {expected} 块",
+  "poolBasisFactor": "显示 ÷ share = {factor}",
+  "poolRowYield": "折算效率",
+  "poolSplitRange": "95% 区间",
+  "poolFactorNoLuck": "不含运气（按比值）",
+  "poolPearlHashDualWarn": "PearlHash 公开接口 /api/stats 中，显示算力 ÷（接受的 share 速率 × 2^48）在 11/3 前恒为 {oldFactor}（推算 {oldFactorCost}，同期链上 1,289 / 1,420.7 块实测 ≈{priorCost}），11/4 起调为恒定 {newFactor}。现并列展示 30 天链上滚动实测与按显示算力比推算两套结果：",
+  "poolPearlHashSinceNote": "为什么并列两套：11/2 后（{range} · {days} 天）主链出块 {blocks} / 按 share 应出 {expected}（{yield}，95% 区间 {low}～{high}），短期样本尚不足以从出块运气中单独分辨约 1.8% 的差值；而 30 天滚动窗口仍含 11/2 前旧数据，随其移出会逐步收敛。",
+  "poolPearlHashWatchNote": "逐地址核查：11/11 起持续记录前 1,000 个收款地址，每份 share 分到的 PRL 一致，各地址入账份额与自身 share 速率相符，目前结论不支持「随机挑部分地址抽水」。该池仅允许自家封闭协议客户端接入且不公开区块列表，外部无法独立核验其上报的 share 基数。"
 }

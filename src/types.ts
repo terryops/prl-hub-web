@@ -176,7 +176,18 @@ export type PoolPayout = {
   realFeeTier?: "founding" | "standard" | null;
   realFeeTiers?: { founding: number | null; standard: number | null } | null;
 };
+export type RollingSegment = {
+  start: number; end: number; poolBlocks: number; blocksSample: number; orphans: number; work: number;
+  factor: number; feePercent: number; foundYield: number; foundYield95: [number, number];
+  ratio: number; percent: number; cost95: [number, number];
+};
+export type DisplayFactorCost = {
+  since: number; factor: number; percent: number; feePercent: number;
+};
 export type RollingRealCost = {
+  displayFactor?: DisplayFactorCost | null;
+  prior?: RollingSegment | null;
+  since?: RollingSegment | null;
   id: string; pool: string; scheme: string; theoryBasis: "accepted_share_rounds" | "accepted_share_work";
   start: number; end: number; measuredAt: number; targetDays: number;
   poolBlocks: number; blocksSample: number; orphans: number; work: number; feePercent: number;

@@ -599,5 +599,20 @@
   "poolNegativeCostWarn": "Public samples come from large payee addresses on chain and may include private rebates or cross-day settlement adjustments, with no public daily pricing breakdown. Regular addresses pay the stated fee, so Est. yield uses the stated fee.",
   "poolClosedPoolWarn": "PearlHash accepts only its own closed-protocol client software and publishes no block list, per-block effort or payout ledger; its reported share rate cannot be independently verified.",
   "poolPerynWarn": "Peryn offers undisclosed rebate tiers to large accounts (addresses above 50 PH/s or carrying special-rebate badges are excluded here) and provides no historical API; address pages keep only 7 days of daily hashrate rounded to 3 significant figures, so older windows cannot be re-audited.",
-  "poolF2PoolWarn": "F2Pool publishes no public account pages, block list or settlement breakdown; this figure comes from a single read-only account's daily totals and runs 0.5–0.7 percentage points above its home-page price for reasons the pool does not disclose."
+  "poolF2PoolWarn": "F2Pool publishes no public account pages, block list or settlement breakdown; this figure comes from a single read-only account's daily totals and runs 0.5–0.7 percentage points above its home-page price for reasons the pool does not disclose.",
+  "poolWindow30d": "30d rolling",
+  "poolDisplayFactorTag": "Display ratio",
+  "poolCol30d": "30-day rolling",
+  "poolColFactor": "Display ratio",
+  "poolSplitDays": "{range} · {days}d",
+  "poolFactorSince": "Fixed {factor} since {day}",
+  "poolRowBasis": "Basis",
+  "poolBasisBlocks": "{found} / {expected} blk",
+  "poolBasisFactor": "display ÷ share = {factor}",
+  "poolRowYield": "Effective yield",
+  "poolSplitRange": "95% interval",
+  "poolFactorNoLuck": "No luck term (by ratio)",
+  "poolPearlHashDualWarn": "In PearlHash's /api/stats, displayed hashrate ÷ (accepted share rate × 2^48) was fixed at {oldFactor} before Nov 3 (implying {oldFactorCost}, matching chain blocks 1,289 / 1,420.7 ≈ {priorCost}), and fixed at {newFactor} since Nov 4. Both the 30-day rolling chain figure and the display-ratio figure are shown:",
+  "poolPearlHashSinceNote": "Why both are shown: after Nov 2 ({range} · {days}d), chain blocks are {blocks} vs. {expected} expected ({yield}, 95% CI {low}–{high}), still too short to separate a ~1.8% gap from block luck, while the 30-day window still holds pre-Nov 3 data and will converge as those days roll out.",
+  "poolPearlHashWatchNote": "Per-address check: tracking the top 1,000 payout addresses hourly since Nov 11 shows identical PRL per share and credited shares matching each account's share rate — current findings do not support selective per-address skimming. Because PearlHash requires its closed-protocol client and publishes no block list, its reported share rate cannot be independently verified."
 }

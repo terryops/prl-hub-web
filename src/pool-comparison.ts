@@ -131,6 +131,20 @@ export function rollingRealCost(p: PoolPayout) {
       Math.abs(percent - (1 - o.ratio) * 100) > 1e-6 ||
       !pair(o.foundYield95) || o.foundYield95[0] < 0 || o.foundYield95[0] > o.foundYield || o.foundYield95[1] < o.foundYield ||
       !pair(o.cost95) || o.cost95[0] > percent || o.cost95[1] < percent) return null;
+  const df = o.displayFactor;
+  if (df != null && (!pearlhash || !Number.isSafeInteger(df.since) || df.since <= 0 || df.since % 86400 ||
+      df.since > o.end - 5 * 86400 || !finite(df.factor) || !(df.factor > 0 && df.factor <= 1) ||
+      df.feePercent !== o.feePercent || !finite(df.percent) ||
+      Math.abs(df.percent - (1 - (1 - o.feePercent / 100) * df.factor) * 100) > 1e-6)) return null;
+  const validSeg = (seg: typeof o.prior) => !!seg && Number.isSafeInteger(seg.start) && seg.start > 0 && !(seg.start % 86400) &&
+    Number.isSafeInteger(seg.end) && !(seg.end % 86400) && seg.end - seg.start >= 5 * 86400 && seg.end - seg.start <= 60 * 86400 &&
+    Number.isSafeInteger(seg.poolBlocks) && seg.poolBlocks >= 100 && seg.poolBlocks <= 10000 && seg.orphans === 0 &&
+    seg.blocksSample === seg.poolBlocks && finite(seg.work) && seg.work > 0 && finite(seg.factor) && seg.factor > 0 && seg.factor <= 1 &&
+    seg.feePercent === o.feePercent && finite(seg.foundYield) && Math.abs(seg.foundYield - seg.poolBlocks / seg.work) <= 1e-9 &&
+    finite(seg.ratio) && Math.abs(seg.ratio - (1 - o.feePercent / 100) * seg.blocksSample / seg.work) <= 1e-9 &&
+    finite(seg.percent) && Math.abs(seg.percent - (1 - seg.ratio) * 100) <= 1e-6 && pair(seg.foundYield95) && pair(seg.cost95);
+  if ((o.prior != null || o.since != null) && (!pearlhash || !df || !validSeg(o.prior) || !validSeg(o.since) ||
+      o.prior!.end !== o.since!.start || o.since!.end !== o.end)) return null;
   return { ...o, days: (o.end - o.start) / 86400, lossUnconfirmed: o.foundYield95[1] >= 1 };
 }
 

@@ -599,5 +599,20 @@
   "poolNegativeCostWarn": "Las muestras públicas provienen de grandes direcciones de cobro en cadena y pueden incluir reembolsos privados o ajustes entre días sin desglose diario público; las direcciones normales pagan la comisión publicada y el rendimiento estimado usa esa comisión.",
   "poolClosedPoolWarn": "PearlHash solo admite su propio cliente de protocolo cerrado y no publica lista de bloques, effort por bloque ni registro de repartos; su tasa de shares no puede verificarse de forma independiente.",
   "poolPerynWarn": "Peryn aplica niveles privados de reembolso a cuentas grandes (aquí se excluyen las direcciones de más de 50 PH/s o con distintivos de reembolso especial) y no ofrece API histórica; las páginas de dirección solo guardan 7 días de hashrate diario redondeado a 3 cifras significativas, impidiendo reauditar ventanas anteriores.",
-  "poolF2PoolWarn": "F2Pool no publica páginas públicas de cuentas, lista de bloques ni desglose de liquidación; esta cifra proviene del resumen diario de una única cuenta de solo lectura y supera en 0,5–0,7 puntos porcentuales al precio de su portada por motivos no divulgados."
+  "poolF2PoolWarn": "F2Pool no publica páginas públicas de cuentas, lista de bloques ni desglose de liquidación; esta cifra proviene del resumen diario de una única cuenta de solo lectura y supera en 0,5–0,7 puntos porcentuales al precio de su portada por motivos no divulgados.",
+  "poolWindow30d": "30 d móviles",
+  "poolDisplayFactorTag": "Relación mostrada",
+  "poolCol30d": "30 días móviles",
+  "poolColFactor": "Relación mostrada",
+  "poolSplitDays": "{range} · {days} d",
+  "poolFactorSince": "Fijo en {factor} desde {day}",
+  "poolRowBasis": "Base",
+  "poolBasisBlocks": "{found} / {expected} blq.",
+  "poolBasisFactor": "mostrado ÷ share = {factor}",
+  "poolRowYield": "Eficiencia efectiva",
+  "poolSplitRange": "Intervalo del 95 %",
+  "poolFactorNoLuck": "Sin suerte (por relación)",
+  "poolPearlHashDualWarn": "En /api/stats de PearlHash, hashrate mostrado ÷ (tasa de shares aceptados × 2^48) estuvo fijo en {oldFactor} antes del 3 de nov. (implicando {oldFactorCost}, acorde con 1.289 / 1.420,7 bloques en cadena ≈ {priorCost}) y fijo en {newFactor} desde el 4 de nov. Se muestran tanto el cálculo móvil de 30 días en cadena como el de la relación mostrada:",
+  "poolPearlHashSinceNote": "Por qué se muestran ambos: tras el 2 de nov. ({range} · {days} d), los bloques en cadena son {blocks} frente a {expected} esperados ({yield}, IC 95 % {low}–{high}), aún pocos días para separar una diferencia de ~1,8 % de la suerte, mientras la ventana de 30 días aún incluye datos previos al 3 de nov.",
+  "poolPearlHashWatchNote": "Verificación por dirección: el registro horario de las 1.000 principales direcciones de cobro desde el 11 de nov. muestra idéntico PRL por share y cuotas acreditadas acordes a la tasa de shares de cada cuenta; los datos actuales no respaldan recortes selectivos a direcciones concretas. Al exigir cliente de protocolo cerrado y no publicar lista de bloques, la tasa de shares declarada no puede verificarse de forma independiente."
 }

@@ -599,5 +599,20 @@
   "poolNegativeCostWarn": "Les échantillons publics proviennent de grandes adresses bénéficiaires sur la chaîne et peuvent inclure des remises privées ou des régularisations inter-jours sans détail quotidien public ; les adresses ordinaires paient les frais affichés, retenus pour le rendement estimé.",
   "poolClosedPoolWarn": "PearlHash n’accepte que son propre logiciel à protocole fermé et ne publie ni liste des blocs, ni effort par bloc, ni détail des répartitions ; son taux de shares ne peut pas être vérifié indépendamment.",
   "poolPerynWarn": "Peryn accorde des paliers de remise non publics aux gros comptes (les adresses au-delà de 50 PH/s ou portant un badge de remise spéciale sont exclues ici) et ne fournit pas d’API d’historique ; les pages d’adresse ne gardent que 7 jours de hashrate quotidien arrondi à 3 chiffres significatifs, empêchant tout réaudit ultérieur.",
-  "poolF2PoolWarn": "F2Pool ne publie ni pages de comptes publiques, ni liste des blocs, ni détail des règlements ; ce chiffre provient du cumul quotidien d’un seul compte en lecture seule et dépasse de 0,5 à 0,7 point le tarif affiché en page d’accueil sans explication publique."
+  "poolF2PoolWarn": "F2Pool ne publie ni pages de comptes publiques, ni liste des blocs, ni détail des règlements ; ce chiffre provient du cumul quotidien d’un seul compte en lecture seule et dépasse de 0,5 à 0,7 point le tarif affiché en page d’accueil sans explication publique.",
+  "poolWindow30d": "30 j glissants",
+  "poolDisplayFactorTag": "Ratio affiché",
+  "poolCol30d": "30 j glissants",
+  "poolColFactor": "Ratio affiché",
+  "poolSplitDays": "{range} · {days} j",
+  "poolFactorSince": "Fixe à {factor} depuis {day}",
+  "poolRowBasis": "Base",
+  "poolBasisBlocks": "{found} / {expected} bl.",
+  "poolBasisFactor": "affiché ÷ share = {factor}",
+  "poolRowYield": "Rendement effectif",
+  "poolSplitRange": "Intervalle à 95 %",
+  "poolFactorNoLuck": "Hors chance (par ratio)",
+  "poolPearlHashDualWarn": "Dans /api/stats de PearlHash, hashrate affiché ÷ (taux de shares acceptés × 2^48) était fixé à {oldFactor} avant le 3 nov. (soit {oldFactorCost}, conforme aux 1 289 / 1 420,7 blocs sur chaîne ≈ {priorCost}), puis à {newFactor} depuis le 4 nov. Les deux mesures – 30 j glissants sur chaîne et ratio affiché – sont présentées :",
+  "poolPearlHashSinceNote": "Pourquoi afficher les deux : après le 2 nov. ({range} · {days} j), on compte {blocks} blocs contre {expected} attendus ({yield}, IC 95 % {low}–{high}), échantillon encore trop court pour isoler un écart d’environ 1,8 % de la chance, tandis que la fenêtre de 30 j contient encore des jours d’avant le 3 nov.",
+  "poolPearlHashWatchNote": "Suivi par adresse : l’enregistrement horaire des 1 000 principales adresses depuis le 11 nov. montre un PRL par share identique et des parts créditées conformes au taux de shares de chaque compte — les données ne soutiennent pas un prélèvement ciblé sur certaines adresses. Le protocole client fermé et l’absence de liste de blocs empêchent toutefois de vérifier indépendamment le taux de shares déclaré."
 }

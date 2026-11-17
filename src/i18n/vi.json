@@ -599,5 +599,20 @@
   "poolNegativeCostWarn": "Mẫu công khai lấy từ các địa chỉ nhận lớn trên chuỗi, có thể gồm khoản hoàn riêng hoặc bù trừ qua ngày và không có bảng kê hằng ngày công khai; địa chỉ thường vẫn chịu phí công bố nên lợi suất ước tính tính theo phí công bố.",
   "poolClosedPoolWarn": "PearlHash chỉ cho phép phần mềm giao thức đóng riêng và không công bố danh sách khối, effort từng khối hay sổ chia thưởng; tốc độ share báo cáo không thể kiểm chứng độc lập.",
   "poolPerynWarn": "Peryn áp dụng mức hoàn phí riêng không công khai cho các địa chỉ lớn (đã loại trừ địa chỉ trên 50 PH/s hoặc có nhãn hoàn phí đặc biệt) và không cung cấp API lịch sử; trang địa chỉ chỉ lưu hashrate ngày làm tròn 3 chữ số có nghĩa trong 7 ngày nên không thể đối chiếu lại các kỳ trước.",
-  "poolF2PoolWarn": "F2Pool không công bố trang tài khoản công khai, danh sách khối hay chi tiết thanh toán; con số này tính từ tổng hợp ngày của một tài khoản chỉ đọc duy nhất và cao hơn giá trang chủ khoảng 0,5–0,7 điểm phần trăm mà chưa rõ nguyên nhân."
+  "poolF2PoolWarn": "F2Pool không công bố trang tài khoản công khai, danh sách khối hay chi tiết thanh toán; con số này tính từ tổng hợp ngày của một tài khoản chỉ đọc duy nhất và cao hơn giá trang chủ khoảng 0,5–0,7 điểm phần trăm mà chưa rõ nguyên nhân.",
+  "poolWindow30d": "30N trượt",
+  "poolDisplayFactorTag": "Tỷ lệ hiển thị",
+  "poolCol30d": "30 ngày trượt",
+  "poolColFactor": "Tỷ lệ hiển thị",
+  "poolSplitDays": "{range} · {days} ngày",
+  "poolFactorSince": "Cố định {factor} từ {day}",
+  "poolRowBasis": "Cơ sở",
+  "poolBasisBlocks": "{found} / {expected} khối",
+  "poolBasisFactor": "hiển thị ÷ share = {factor}",
+  "poolRowYield": "Hiệu suất quy đổi",
+  "poolSplitRange": "Khoảng 95%",
+  "poolFactorNoLuck": "Không tính may rủi (theo tỷ lệ)",
+  "poolPearlHashDualWarn": "Trong /api/stats của PearlHash, hashrate hiển thị ÷ (tốc độ share chấp nhận × 2^48) cố định ở {oldFactor} trước 3/11 (tương ứng {oldFactorCost}, khớp với 1.289 / 1.420,7 khối trên chuỗi ≈ {priorCost}) và cố định ở {newFactor} từ 4/11. Hiển thị song song số liệu trượt 30 ngày trên chuỗi và số liệu theo tỷ lệ hiển thị:",
+  "poolPearlHashSinceNote": "Lý do hiển thị cả hai: sau 2/11 ({range} · {days} ngày), số khối trên chuỗi là {blocks} / {expected} kỳ vọng ({yield}, KTC 95% {low}–{high}), mẫu ngắn hạn chưa đủ tách mức chênh ~1,8% khỏi may rủi khối, trong khi cửa sổ 30 ngày vẫn còn dữ liệu trước 3/11.",
+  "poolPearlHashWatchNote": "Đối chiếu từng địa chỉ: theo dõi hàng giờ 1.000 địa chỉ nhận trả thưởng lớn nhất từ 11/11 cho thấy lượng PRL trên mỗi share giống nhau và phần ghi nhận khớp với tốc độ share của từng tài khoản — kết quả hiện tại không ủng hộ giả thuyết khấu trừ chọn lọc một số địa chỉ. Do chỉ cho phép phần mềm giao thức đóng riêng và không công bố danh sách khối, không thể xác minh độc lập tốc độ share được báo cáo."
 }

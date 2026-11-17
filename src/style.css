@@ -3381,3 +3381,20 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
   .volume-donut-layout { grid-template-columns: 1fr; justify-items: center; gap: 14px; }
   .volume-donut-layout .donut-legend { width: 100%; }
 }
+
+.pool-cost-tooltip.pool-cost-split { width: 430px; }
+.pool-comparison .pool-realFee .pool-payout-sub strong { color: var(--muted); font-size: 13px; font-weight: 550; }
+.pool-multiple .pool-payout small { white-space: nowrap; }
+.pool-cost-split-table { width: 100%; border-collapse: collapse; margin: 10px 0 6px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.pool-cost-split-table th, .pool-cost-split-table td { text-align: right; padding: 2.5px 0; white-space: nowrap; }
+.pool-cost-split-table th:first-child, .pool-cost-split-table td:first-child { text-align: left; color: var(--muted); font-weight: 400; padding-inline-end: 8px; }
+.pool-cost-split-table th + th, .pool-cost-split-table td + td { padding-inline-start: 12px; }
+.pool-cost-split-table thead tr:first-child th { font-size: 12.5px; font-weight: 650; color: var(--muted); padding-bottom: 1px; }
+.pool-cost-split-table thead tr:first-child th.shown { color: var(--text); }
+.pool-cost-split-table thead tr.dates th { font-size: 11px; font-weight: 400; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.pool-cost-split-table tbody tr:first-child td { padding-top: 6px; }
+.pool-cost-split-table td { color: var(--muted); }
+.pool-cost-split-table td.shown { color: var(--text); }
+.pool-cost-split-table tr.total td { border-top: 1px solid var(--line); padding-top: 6px; font-weight: 650; }
+.pool-cost-split-table tr.total td.shown { color: var(--text); }
+.pool-cost-split-table tr.range td { font-size: 11.5px; color: var(--muted); padding-top: 3px; }
