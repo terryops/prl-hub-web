@@ -20,6 +20,24 @@ export function NetworkSummary({ data, t, lang, failed }: { data?: Overview; lan
     [t("unitOutput"), unitYield(n?.prlPerTHDay, lang, t("perDay"))],
   ].map(([label, value]) => <div className="card network-stat" key={label}><small>{label}</small>{!data && !failed ? <Skeleton label={t("loading")} kind="balance" /> : <strong title={label === t("unitOutput") && n?.prlPerTHDay != null ? prlNumber(n.prlPerTHDay * 1000, lang, 8, 8) + ` PRL/PH·${t("perDay")}` : label === t("blockReward") && n?.reward != null ? prlNumber(n.reward, lang, 8, 8) + " PRL" : undefined} className={value === "—" ? "missing-value" : undefined}>{value}</strong>}</div>)}</section>;
 }
+// The Real Cost statement at the top of the pool page: open methods, no sponsors, PRs only, pool owners may opt out.
+const NOTICE_LINKS: Record<string, { href: string; text: string }> = {
+  "{github}": { href: "https://github.com/terryops/prl-hub-server", text: "GitHub" },
+  "{email}": { href: "mailto:support@pearlhub.net", text: "support@pearlhub.net" },
+};
+const NOTICE_POINTS = [["poolNoticeOpenTitle", "poolNoticeOpenText"], ["poolNoticeSponsorTitle", "poolNoticeSponsorText"],
+  ["poolNoticePrTitle", "poolNoticePrText"], ["poolNoticeHideTitle", "poolNoticeHideText"]] as const;
+export function PoolNotice({ t, onClose }: { t: Translate; onClose: () => void }) {
+  const linked = (text: string) => text.split(/(\{github\}|\{email\})/).map((part, i) => {
+    const link = NOTICE_LINKS[part];
+    return link ? <a key={i} href={link.href} target={link.href.startsWith("https:") ? "_blank" : undefined} rel="noreferrer">{link.text}</a> : part;
+  });
+  return <section className="card pool-news" aria-labelledby="pool-news-title">
+    <h2 id="pool-news-title"><WarnMark />{t("poolNewsTitle")}</h2>
+    <ul>{NOTICE_POINTS.map(([title, text]) => <li key={title}><strong>{t(title)}</strong> {linked(t(text))}</li>)}</ul>
+    <button className="icon-button market-banner-close" onClick={onClose} aria-label={t("close")} title={t("close")}><Icon name="close" /></button>
+  </section>;
+}
 function PoolSparkline({ row, t }: { row: PoolRow; t: Translate }) {
   const plot = poolSparkline(row.history || []);
   return plot ? <svg className="pool-sparkline" viewBox="0 0 140 42" role="img" aria-label={`${row.name} · ${t("poolHashrate7d")}`}>

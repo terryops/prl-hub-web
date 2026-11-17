@@ -42,7 +42,7 @@ import type {
 } from "./types.ts";
 import "./style.css";
 import { MarketData, PoolDonut } from "./MarketData.tsx";
-import { PoolComparison } from "./PoolOverview.tsx";
+import { PoolComparison, PoolNotice } from "./PoolOverview.tsx";
 import { FleetCalculator } from "./FleetCalculator.tsx";
 import { SecurityOverview } from "./SecurityOverview.tsx";
 import { securityCopy, webSecurity } from "./security-overview.ts";
@@ -84,7 +84,8 @@ import { AndroidRuleForm } from "./AndroidRuleForm.tsx";
 import { androidSecurity, androidSecurityCopy } from "./android-security.ts";
 import { parsePoolCostRoute, poolCostHref } from "./pool-cost-route.ts";
 
-const POOL_NEWS_KEY = "pearlhub.poolNews.20261109", POOL_NEWS_UNTIL = Date.UTC(2026, 10, 16);
+// The Real Cost statement stays until each visitor closes it (a new key shows it again to everyone).
+const POOL_NEWS_KEY = "pearlhub.poolNews.20261117";
 // The Google Play build may not sell Pro outside Play billing; it follows the iOS app's rule.
 const fromApp = appClient() || (ANDROID && androidStore() === "play");
 // Where Pro came from, as the store's name; a grant made by hand ("admin") or none names nothing.
@@ -180,7 +181,7 @@ function App() {
   const [androidBannerHidden, setAndroidBannerHidden] = useState(() => { if (ANDROID || fromApp) return true; try { return localStorage.getItem("pearlhub.androidBanner") === "1"; } catch { return false; } });
   const hideAndroidBanner = () => { setAndroidBannerHidden(true); try { localStorage.setItem("pearlhub.androidBanner", "1"); } catch { /* This visit only. */ } };
   // Pools page: the 2026-11-09 update notice, website only, until 11-16. Closing it is remembered on this device.
-  const [poolNewsHidden, setPoolNewsHidden] = useState(() => { if (ANDROID || fromApp || Date.now() >= POOL_NEWS_UNTIL) return true; try { return localStorage.getItem(POOL_NEWS_KEY) === "1"; } catch { return false; } });
+  const [poolNewsHidden, setPoolNewsHidden] = useState(() => { if (ANDROID || fromApp) return true; try { return localStorage.getItem(POOL_NEWS_KEY) === "1"; } catch { return false; } });
   const hidePoolNews = () => { setPoolNewsHidden(true); try { localStorage.setItem(POOL_NEWS_KEY, "1"); } catch { /* This visit only. */ } };
   const [manualRefresh, setManualRefresh] = useState(false);
   /// The monitor opened from 一览, shown as its full card in place of the list; null = none.
@@ -1365,13 +1366,7 @@ function App() {
           <PoolCostDetail route={costRoute} data={overview.data} lang={state.lang} />
         </Suspense>}
         {page === "pools" && (<div hidden={!!costRoute}>
-          {!poolNewsHidden && (
-            <section className="card pool-news" aria-labelledby="pool-news-title">
-              <h2 id="pool-news-title">{t("poolNewsTitle")}</h2>
-              <p>{t("poolNewsText")}</p>
-              <button className="icon-button market-banner-close" onClick={hidePoolNews} aria-label={t("close")} title={t("close")}><Icon name="close" /></button>
-            </section>
-          )}
+          {!poolNewsHidden && <PoolNotice t={t} onClose={hidePoolNews} />}
           <PoolComparison
             lang={state.lang}
             data={overview.data}

@@ -3324,10 +3324,18 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
 .fleet-live-difficulty { margin: -4px 0 0; font-size: var(--font-13); }
 .fleet-value-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
 .fleet-value-row > span:last-child { color: var(--muted); }
-.pool-news { position: relative; display: grid; gap: 4px; margin-bottom: 16px; padding: 14px 56px 14px 16px; background: radial-gradient(80% 160% at 0% 0%, color-mix(in srgb, var(--blue) 14%, transparent), transparent 65%), radial-gradient(60% 140% at 100% 100%, color-mix(in srgb, var(--purple) 12%, transparent), transparent 60%), var(--surface); }
-.pool-news h2 { margin: 0; font-size: var(--font-16); line-height: 1.35; }
-.pool-news p { margin: 0; font-size: var(--font-13); line-height: 1.6; color: var(--muted); }
-@media (max-width: 640px) { .pool-news { padding: 12px 44px 12px 14px; } }
+/* The Real Cost statement: a warning card (orange bar, tint, title), not news. Light mode's text orange is darker for contrast. */
+.pool-news { --notice-ink: #b45309; position: relative; display: grid; gap: 10px; margin-bottom: 16px; padding: 16px 56px 16px 18px; border: 1px solid color-mix(in srgb, var(--orange-warn) 45%, transparent); border-left: 4px solid var(--orange-warn); background: color-mix(in srgb, var(--orange-warn) 8%, var(--surface)); }
+:root[data-theme="dark"] .pool-news { --notice-ink: var(--orange-warn); background: color-mix(in srgb, var(--orange-warn) 12%, var(--surface)); }
+.pool-news h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--font-16); line-height: 1.35; color: var(--notice-ink); }
+.pool-news h2 .warn-mark { width: 20px; height: 20px; }
+.pool-news ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pool-news li { font-size: var(--font-14); line-height: 1.6; color: var(--text); }
+.pool-news li strong { font-weight: 650; color: var(--notice-ink); }
+.pool-news a { color: var(--blue-text); font-weight: 500; overflow-wrap: anywhere; }
+:root[data-theme="dark"] .pool-news a { color: var(--blue); }
+.pool-news .market-banner-close { top: 10px; transform: none; }
+@media (max-width: 640px) { .pool-news { padding: 14px 44px 14px 14px; } .pool-news .market-banner-close { top: 8px; right: 8px; } }
 
 /* K-line exchange toggle + Global 24h Trading Volume Share & Pools */
 .kline-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
