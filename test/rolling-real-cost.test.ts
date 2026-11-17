@@ -54,6 +54,22 @@ test("HeroMiners' rolling estimate: its figure, period and count interval, check
   assert.equal(rollingRealCost({ ...golden, scheme: "PPS" }), null);
 });
 
+test("PearlHash's rolling estimate: accepted_share_work up to 10,000 blocks with 0 reported orphans", () => {
+  const work = 2466.3, blocks = 2343, foundYield = blocks / work, ratio = 0.99 * foundYield, percent = (1 - ratio) * 100;
+  const ph: PoolPayout = {
+    scheme: "PROP", fee: 1, grossPerPH: 12, solo: false, estimated: true,
+    realFeePercent: percent, realFeeEstimated: true, realFeePeriod: { start: raw.start, end: raw.start + 26 * 86400 },
+    realFeeEstimate: {
+      ...raw, id: "https://pearlhash.xyz/", pool: "PearlHash", scheme: "PROP", theoryBasis: "accepted_share_work",
+      end: raw.start + 26 * 86400, poolBlocks: blocks, blocksSample: blocks, orphans: 0, work, feePercent: 1,
+      foundYield, foundYield95: [foundYield - 0.039, foundYield + 0.04], ratio, cost95: [2.06, 9.72],
+    },
+  };
+  const r = rollingRealCost(ph)!;
+  assert.equal(r.days, 26); assert.equal(r.poolBlocks, 2343); assert.equal(r.lossUnconfirmed, false);
+  assert.equal(rollingRealCost({ ...ph, realFeeEstimate: { ...ph.realFeeEstimate!, orphans: 1, blocksSample: 2342 } }), null);
+});
+
 test("a verified wire record requires explicit luck exclusion, a common basis and at least six hours", () => {
   const good: PoolPayout = { ...golden, realFeeStatus: "verified", realFeeBasis: "miner_reported_work", realFeeLuckExcluded: true };
   assert.equal(verifiedMinerCost(good), true);
@@ -81,7 +97,8 @@ test("all 16 locales retain the rolling estimate's data placeholders", () => {
     .map((name) => [name.slice(0, -5), JSON.parse(readFileSync(new URL(name, localePath), "utf8"))]));
   assert.equal(Object.keys(dictionaries).length, 16);
   const keys = ["poolRollingTitle", "poolRollingSample", "poolRollingYield", "poolRollingCostRange",
-    "poolRollingUnconfirmed", "poolRollingBasis", "poolRollingPending", "poolRollingPeriodIntro"] as const;
+    "poolRollingUnconfirmed", "poolRollingBasis", "poolRollingPending", "poolRollingPeriodIntro",
+    "poolNegativeCostWarn", "poolClosedPoolWarn"] as const;
   const placeholders = (s: string) => [...s.matchAll(/\{\w+\}/g)].map((m) => m[0]).sort();
   for (const [lang, dictionary] of Object.entries(dictionaries)) for (const key of keys) {
     assert.ok(dictionary[key].trim(), `${lang}:${key}`);

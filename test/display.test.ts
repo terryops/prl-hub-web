@@ -257,6 +257,8 @@ test("pool comparison shows one icon-only link per audited pool and none without
     for (const view of [html.slice(html.indexOf("<tbody"), html.indexOf("</tbody>")), html.slice(html.indexOf('class="pool-mobile-list"'))]) {
       assert.ok(view.includes(cost), lang);
       assert.ok(view.includes(negative), lang);
+      assert.match(view, /pool-cost-note warn/);
+      assert.match(view, /warn-mark/);
       const links = [...view.matchAll(/<a class="pool-cost-detail-link"[^>]*>(.*?)<\/a>/g)];
       assert.equal(links.length, 2, lang);
       for (const link of links) {
@@ -373,7 +375,7 @@ test("cost pages: one heading, the figure, then how it is worked out, how to che
       assert.ok(html.includes(`<h2>${heading}</h2>`), `${slug}:${scheme}:${heading}`);
     for (const gone of ["evidence.zip", "verify.py", "证据覆盖", "Evidence coverage", "1.40%", "cost-toc"])
       assert.ok(!html.includes(gone), `${slug}:${scheme}:${gone}`);
-    if (slug === "peryn") assert.match(html, /tier=founding" aria-current="page"/);
+    if (slug === "peryn") assert.match(html, /tier=standard" aria-current="page"/);
   }
 });
 

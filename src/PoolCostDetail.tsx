@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Lang, Overview, PoolOverview, PoolPayout } from "./types.ts";
 import { Icon } from "./Icons.tsx";
-import { HelpTip, InfoMark } from "./InfoTip.tsx";
+import { HelpTip, InfoMark, WarnMark } from "./InfoTip.tsx";
 import { costPools, poolCostHref, poolCostSlug, type PoolCostRoute } from "./pool-cost-route.ts";
 import { auditTable, costCopy, costSchemes, costStory, type AuditColumn, type CostLanguage, type CostStory } from "./real-cost-content.ts";
 import { netPerPH, orphanRate, poolPayouts, realCostParts, realFeeTiers, rollingRealCost, shareYield } from "./pool-comparison.ts";
@@ -29,7 +29,7 @@ export default function PoolCostDetail({ route, data, lang }: { route: PoolCostR
   const schemes = costSchemes(route.slug);
   const scheme = route.scheme && schemes.includes(route.scheme) ? route.scheme : schemes[0] || route.scheme || "";
   const story = costStory(route.slug, scheme, language);
-  const tier = route.tier || "founding";
+  const tier = route.tier || "standard";
   const payout = livePayout(row, scheme);
   const locale = language === "zh" ? "zh-CN" : "en-US";
   const num = (v: number, digits = 2, min = 0) => new Intl.NumberFormat(locale, { minimumFractionDigits: min, maximumFractionDigits: digits }).format(v);
@@ -48,7 +48,7 @@ export default function PoolCostDetail({ route, data, lang }: { route: PoolCostR
     return () => { document.title = previous; };
   }, [title]);
 
-  // Peryn's PPS+ is measured per fee tier; the page shows the chosen one (founding members' by default).
+  // Peryn's PPS+ is measured per fee tier; the page shows the chosen one (other addresses' by default).
   const tiered = route.slug === "peryn" && scheme === "PPS+";
   const tiers = tiered && payout ? realFeeTiers(payout) : null;
   const value = tiered ? tiers?.find((x) => x.tier === tier)?.percent ?? null : payout?.realFeePercent ?? null;
@@ -80,9 +80,10 @@ export default function PoolCostDetail({ route, data, lang }: { route: PoolCostR
     }
     const r = story.method === "rolling" ? rollingRealCost(payout) : null;
     if (r) {
+      const yieldLabel = r.theoryBasis === "accepted_share_work" ? c.shareRatio : c.foundYield;
       rows.push({ label: c.found, value: r.orphans ? c.foundOrphans.replace("{n}", num(r.blocksSample, 0)).replace("{o}", num(r.orphans, 0)) : c.blocksUnit.replace("{n}", num(r.blocksSample, 0)) },
         { label: c.expected, value: c.blocksUnit.replace("{n}", num(r.work, 1)) },
-        { label: c.foundYield, value: language === "zh" ? `${pct(r.foundYield * 100)}（${between(r.foundYield95[0] * 100, r.foundYield95[1] * 100)}）`
+        { label: yieldLabel, value: language === "zh" ? `${pct(r.foundYield * 100)}（${between(r.foundYield95[0] * 100, r.foundYield95[1] * 100)}）`
           : `${pct(r.foundYield * 100)} (${between(r.foundYield95[0] * 100, r.foundYield95[1] * 100)})` },
         { label: c.fee, value: pct(r.feePercent) },
         { label: c.total, value: "≈" + pct(value), total: true });
@@ -92,7 +93,9 @@ export default function PoolCostDetail({ route, data, lang }: { route: PoolCostR
   }
   const otherTier = tiers?.find((x) => x.tier !== tier);
   // Against the fee the pool states: how much of the cost the fee alone explains.
-  const fee = payout?.fee;
+  const fee = tiered && tier === "founding"
+    ? (payout?.founding?.fee ?? payout?.foundingClosed?.fee ?? payout?.fee)
+    : payout?.fee;
   const gap = value != null && fee != null && Number.isFinite(fee) ? Math.round((value - fee) * 100) / 100 : null;
   const feeNote = gap == null ? null : gap === 0 ? c.atFee : (gap > 0 ? c.vsFee : c.belowFee).replace("{gap}", num(Math.abs(gap), 2, 2));
   const updated = data?.ts ? new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" }).format(data.ts * 1000) + " UTC" : null;
@@ -151,14 +154,22 @@ export default function PoolCostDetail({ route, data, lang }: { route: PoolCostR
         {schemes.map((s) => <a key={s} href={poolCostHref(route.slug, s)} aria-current={scheme === s ? "page" : undefined}>{s}</a>)}
       </div>}
       {tiered && <div className="cost-schemes" role="group" aria-label={c.tier}>
-        {(["founding", "standard"] as const).map((t) => <a key={t} href={poolCostHref(route.slug, scheme, t)} aria-current={tier === t ? "page" : undefined}>{c[t]}</a>)}
+        {(["standard", "founding"] as const).map((t) => <a key={t} href={poolCostHref(route.slug, scheme, t)} aria-current={tier === t ? "page" : undefined}>{c[t]}</a>)}
       </div>}
     </div>
 
     <section className="card cost-result" aria-label={c.realCost}>
       <div className="cost-result-main">
         <span>{c.realCost} · {scheme}{tiered ? ` · ${c[tier]}` : ""}</span>
-        {value != null ? <strong>{approx}{pct(value)}</strong> : <strong className="cost-result-none">—</strong>}
+        {value != null ? (() => {
+          const warnText = value < 0 ? c.negativeWarn
+            : route.slug === "pearlhash" ? c.closedWarn
+            : route.slug === "peryn" ? c.perynWarn
+            : route.slug === "f2pool" ? c.f2poolWarn : null;
+          return warnText
+            ? <div className="cost-result-figure"><strong>{approx}{pct(value)}</strong><HelpTip className="info-tip cost-result-warn" bubbleClassName="pool-cost-tooltip info-tip-bubble" label={c.warnLabel} mark={<WarnMark />}><p className="pool-cost-warn">{warnText}</p></HelpTip></div>
+            : <strong>{approx}{pct(value)}</strong>;
+        })() : <strong className="cost-result-none">—</strong>}
         {value != null && period ? <small>{c.period} {day.format(period.start * 1000)} – {day.format(period.end * 1000)} (UTC)</small>
           : value == null && <small>{c.noData}</small>}
         {value != null && feeNote && <small>{feeNote}</small>}

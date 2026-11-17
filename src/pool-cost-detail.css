@@ -20,8 +20,11 @@
 .cost-result { padding: 22px 24px; margin-bottom: 16px; }
 .cost-result-main { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .cost-result-main > span { font-size: 12px; color: var(--muted); }
-.cost-result-main > strong { font-size: 34px; font-weight: 600; line-height: 1.15; letter-spacing: -.03em; color: var(--blue-text); font-variant-numeric: tabular-nums; }
+.cost-result-figure { display: inline-flex; align-items: center; gap: 8px; }
+.cost-result-main > strong, .cost-result-figure > strong { font-size: 34px; font-weight: 600; line-height: 1.15; letter-spacing: -.03em; color: var(--blue-text); font-variant-numeric: tabular-nums; }
 .cost-result-main > strong.cost-result-none { color: var(--muted); }
+.cost-result-warn, :root .cost-result-warn:hover, :root .cost-result-warn[aria-expanded="true"] { width: 28px; height: 28px; min-height: 28px; padding: 3px; border: 0; background: transparent; color: var(--orange-warn); }
+.cost-result-warn .icon { width: 20px; height: 20px; }
 .cost-result-main > small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cost-result-other { display: inline-flex; align-items: center; gap: 4px; }
 .cost-result-rows { margin: 18px 0 0; border-top: 1px solid var(--line); }
@@ -70,7 +73,7 @@
   .cost-heading { gap: 14px; flex-wrap: wrap; margin-top: 0; }
   .cost-heading h1 { font-size: 21px; }
   .cost-result { padding: 18px 16px; }
-  .cost-result-main > strong { font-size: 30px; }
+  .cost-result-main > strong, .cost-result-figure > strong { font-size: 30px; }
   .cost-section { padding: 18px 16px; }
 }
 .cost-result-updated { margin: 12px 0 0; font-size: 11px; color: var(--muted); }

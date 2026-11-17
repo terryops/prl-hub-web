@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sortPools, poolSparkline, poolPayouts, realCostPeriods, hasPpsRealCost, ppsWindowEnd, weekLuck, estimatedYield, yieldTrustworthy, netPerPH, payoutCost, netYield, bestYield, rankedYield, orphanRate, schemeFamily, poolsByScheme, ownApiMissing, mergeBonus, minerReport, realFeePending, shareYield, percentRange, realCostParts, realFeeTiers, realCostFewBlocks, REAL_COST_MIN_BLOCKS } from "../src/pool-comparison.ts";
+import { sortPools, poolSparkline, poolPayouts, realCostPeriods, hasPpsRealCost, ppsWindowEnd, weekLuck, estimatedYield, yieldTrustworthy, netPerPH, payoutCost, netYield, bestYield, rankedYield, orphanRate, schemeFamily, poolsByScheme, ownApiMissing, mergeBonus, minerReport, realFeePending, shareYield, percentRange, realCostParts, realCostWarn, realFeeTiers, realCostFewBlocks, REAL_COST_MIN_BLOCKS } from "../src/pool-comparison.ts";
 import type { PoolPayout } from "../src/types.ts";
 import type { PoolOverview } from "../src/types.ts";
 
@@ -122,7 +122,8 @@ test("take-home yield: PPS pays the network figure less Real Cost, so PPS pools 
   close(netPerPH(payout("PPS", 5, 18.391774526036183, 5.003957146717564)), 18.391774526036183 * (1 - 0.05003957146717564));
   close(netPerPH(payout("PPS", 1, 18.36908537496546, 3.594200702636696)), 18.36908537496546 * (1 - 0.03594200702636696));
   close(netPerPH(payout("FPPS", 2, 100, 0)), 100); // a measured zero is kept
-  close(netPerPH(payout("PPS", 2, 100, -1)), 101); // so is a pool that paid above the network figure
+  close(netPerPH(payout("PPS", 2, 100, -1)), 98); // a negative PPS Real Cost falls back to the stated fee
+  assert.equal(payoutCost(payout("PPS+", 1, 100, -0.85)), 1);
   // Until Real Cost is measured, the tariff stands in.
   close(netPerPH(payout("PPS", 4, 100, null)), 96);
   close(netPerPH(payout("PPS", 4, 100, Number.NaN)), 96);
@@ -299,4 +300,16 @@ test("Real Cost too few blocks: a PPLNS / PROP dash whose week is worth under 10
     [{ name: "Peryn" } as PoolOverview, pay("PPLNS")], [row(47.8), pay("PPS+")], [row(47.8), pay("SOLO", null, { solo: true })],
     [row(47.8, { solo: true }), pay("PPLNS")], [row(47.8), pay(null)]] as const)
     assert.equal(realCostFewBlocks(r, p), null, JSON.stringify([r, p]));
+});
+test("Real Cost warning mark: negative figures, PearlHash, Peryn and F2Pool carry orange warnings; open verifiable pools and SOLO do not", () => {
+  const pool = (id: string, name: string, solo = false) => ({ id, name, solo });
+  assert.equal(realCostWarn(pool("https://peryn.ai/", "Peryn"), payout("PPS+", 1, 100, -0.85)), "negative");
+  assert.equal(realCostWarn(pool("https://peryn.ai/", "Peryn"), payout("PPS+", 1, 100, 1.04)), "peryn");
+  assert.equal(realCostWarn(pool("https://www.f2pool.com/", "F2Pool"), payout("PPS", 1, 100, 4.37)), "f2pool");
+  assert.equal(realCostWarn(pool("https://pearlhash.xyz/", "PearlHash"), payout("PROP", 1, 80, 5.95)), "closed");
+  assert.equal(realCostWarn(pool("https://pearlhash.xyz/", "PearlHash"), payout("PROP", 1, 80, -0.2)), "negative");
+  assert.equal(realCostWarn(pool("https://pearlfortune.org/", "Pearl Fortune"), payout("PPLNS", 2, 80, 2.4)), null);
+  assert.equal(realCostWarn(pool("https://peryn.ai/", "Peryn"), payout("PPLNS", 1, 80, null)), null);
+  assert.equal(realCostWarn(pool("https://pearlhash.xyz/", "PearlHash"), payout("PROP", 1, 80, null)), null);
+  assert.equal(realCostWarn(pool("https://pearlhash.xyz/solo", "PearlHash SOLO", true), payout("SOLO", 1, 80, 5.95, true)), null);
 });

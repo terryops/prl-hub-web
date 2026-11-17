@@ -148,7 +148,7 @@
   "comparisonExplanation": "PRL por PH·dia: blocos observados × recompensa ÷ hashrate, normalizado para um dia, menos a taxa do pool.",
   "poolWeekLuckExplanation": "Rendimento estimado = rendimento teórico atual × sorte de blocos do pool nos últimos 7 dias (blocos encontrados ÷ blocos que o hashrate dele deveria ter encontrado, medido a cada 5 minutos) × (1 − taxa do pool); PRL/PH·dia; verde = o maior.",
   "poolWeekLuckFallback": "Pools sem “7 dias” têm menos de uma semana de amostras: blocos encontrados × recompensa por bloco ÷ hashrate.",
-  "ppsExplanation": "O PPS usa a produção esperada da rede menos o custo real do pool (a taxa dele enquanto não for medido). SOLO é uma loteria. Nenhum deles é classificado como o maior rendimento medido.",
+  "ppsExplanation": "O PPS usa a produção esperada da rede menos o custo real do pool (a taxa divulgada enquanto não for medido ou se for negativo). SOLO é uma loteria. Nenhum deles é classificado como o maior rendimento medido.",
   "sampleExplanation": "Amostras pequenas contêm menos de 20 blocos e podem variar bastante. O rótulo verde “Maior medido” compara pools com amostras suficientes da mesma fonte.",
   "heroExplanation": "A taxa de software HeroMiners é uma referência de 3%; edite a taxa total para corresponder ao seu software.",
   "mixedSources": "Os dados principais usam uma janela de 24 horas. As linhas “Fonte extra” usam os últimos 1.000 blocos da rede do MiningPoolStats. “API do pool” indica hashrate ou taxas complementados ou corrigidos pela API do próprio pool.",
@@ -393,7 +393,7 @@
   "poolRollingUnconfirmed": "Uma perda permanente de rendimento não foi confirmada; a produção observada ainda inclui a sorte dos blocos.",
   "poolRollingBasis": "Baseado no trabalho de shares registrado pelo pool. A taxa {fee} e as perdas de órfãos são contadas uma vez cada. O intervalo exclui erros de telemetria e dos dados do pool.",
   "poolRollingPending": "Sem estimativa móvel atual. São necessários pelo menos cinco dias UTC completos e 100 blocos com registros do trabalho de cada rodada.",
-  "poolRollingPeriodIntro": "HeroMiners usa até 30 dias UTC completos, no mínimo cinco dias e 100 blocos; o intervalo inclui sorte. Outras estimativas PPLNS/PROP exigem cinco dias observados nos últimos sete, effort por bloco e ao menos 100 blocos esperados.",
+  "poolRollingPeriodIntro": "HeroMiners e PearlHash usam até 30 dias UTC completos, no mínimo cinco dias e 100 blocos; o intervalo inclui sorte. Outras estimativas PPLNS/PROP exigem cinco dias observados nos últimos sete, effort por bloco e ao menos 100 blocos esperados.",
   "poolRealCostFrom": "De",
   "poolRealCostTo": "Até",
   "poolShareYieldShownHelp": "O site do {pool} mostra o hashrate cerca de {loss} abaixo dos shares que ele credita, e os blocos encontrados acompanham esse número menor, não os shares. O {pool} paga pelos blocos que de fato encontra, então os ganhos ficam cerca de {loss} menores; a taxa é de {fee}, então o custo real fica em cerca de {cost}.",
@@ -588,5 +588,9 @@
   "trade": "Negociar",
   "navTradeShort": "Negociar",
   "tradeOnExchange": "Negociar na %@",
-  "tradeInApp": "Negociar no app"
+  "tradeInApp": "Negociar no app",
+  "poolNegativeCostWarn": "As amostras públicas vêm de grandes endereços recebedores na rede e podem incluir bônus privados ou ajustes entre dias sem detalhamento diário público; endereços comuns pagam a taxa divulgada, usada no rendimento estimado.",
+  "poolClosedPoolWarn": "O PearlHash aceita apenas seu próprio cliente de protocolo fechado e não publica lista de blocos, effort por bloco nem histórico de rateio; a taxa de shares informada não pode ser verificada de forma independente.",
+  "poolPerynWarn": "A Peryn aplica faixas privadas de desconto para grandes contas (endereços acima de 50 PH/s ou com selo de desconto especial são excluídos aqui) e não oferece API histórica; as páginas de endereço mantêm apenas 7 dias de hashrate diário com 3 algarismos significativos, impedindo reauditar períodos anteriores.",
+  "poolF2PoolWarn": "A F2Pool não publica páginas públicas de contas, lista de blocos nem detalhamento de liquidação; este valor vem do resumo diário de uma única conta somente leitura e fica 0,5–0,7 ponto percentual acima do preço da página inicial por motivos não divulgados."
 }

@@ -2,11 +2,11 @@ import { useState, type ReactNode } from "react";
 import type { Lang, Overview, PoolOverview as PoolRow, PoolPayout } from "./types.ts";
 import type { TextKey } from "./i18n/index.ts";
 import { difficulty, hashrate, unitYield, prlNumber } from "./format.ts";
-import { bestYield, mergeBonus, realCostFewBlocks, realCostParts, realFeePending, REAL_COST_MIN_BLOCKS, realFeeTiers, shareYield, rollingRealCost, netPerPH, orphanRate, ownApiMissing, payoutCost, percentRange, poolPayouts, poolSparkline, rankedYield, sortPools, relativePoolBlock, weekLuck, type PoolSortKey } from "./pool-comparison.ts";
+import { bestYield, mergeBonus, realCostFewBlocks, realCostParts, realCostWarn, realFeePending, REAL_COST_MIN_BLOCKS, realFeeTiers, shareYield, rollingRealCost, netPerPH, orphanRate, ownApiMissing, payoutCost, percentRange, poolPayouts, poolSparkline, rankedYield, sortPools, relativePoolBlock, weekLuck, type PoolSortKey } from "./pool-comparison.ts";
 import { Icon } from "./Icons.tsx";
 import { Skeleton } from "./Skeleton.tsx";
 import { HelpTip, PoolCostHelp } from "./PoolCostHelp.tsx";
-import { InfoMark } from "./InfoTip.tsx";
+import { InfoMark, WarnMark } from "./InfoTip.tsx";
 import { PoolSchemeGuide } from "./PoolSchemeGuide.tsx";
 import { poolCostDetailHref } from "./pool-cost-route.ts";
 export type Translate = (key: TextKey) => string;
@@ -87,21 +87,28 @@ export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data
   const yieldText = (r: PoolRow, p: PoolPayout, y: number) =>
     t("poolShareYieldShownHelp").replaceAll("{pool}", r.name).replaceAll("{loss}", numeric((1 - y) * 100, 1, lang) + "%")
       .replace("{fee}", numeric(p.fee ?? 0, 1, lang) + "%").replace("{cost}", numeric(p.realFeePercent ?? 0, 1, lang) + "%");
+  const warnKey = (w: NonNullable<ReturnType<typeof realCostWarn>>) =>
+    w === "negative" ? "poolNegativeCostWarn" : w === "closed" ? "poolClosedPoolWarn" : w === "peryn" ? "poolPerynWarn" : "poolF2PoolWarn";
   const yieldNote = (r: PoolRow, p: PoolPayout, value: ReactNode, text: string) => {
     const y = shareYield(p);
     if (y == null) return null;
-    return <HelpTip label={`${t("poolRealCost")} ${text}`} className="pool-cost-note" mark={<>{value}<InfoMark /></>}>
-      {yieldText(r, p, y)}
+    const w = realCostWarn(r, p);
+    return <HelpTip label={`${t("poolRealCost")} ${text}`} className={`pool-cost-note${w ? " warn" : ""}`} mark={<>{value}{w ? <WarnMark /> : <InfoMark />}</>}>
+      {w && <p className="pool-cost-warn">{t(warnKey(w))}</p>}
+      <p>{yieldText(r, p, y)}</p>
     </HelpTip>;
   };
-  // PPLNS / PROP (iOS RealFeeHelpButton): the figure with an ⓘ beside it, the bubble showing what it is made of — the fee,
-  // the week's orphans and the rest, adding up to the figure. A pool that turns fewer shares into blocks keeps its sentence on top.
+  // PPLNS / PROP (iOS RealFeeHelpButton): the figure with an ⓘ (or orange !) beside it, the bubble showing what it is made of —
+  // the fee, the week's orphans and the rest, adding up to the figure. A pool that turns fewer shares into blocks keeps its sentence on top.
   const costNote = (r: PoolRow, p: PoolPayout, value: ReactNode, text: string) => {
-    // HeroMiners: up to 30 days of its blocks against the shares it credits; luck stays in, as the interval.
+    const w = realCostWarn(r, p);
+    const warnLine = w && <p className="pool-cost-warn">{t(warnKey(w))}</p>;
+    // HeroMiners & PearlHash: up to 30 days of canonical blocks against accepted share work; luck stays in, as the interval.
     const estimate = rollingRealCost(p);
     if (estimate) {
       const pct = (x: number) => numeric(x, 2, lang).replace(/-/g, "−") + "%";
-      return <HelpTip label={`${t("poolRealCost")} ${text}`} className="pool-cost-note" mark={<>{value}<InfoMark /></>}>
+      return <HelpTip label={`${t("poolRealCost")} ${text}`} className={`pool-cost-note${w ? " warn" : ""}`} mark={<>{value}{w ? <WarnMark /> : <InfoMark />}</>}>
+        {warnLine}
         <p className="pool-cost-lead">{t("poolRollingTitle").replace("{days}", numeric(estimate.days, 0, lang))} · {dates.format(estimate.start * 1000)} – {dates.format(estimate.end * 1000)}</p>
         <p>{t("poolRollingCostRange").replace("{low}", pct(estimate.cost95[0])).replace("{high}", pct(estimate.cost95[1]))}</p>
         {estimate.lossUnconfirmed && <p>{t("poolRollingUnconfirmed")}</p>}
@@ -113,7 +120,8 @@ export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data
     const percent = (x: number) => x.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/-/g, "−") + "%";
     const part = (label: string, amount: string, detail?: string, total = false) =>
       <div className={`pool-cost-part${total ? " total" : ""}`}><span>{label}{detail && <small>{detail}</small>}</span><span>{amount}</span></div>;
-    return <HelpTip label={`${t("poolRealCost")} ${text}`} className="pool-cost-note" mark={<>{value}<InfoMark /></>}>
+    return <HelpTip label={`${t("poolRealCost")} ${text}`} className={`pool-cost-note${w ? " warn" : ""}`} mark={<>{value}{w ? <WarnMark /> : <InfoMark />}</>}>
+      {warnLine}
       {y != null && <p className="pool-cost-lead">{yieldText(r, p, y)}</p>}
       {period && <p className="pool-cost-lead">{t("poolCostLuckOut").replace("{period}", `${dates.format(period.start * 1000)} – ${dates.format(period.end * 1000)}`)}</p>}
       <div className="pool-cost-parts">
@@ -128,14 +136,25 @@ export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data
     </HelpTip>;
   };
   // Real Cost measured per fee tier (Peryn's PPS+): both tiers in a bubble, the one shown first and bold.
-  const tierNote = (p: PoolPayout, value: ReactNode, text: string) => {
+  const tierNote = (r: PoolRow, p: PoolPayout, value: ReactNode, text: string) => {
     const tiers = realFeeTiers(p);
     if (!tiers) return null;
-    return <HelpTip label={`${t("poolRealCost")} ${text}`} className="pool-cost-note" mark={<>{value}<InfoMark /></>}>
+    const w = realCostWarn(r, p);
+    return <HelpTip label={`${t("poolRealCost")} ${text}`} className={`pool-cost-note${w ? " warn" : ""}`} mark={<>{value}{w ? <WarnMark /> : <InfoMark />}</>}>
+      {w && <p className="pool-cost-warn">{t(warnKey(w))}</p>}
       <div className="pool-cost-parts">{tiers.map((x) => <div className={`pool-cost-part${x.shown ? " shown" : ""}`} key={x.tier}>
         <span>{t(x.tier === "founding" ? "poolCostTierFounding" : "poolCostTierStandard")}</span>
         <span>{x.percent == null ? "—" : "≈" + numeric(x.percent, 2, lang) + "%"}</span>
       </div>)}</div>
+    </HelpTip>;
+  };
+  const warnNote = (r: PoolRow, p: PoolPayout, value: ReactNode, text: string) => {
+    const w = realCostWarn(r, p);
+    if (!w) return null;
+    const period = p.realFeePeriod;
+    return <HelpTip label={`${t("poolRealCost")} ${text}`} className="pool-cost-note warn" mark={<>{value}<WarnMark /></>}>
+      <p className="pool-cost-warn">{t(warnKey(w))}</p>
+      {period && <p className="pool-cost-lead">{dates.format(period.start * 1000)} – {dates.format(period.end * 1000)}</p>}
     </HelpTip>;
   };
   const payouts = (r: PoolRow, kind: "earnings" | "fee" | "realFee") => {
@@ -155,7 +174,7 @@ export function PoolComparison({ data, failed, t, lang, onUse, onRetry }: { data
         </strong>;
       const held = kind === "realFee" ? pending(r, p) ?? fewBlocks(r, p, value) : null;
       return <div className="pool-payout" key={i}>
-        {held ?? (kind === "realFee" ? costNote(r, p, value, text) ?? yieldNote(r, p, value, text) ?? tierNote(p, value, text) : null) ?? value}{(all.length > 1 || kind !== "earnings") && <small>{p.scheme || "—"}</small>}
+        {held ?? (kind === "realFee" ? costNote(r, p, value, text) ?? yieldNote(r, p, value, text) ?? tierNote(r, p, value, text) ?? warnNote(r, p, value, text) : null) ?? value}{(all.length > 1 || kind !== "earnings") && <small>{p.scheme || "—"}</small>}
       </div>;
     })}
     {kind === "earnings" && <small>{t(weekLuck(r) ? "poolPerPHDay7d" : "poolPerPHDay")}</small>}

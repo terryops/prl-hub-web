@@ -148,7 +148,7 @@
   "comparisonExplanation": "PH·gün başına PRL: gözlemlenen blok sayısı × ödül ÷ hashrate, bir güne oranlanır ve havuz ücreti düşülür.",
   "poolWeekLuckExplanation": "Tahmini getiri = bugünkü teorik getiri × havuzun son 7 günlük blok şansı (bulunan bloklar ÷ hashrate'inin bulması gereken bloklar, 5 dakikada bir ölçülür) × (1 − havuz ücreti); PRL/PH·gün; yeşil = en yüksek.",
   "poolWeekLuckFallback": "“7 gün” işareti olmayan havuzlarda bir haftalık ölçüm yok: bulunan bloklar × blok ödülü ÷ hashrate.",
-  "ppsExplanation": "PPS, ağın beklenen üretiminden havuzun gerçek maliyetini düşer (ölçülene kadar havuz ücretini). SOLO bir piyango gibidir. İkisi de “En yüksek ölçülen” olarak işaretlenmez.",
+  "ppsExplanation": "PPS, ağın beklenen üretiminden havuzun gerçek maliyetini düşer (ölçülene kadar veya negatif olduğunda ilan edilen havuz ücretini). SOLO bir piyango gibidir. İkisi de “En yüksek ölçülen” olarak işaretlenmez.",
   "sampleExplanation": "Küçük örneklemler 20'den az blok içerir ve büyük ölçüde dalgalanabilir. Yeşil “En yüksek ölçülen” etiketi, aynı kaynaktan yeterli örneklemi olan havuzları karşılaştırır.",
   "heroExplanation": "HeroMiners yazılım ücreti için %3 referans alınmıştır; toplam ücreti kendi yazılımınıza göre düzenleyin.",
   "mixedSources": "Birincil veriler 24 saatlik bir pencere kullanır. “Ekstra kaynak” satırları, MiningPoolStats'taki son 1.000 ağ bloğunu kullanır. “Havuz API'si”, hashrate veya ücretlerin havuzun kendi API'siyle tamamlandığını ya da düzeltildiğini belirtir.",
@@ -393,7 +393,7 @@
   "poolRollingUnconfirmed": "Kalıcı bir verim kaybı doğrulanmadı; gözlenen üretim hâlâ blok şansından etkilenir.",
   "poolRollingBasis": "Havuzun kaydettiği kabul edilmiş share işi esas alınır. {fee} ücret ve yetim blok kayıpları birer kez sayılır. Aralık, telemetri ve havuz raporlama hatalarını içermez.",
   "poolRollingPending": "Güncel hareketli tahmin yok. Tur işi kayıtlarıyla birlikte en az beş tam UTC günü ve 100 blok gereklidir.",
-  "poolRollingPeriodIntro": "HeroMiners en az beş gün ve 100 blok olmak üzere 30 tam UTC gününe kadar veri kullanır; aralık blok şansını içerir. Diğer PPLNS/PROP tahminleri son yedi günde beş gözlem günü, blok effort verisi ve en az 100 beklenen blok gerektirir.",
+  "poolRollingPeriodIntro": "HeroMiners ve PearlHash en az beş gün ve 100 blok olmak üzere 30 tam UTC gününe kadar veri kullanır; aralık blok şansını içerir. Diğer PPLNS/PROP tahminleri son yedi günde beş gözlem günü, blok effort verisi ve en az 100 beklenen blok gerektirir.",
   "poolRealCostFrom": "Başlangıç",
   "poolRealCostTo": "Bitiş",
   "poolShareYieldShownHelp": "{pool} sitesi hashrate’i kaydettiği share’lerden yaklaşık {loss} düşük gösterir ve bulunan bloklar share’leri değil bu düşük rakamı izler. {pool} gerçekten bulduğu bloklara göre ödeme yaptığı için kazanç da yaklaşık {loss} düşer; ücret {fee}, gerçek maliyet yaklaşık {cost}.",
@@ -588,5 +588,9 @@
   "trade": "Al-Sat",
   "navTradeShort": "Al-Sat",
   "tradeOnExchange": "%@ üzerinde al-sat",
-  "tradeInApp": "Uygulamada al-sat"
+  "tradeInApp": "Uygulamada al-sat",
+  "poolNegativeCostWarn": "Açık örnekler zincirdeki büyük ödeme adreslerinden alınır; özel iadeler veya günler arası mahsuplar içerebilir ve günlük hesap dökümü açık değildir. Normal adresler ilan edilen ücreti öder; tahmini getiri bu ücreti esas alır.",
+  "poolClosedPoolWarn": "PearlHash yalnızca kendi kapalı protokol istemcisini kabul eder ve blok listesi, blok başına effort veya dağıtım dökümü yayımlamaz; bildirdiği share oranı bağımsız olarak doğrulanamaz.",
+  "poolPerynWarn": "Peryn büyük hesaplara kamuya açık olmayan iade kademeleri uygular (50 PH/s üzeri veya özel iade rozeti taşıyan adresler burada hariç tutulmuştur) ve geçmiş API’si sunmaz; adres sayfaları 3 anlamlı basamağa yuvarlanmış günlük hashrate’i yalnızca 7 gün sakladığından eski dönemler yeniden denetlenemez.",
+  "poolF2PoolWarn": "F2Pool herkese açık hesap sayfaları, blok listesi veya mutabakat dökümü yayımlamaz; bu değer tek bir salt okunur hesabın günlük toplamlarından hesaplanır ve açıklanmayan nedenlerle ana sayfa fiyatının 0,5–0,7 puan üzerindedir."
 }

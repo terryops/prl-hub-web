@@ -148,7 +148,7 @@
   "comparisonExplanation": "PRL/PH·hari: blok terukur × hadiah ÷ hashrate, dinormalisasi per hari, dikurangi biaya pool.",
   "poolWeekLuckExplanation": "Estimasi hasil = hasil teoretis saat ini × keberuntungan blok pool selama 7 hari terakhir (blok yang ditemukan ÷ blok yang seharusnya ditemukan hashrate-nya, diukur setiap 5 menit) × (1 − biaya pool); PRL/PH·hari; hijau = tertinggi.",
   "poolWeekLuckFallback": "Pool tanpa label “7 hari” belum punya data seminggu: blok yang ditemukan × hadiah blok ÷ hashrate.",
-  "ppsExplanation": "PPS memakai hasil ekspektasi jaringan dikurangi biaya nyata pool (biaya pool selama belum terukur). SOLO sangat bervariasi. Keduanya tidak diberi penanda hasil terukur terbaik.",
+  "ppsExplanation": "PPS memakai hasil ekspektasi jaringan dikurangi biaya nyata pool (biaya tertera saat belum terukur atau bernilai negatif). SOLO sangat bervariasi. Keduanya tidak diberi penanda hasil terukur terbaik.",
   "sampleExplanation": "Sampel kecil berisi kurang dari 20 blok dan dapat berfluktuasi besar. Label hijau Terukur tertinggi hanya membandingkan pool dengan cukup sampel dari sumber yang sama.",
   "heroExplanation": "Biaya perangkat lunak HeroMiners memakai acuan 3%; sesuaikan total biaya dengan perangkat lunak Anda.",
   "mixedSources": "Data utama memakai jendela 24 jam. Sumber tambahan memakai 1.000 blok jaringan terakhir dari MiningPoolStats. API pool menunjukkan hashrate atau biaya dilengkapi atau dikoreksi dari API pool sendiri.",
@@ -393,7 +393,7 @@
   "poolRollingUnconfirmed": "Kehilangan hasil jangka panjang belum terbukti; hasil pengamatan masih dipengaruhi keberuntungan blok.",
   "poolRollingBasis": "Berdasarkan kerja share yang dicatat pool. Biaya {fee} dan kerugian blok yatim dihitung masing-masing sekali. Interval tidak mencakup kesalahan telemetri atau laporan pool.",
   "poolRollingPending": "Belum ada perkiraan bergulir saat ini. Diperlukan minimal lima hari UTC penuh dan 100 blok beserta catatan kerja putaran.",
-  "poolRollingPeriodIntro": "HeroMiners memakai hingga 30 hari UTC penuh, minimal lima hari dan 100 blok; interval mencakup keberuntungan blok. Perkiraan PPLNS/PROP lain memerlukan lima hari pengamatan dari tujuh hari terakhir, effort blok, dan minimal 100 blok yang diharapkan.",
+  "poolRollingPeriodIntro": "HeroMiners dan PearlHash memakai hingga 30 hari UTC penuh, minimal lima hari dan 100 blok; interval mencakup keberuntungan blok. Perkiraan PPLNS/PROP lain memerlukan lima hari pengamatan dari tujuh hari terakhir, effort blok, dan minimal 100 blok yang diharapkan.",
   "poolRealCostFrom": "Dari",
   "poolRealCostTo": "Hingga",
   "poolShareYieldShownHelp": "Situs {pool} menampilkan hashrate sekitar {loss} di bawah share yang dicatatnya, dan blok yang ditemukan mengikuti angka yang lebih rendah itu, bukan share. {pool} membayar berdasarkan blok yang benar-benar ditemukan, jadi pendapatan sekitar {loss} lebih rendah; biayanya {fee}, sehingga biaya nyata sekitar {cost}.",
@@ -588,5 +588,9 @@
   "trade": "Trading",
   "navTradeShort": "Trading",
   "tradeOnExchange": "Trading di %@",
-  "tradeInApp": "Trading di aplikasi"
+  "tradeInApp": "Trading di aplikasi",
+  "poolNegativeCostWarn": "Sampel publik berasal dari alamat penerima besar di rantai dan dapat mencakup rabat khusus atau penyesuaian lintas hari tanpa rincian harian terbuka; alamat biasa membayar biaya tertera sehingga estimasi hasil memakai biaya tertera.",
+  "poolClosedPoolWarn": "PearlHash hanya menerima perangkat lunak protokol tertutup miliknya sendiri dan tidak mempublikasikan daftar blok, effort per blok, atau rincian pembagian; laju share yang dilaporkan tidak dapat diverifikasi secara independen.",
+  "poolPerynWarn": "Peryn menerapkan tingkat rabat tertutup bagi alamat besar (alamat di atas 50 PH/s atau berlabel rabat khusus telah dikecualikan) dan tidak menyediakan API riwayat; halaman alamat hanya menyimpan hashrate harian 3 angka penting selama 7 hari sehingga periode lama tidak dapat diaudit ulang.",
+  "poolF2PoolWarn": "F2Pool tidak mempublikasikan halaman akun publik, daftar blok, atau rincian penyelesaian; angka ini berasal dari rekap harian satu akun baca-saja dan lebih tinggi 0,5–0,7 poin persentase dari harga halaman utamanya tanpa penjelasan terbuka."
 }

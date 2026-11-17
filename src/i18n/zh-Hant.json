@@ -148,7 +148,7 @@
   "comparisonExplanation": "收益/PH·天：實測出塊 × 單塊獎勵 ÷ 算力，按一天折算，再扣礦池費率。",
   "poolWeekLuckExplanation": "預估收益 = 當前理論收益 × 該池近 7 天出塊運氣（實際出塊 ÷ 按其算力應出的塊，每 5 分鐘採樣）×（1 − 礦池費率）；PRL/PH·天；綠色 = 最高。",
   "poolWeekLuckFallback": "未標「7 天」的礦池不足 7 天樣本，按實際挖到的塊 × 單塊獎勵 ÷ 算力計算。",
-  "ppsExplanation": "PPS 使用全網期望值扣除該池的真實費用（尚未測出時按礦池費率）；SOLO 收益波動很大，兩者均不參與最高實測收益標記。",
+  "ppsExplanation": "PPS 使用全網期望值扣除該池的真實費用（尚未測出或為負值時按公示礦池費率）；SOLO 收益波動很大，兩者均不參與最高實測收益標記。",
   "sampleExplanation": "小樣本表示不足 20 個區塊，波動較大。綠色「最高實測」僅比較同一資料來源、樣本足夠的礦池。",
   "heroExplanation": "HeroMiners 的軟體抽水以 3% 為參考；請按實際軟體調整計算器總費率。",
   "mixedSources": "主資料為 24h 視窗；「補充資料」來自 MiningPoolStats 最近 1000 個全網區塊。「礦池校正」表示已用礦池自己的 API 補全或校正算力或費率。",
@@ -393,7 +393,7 @@
   "poolRollingUnconfirmed": "信賴區間包含 0，損耗尚未確認；樣本仍含出塊運氣，區間隨樣本天數增加而收窄。",
   "poolRollingBasis": "以礦池記錄的已接受 share 工作量為基準，手續費 {fee} 與孤塊損失各計一次。區間不包含算力回報和礦池計數誤差。",
   "poolRollingPending": "暫無可用的滾動估計；需要至少五個完整 UTC 日、100 個塊及其工作量記錄。",
-  "poolRollingPeriodIntro": "HeroMiners 使用最近 30 天內的完整 UTC 日記錄，至少需要五天和 100 個塊，區間包含出塊運氣。其他 PPLNS／PROP 估算需要最近七天內至少五天觀測、逐塊 effort，且理論工作量足夠產生至少 100 個塊。",
+  "poolRollingPeriodIntro": "HeroMiners 與 PearlHash 使用最近 30 天內的完整 UTC 日記錄，至少需要五天和 100 個塊，區間包含出塊運氣。其他 PPLNS／PROP 估算需要最近七天內至少五天觀測、逐塊 effort，且理論工作量足夠產生至少 100 個塊。",
   "poolRealCostFrom": "開始",
   "poolRealCostTo": "結束",
   "poolShareYieldShownHelp": "{pool} 網站顯示的算力比它記帳的 share 低約 {loss}，實際出塊跟的是這個更低的數，而不是 share。它按實際出的塊分錢，所以到手也少約 {loss}；手續費 {fee}，真實費用約 {cost}。",
@@ -588,5 +588,9 @@
   "trade": "交易",
   "navTradeShort": "交易",
   "tradeOnExchange": "前往 %@ 交易",
-  "tradeInApp": "在 App 中交易"
+  "tradeInApp": "在 App 中交易",
+  "poolNegativeCostWarn": "公開樣本取自鏈上大額收款地址，可能含大額補貼或跨日補結，且該池未公開逐日結算明細；普通地址按公示費率扣費，預估收益仍按公示費率計算。",
+  "poolClosedPoolWarn": "PearlHash 僅允許自家封閉協定客戶端接入，且不公開區塊列表、逐塊 effort 與分帳明細，外部無法獨立核驗其上報的 share 速率。",
+  "poolPerynWarn": "Peryn 對大算力地址設有非公開返點分層（重算已剔除 > 50 PH/s 及標有特殊返點身分的地址），且不提供歷史 API，地址頁面僅保留 7 天、3 位有效數字的每日算力，無法對早期視窗回溯複核。",
+  "poolF2PoolWarn": "F2Pool 不公開任何帳戶頁面、區塊列表或逐筆結算明細；該數值僅基於單一只讀帳戶的每日彙總測算，且比其公布價格高約 0.5～0.7 個百分點，差額來源未公開。"
 }

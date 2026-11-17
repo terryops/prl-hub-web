@@ -53,6 +53,9 @@ export function HelpTip({ label, className, bubbleClassName = "pool-cost-tooltip
 /** The ⓘ glyph (Ionicons information-circle-outline), for other help buttons that should look the same. */
 export const InfoMark = () => <svg className="icon" viewBox="0 0 512 512" aria-hidden="true"><path d="M248 64C146.39 64 64 146.39 64 248s82.39 184 184 184 184-82.39 184-184S349.61 64 248 64Z" fill="none" stroke="currentColor" strokeMiterlimit="10" strokeWidth="32" /><path d="M220 220h32v116" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="32" /><path d="M208 340h88" fill="none" stroke="currentColor" strokeLinecap="round" strokeMiterlimit="10" strokeWidth="32" /><path fill="currentColor" d="M248 130a26 26 0 1 0 26 26 26 26 0 0 0-26-26" /></svg>;
 
+/** The ! glyph (Ionicons alert-circle-outline), matching InfoMark's 512×512 stroke geometry for Real Cost warnings. */
+export const WarnMark = () => <svg className="icon warn-mark" viewBox="0 0 512 512" aria-hidden="true"><path d="M448 256c0-106-86-192-192-192S64 150 64 256s86 192 192 192 192-86 192-192Z" fill="none" stroke="currentColor" strokeMiterlimit="10" strokeWidth="32" /><path d="M250.26 166.05 256 288l5.73-121.95a5.74 5.74 0 0 0-5.79-6h0a5.74 5.74 0 0 0-5.68 6Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="32" /><path fill="currentColor" d="M256 367.91a20 20 0 1 1 20-20 20 20 0 0 1-20 20Z" /></svg>;
+
 /** iOS PearlInfoTip: a small ⓘ beside what it explains, holding the sentence that would otherwise sit on the
  * page. Tap (or hover / focus with a mouse) shows it in a bubble. `label` names the button for screen readers;
  * the text is its description. Consequences of an irreversible action stay on the page, never in here. */

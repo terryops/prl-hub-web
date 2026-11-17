@@ -16,6 +16,7 @@
   --green: #1f7e67;
   --red: #cb3660;
   --warn: #906b17;
+  --orange-warn: #d97706;
   color-scheme: light;
 }
 * {
@@ -1773,7 +1774,7 @@ form {
   font-size: var(--font-14);
 }
 :root[data-theme="dark"] { --page-bg: #101724; }
-:root[data-theme="dark"] { --blue: #8faaff; --hover: #293956; --selected: #26395f; --warning-bg: #393224; --warning-line: #665434; --skeleton: #2c374c; --on-blue: #101724; --purple-bg: #2e2948; --cyan-bg: #203b4a; }
+:root[data-theme="dark"] { --blue: #8faaff; --hover: #293956; --selected: #26395f; --warning-bg: #393224; --warning-line: #665434; --orange-warn: #fb923c; --skeleton: #2c374c; --on-blue: #101724; --purple-bg: #2e2948; --cyan-bg: #203b4a; }
 button, input, select, textarea { font-size: var(--font-14); }
 h1 { font-size: var(--font-28); } h2 { font-size: var(--font-16); } h3 { font-size: var(--font-14); }
 .card p, .card .help p, .setting-section p, .extension-intro, .extension-steps p { font-size: var(--font-14); }
@@ -2278,10 +2279,14 @@ main.pool-page { max-width: 1800px; padding-inline: 24px; }
 /* One line in the table (the column takes its width, as with the NOCK line); phone cards may wrap it. */
 .pool-comparison .pool-table .pool-cost-pending strong { white-space: nowrap; }
 :root .pool-comparison .pool-cost-pending:hover, :root .pool-comparison .pool-cost-pending[aria-expanded="true"] { background: transparent; color: var(--blue-text); }
-/* A Real Cost with a note: the figure as in every other row, an ⓘ beside it; the bubble says why. */
+/* A Real Cost with a note: the figure as in every other row, an ⓘ (or orange ! when qualified) beside it; the bubble says why. */
 .pool-comparison .pool-cost-note { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; max-width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--pool-cost-accent); cursor: help; text-align: end; }
 .pool-comparison .pool-cost-note .icon { width: 14px; height: 14px; flex: none; }
+.pool-comparison .pool-cost-note.warn .warn-mark { color: var(--orange-warn); }
 :root .pool-comparison .pool-cost-note:hover, :root .pool-comparison .pool-cost-note[aria-expanded="true"] { background: transparent; color: var(--blue-text); }
+:root .pool-comparison .pool-cost-note.warn:hover .warn-mark, :root .pool-comparison .pool-cost-note.warn[aria-expanded="true"] .warn-mark { color: var(--orange-warn); }
+.pool-cost-tooltip p.pool-cost-warn { color: var(--orange-warn); font-weight: 500; }
+.pool-cost-tooltip p.pool-cost-warn:first-child { margin-top: 0; }
 /* Real Cost stays prominent across themes; unavailable values remain muted. */
 .pool-comparison { --pool-cost-accent: color-mix(in srgb, var(--blue-text) 80%, var(--text)); }
 .pool-comparison .pool-table th:nth-child(7) { color: var(--pool-cost-accent); background: color-mix(in srgb, var(--blue) 9%, var(--soft)); }

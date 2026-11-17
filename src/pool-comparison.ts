@@ -111,17 +111,19 @@ export function shareYield(p: PoolPayout): number | null {
   if (typeof y !== "number" || !(y > 0 && y < 1)) return null;
   return typeof cost === "number" && Number.isFinite(cost) ? y : null;
 }
-/** HeroMiners' Real Cost: its blocks against the share work it credits over up to 30 days (iOS RollingPoolCost.validated),
- *  when the service sent a sane one that is the figure shown. Block luck stays in, as the 95% count interval. */
+/** HeroMiners' and PearlHash's Real Cost: canonical blocks against accepted share work over up to 30 days (iOS
+ *  RollingPoolCost.validated), when the service sent a sane one that is the figure shown. Block luck stays in, as the 95%
+ *  count interval. */
 export function rollingRealCost(p: PoolPayout) {
   const o = p.realFeeEstimate, percent = p.realFeePercent, period = p.realFeePeriod;
   const pair = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(finite) && v[0] <= v[1];
-  if (!o || p.solo || ppsScheme(p.scheme) || !finite(percent) || !period ||
-      o.id !== "https://pearl.herominers.com/" || o.pool !== "HeroMiners" || o.theoryBasis !== "accepted_share_rounds" ||
+  const hero = o?.id === "https://pearl.herominers.com/" && o.pool === "HeroMiners" && o.theoryBasis === "accepted_share_rounds";
+  const pearlhash = o?.id === "https://pearlhash.xyz/" && o.pool === "PearlHash" && o.theoryBasis === "accepted_share_work" && o.orphans === 0;
+  if (!o || (!hero && !pearlhash) || p.solo || ppsScheme(p.scheme) || !finite(percent) || !period ||
       o.sourceVersion !== 2 || o.confidenceMethod !== "poisson_count_only" || o.confidence !== .95 || o.targetDays !== 30 ||
       !Number.isSafeInteger(o.start) || o.start <= 0 || o.start % 86400 || !Number.isSafeInteger(o.end) || o.end % 86400 ||
       o.end - o.start < 5 * 86400 || o.end - o.start > 30 * 86400 || period.start !== o.start || period.end !== o.end ||
-      !Number.isSafeInteger(o.poolBlocks) || o.poolBlocks < 100 || o.poolBlocks > 3000 ||
+      !Number.isSafeInteger(o.poolBlocks) || o.poolBlocks < 100 || o.poolBlocks > 10000 ||
       !Number.isSafeInteger(o.orphans) || o.orphans < 0 || o.orphans > o.poolBlocks || o.blocksSample !== o.poolBlocks - o.orphans ||
       !finite(o.work) || o.work <= 0 || !finite(o.feePercent) || o.feePercent < 0 || o.feePercent > 100 ||
       !finite(o.foundYield) || Math.abs(o.foundYield - o.poolBlocks / o.work) > 1e-9 ||
@@ -130,6 +132,18 @@ export function rollingRealCost(p: PoolPayout) {
       !pair(o.foundYield95) || o.foundYield95[0] < 0 || o.foundYield95[0] > o.foundYield || o.foundYield95[1] < o.foundYield ||
       !pair(o.cost95) || o.cost95[0] > percent || o.cost95[1] < percent) return null;
   return { ...o, days: (o.end - o.start) / 86400, lossUnconfirmed: o.foundYield95[1] >= 1 };
+}
+
+export type RealCostWarn = "negative" | "closed" | "peryn" | "f2pool";
+/** Whether a Real Cost figure carries an orange warning mark: a negative figure (rebate/adjustment skew), PearlHash's
+ *  closed client protocol, Peryn's private rebate tiers + 7-day 3-sig-fig pages, or F2Pool's closed accounts. */
+export function realCostWarn(pool: Pick<PoolOverview, "id" | "name" | "solo">, p: PoolPayout): RealCostWarn | null {
+  if (pool.solo || p.solo || !finite(p.realFeePercent)) return null;
+  if (p.realFeePercent < 0) return "negative";
+  if (pool.id === "https://pearlhash.xyz/" || pool.name === "PearlHash") return "closed";
+  if (pool.id === "https://peryn.ai/" || pool.name === "Peryn") return "peryn";
+  if (pool.id === "https://www.f2pool.com/" || pool.name === "F2Pool") return "f2pool";
+  return null;
 }
 /** Diagnostic block output only; never a Real Cost or a ranking input. */
 export function rollingOutputObservation(p: PoolPayout) {
@@ -181,7 +195,7 @@ export function percentRange(min: number, max: number, lang: string): string {
 }
 export function payoutCost(p: PoolPayout, pool?: PoolOverview): number | null {
   const pps = p.scheme?.trim() ? ppsScheme(p.scheme) : !!pool?.pps;
-  const cost = pps && finite(p.realFeePercent) ? p.realFeePercent : p.fee;
+  const cost = pps && finite(p.realFeePercent) && p.realFeePercent >= 0 ? p.realFeePercent : p.fee;
   return finite(cost) ? cost : null;
 }
 /** 预估收益 a miner keeps, PRL per PH·day: the gross figure less `payoutCost`. Unknown when the

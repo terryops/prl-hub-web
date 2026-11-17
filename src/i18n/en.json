@@ -148,7 +148,7 @@
   "comparisonExplanation": "PRL per PH·day: observed blocks × reward ÷ hashrate, normalized to one day, minus the pool fee.",
   "poolWeekLuckExplanation": "Estimated yield = today's theoretical yield × the pool's 7-day block luck (blocks found ÷ blocks its hashrate should have found, sampled every 5 minutes) × (1 − pool fee); PRL/PH·day; green = highest.",
   "poolWeekLuckFallback": "Pools without “7d” have less than a week of samples: blocks actually found × block reward ÷ hashrate.",
-  "ppsExplanation": "PPS uses network expected output minus the pool's Real Cost (its fee until Real Cost is measured). SOLO is a lottery. Neither is ranked as the best measured yield.",
+  "ppsExplanation": "PPS uses network expected output minus the pool's Real Cost (its stated fee when Real Cost is unmeasured or negative). SOLO is a lottery. Neither is ranked as the best measured yield.",
   "sampleExplanation": "Small samples contain fewer than 20 blocks and can fluctuate widely. The green Top measured label compares pools with enough samples from the same source.",
   "heroExplanation": "HeroMiners software fee is a 3% reference; edit the total fee to match your software.",
   "mixedSources": "Primary data uses a 24h window. Extra source rows use the last 1,000 network blocks from MiningPoolStats. Pool API indicates hashrate or fees supplemented or corrected using the pool’s own API.",
@@ -393,7 +393,7 @@
   "poolRollingUnconfirmed": "The interval includes 0, so the loss is not yet confirmed; block luck remains in the sample, and the interval narrows as days accumulate.",
   "poolRollingBasis": "Based on pool-recorded accepted share work. Fee {fee} and orphan losses are each counted once. Intervals exclude telemetry and pool-reporting errors.",
   "poolRollingPending": "No current rolling estimate. At least five complete UTC days and 100 blocks with round-work records are required.",
-  "poolRollingPeriodIntro": "HeroMiners uses up to 30 complete UTC days, with at least five days and 100 blocks. Its interval includes block luck. Other PPLNS/PROP estimates require five observed days in the latest seven, block effort and at least 100 expected blocks.",
+  "poolRollingPeriodIntro": "HeroMiners and PearlHash use up to 30 complete UTC days, with at least five days and 100 blocks. Their intervals include block luck. Other PPLNS/PROP estimates require five observed days in the latest seven, block effort and at least 100 expected blocks.",
   "poolRealCostFrom": "From",
   "poolRealCostTo": "To",
   "poolShareYieldShownHelp": "{pool} shows its hashrate on its own site about {loss} below the shares it credits, and the blocks it finds keep pace with the lower figure, not with the shares. It pays out by the blocks it finds, so earnings are about {loss} lower; its fee is {fee}, so Real Cost is about {cost}.",
@@ -588,5 +588,9 @@
   "trade": "Trade",
   "navTradeShort": "Trade",
   "tradeOnExchange": "Trade on %@",
-  "tradeInApp": "Trade in the app"
+  "tradeInApp": "Trade in the app",
+  "poolNegativeCostWarn": "Public samples come from large payee addresses on chain and may include private rebates or cross-day settlement adjustments, with no public daily pricing breakdown. Regular addresses pay the stated fee, so Est. yield uses the stated fee.",
+  "poolClosedPoolWarn": "PearlHash accepts only its own closed-protocol client software and publishes no block list, per-block effort or payout ledger; its reported share rate cannot be independently verified.",
+  "poolPerynWarn": "Peryn offers undisclosed rebate tiers to large accounts (addresses above 50 PH/s or carrying special-rebate badges are excluded here) and provides no historical API; address pages keep only 7 days of daily hashrate rounded to 3 significant figures, so older windows cannot be re-audited.",
+  "poolF2PoolWarn": "F2Pool publishes no public account pages, block list or settlement breakdown; this figure comes from a single read-only account's daily totals and runs 0.5–0.7 percentage points above its home-page price for reasons the pool does not disclose."
 }

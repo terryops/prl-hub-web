@@ -177,7 +177,7 @@ export type PoolPayout = {
   realFeeTiers?: { founding: number | null; standard: number | null } | null;
 };
 export type RollingRealCost = {
-  id: string; pool: string; scheme: string; theoryBasis: "accepted_share_rounds";
+  id: string; pool: string; scheme: string; theoryBasis: "accepted_share_rounds" | "accepted_share_work";
   start: number; end: number; measuredAt: number; targetDays: number;
   poolBlocks: number; blocksSample: number; orphans: number; work: number; feePercent: number;
   foundYield: number; foundYield95: [number, number]; ratio: number; cost95: [number, number];

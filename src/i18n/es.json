@@ -148,7 +148,7 @@
   "comparisonExplanation": "PRL por PH·día: bloques observados × recompensa ÷ hashrate, normalizado a un día, menos la comisión del pool.",
   "poolWeekLuckExplanation": "Rendimiento estimado = rendimiento teórico actual × suerte de bloques del pool en los últimos 7 días (bloques encontrados ÷ bloques que su hashrate debería haber encontrado, medido cada 5 minutos) × (1 − comisión del pool); PRL/PH·día; verde = el más alto.",
   "poolWeekLuckFallback": "Los pools sin «7 días» tienen menos de una semana de muestras: bloques encontrados × recompensa de bloque ÷ hashrate.",
-  "ppsExplanation": "PPS usa la producción esperada de la red menos el costo real del pool (su comisión mientras no se haya medido). SOLO es una lotería. Ninguno de los dos entra en la comparación del mejor rendimiento medido.",
+  "ppsExplanation": "PPS usa la producción esperada de la red menos el costo real del pool (su comisión publicada si no se ha medido o resulta negativo). SOLO es una lotería. Ninguno de los dos entra en la comparación del mejor rendimiento medido.",
   "sampleExplanation": "Las muestras pequeñas tienen menos de 20 bloques y pueden fluctuar mucho. La etiqueta verde «Top medido» compara los pools con suficientes muestras de la misma fuente.",
   "heroExplanation": "La comisión de software de HeroMiners es una referencia del 3%; edita la comisión total para que coincida con tu software.",
   "mixedSources": "Los datos principales usan una ventana de 24 h. Las filas «Fuente adicional» usan los últimos 1000 bloques de la red según MiningPoolStats. «API del pool» indica hashrate o comisiones completados o corregidos con la API del propio pool.",
@@ -393,7 +393,7 @@
   "poolRollingUnconfirmed": "No se ha confirmado una pérdida duradera; la producción observada aún incluye la suerte de los bloques.",
   "poolRollingBasis": "Basado en el trabajo de shares registrado por el pool. La comisión {fee} y las pérdidas por huérfanos se cuentan una sola vez. El intervalo excluye errores de telemetría y del pool.",
   "poolRollingPending": "No hay estimación móvil actual. Se necesitan al menos cinco días UTC completos y 100 bloques con registros del trabajo de cada ronda.",
-  "poolRollingPeriodIntro": "HeroMiners utiliza hasta 30 días UTC completos, con un mínimo de cinco días y 100 bloques; el intervalo incluye la suerte. Las demás estimaciones PPLNS/PROP requieren cinco días observados de los últimos siete, effort por bloque y al menos 100 bloques esperados.",
+  "poolRollingPeriodIntro": "HeroMiners y PearlHash utilizan hasta 30 días UTC completos, con un mínimo de cinco días y 100 bloques; el intervalo incluye la suerte. Las demás estimaciones PPLNS/PROP requieren cinco días observados de los últimos siete, effort por bloque y al menos 100 bloques esperados.",
   "poolRealCostFrom": "Desde",
   "poolRealCostTo": "Hasta",
   "poolShareYieldShownHelp": "El sitio de {pool} muestra su hashrate cerca de un {loss} por debajo de los shares que acredita, y los bloques que encuentra siguen esa cifra más baja, no los shares. {pool} reparte según los bloques que realmente encuentra, así que las ganancias son cerca de un {loss} menores; su comisión es del {fee}, por lo que el costo real es de aproximadamente {cost}.",
@@ -588,5 +588,9 @@
   "trade": "Trading",
   "navTradeShort": "Trading",
   "tradeOnExchange": "Operar en %@",
-  "tradeInApp": "Operar en la app"
+  "tradeInApp": "Operar en la app",
+  "poolNegativeCostWarn": "Las muestras públicas provienen de grandes direcciones de cobro en cadena y pueden incluir reembolsos privados o ajustes entre días sin desglose diario público; las direcciones normales pagan la comisión publicada y el rendimiento estimado usa esa comisión.",
+  "poolClosedPoolWarn": "PearlHash solo admite su propio cliente de protocolo cerrado y no publica lista de bloques, effort por bloque ni registro de repartos; su tasa de shares no puede verificarse de forma independiente.",
+  "poolPerynWarn": "Peryn aplica niveles privados de reembolso a cuentas grandes (aquí se excluyen las direcciones de más de 50 PH/s o con distintivos de reembolso especial) y no ofrece API histórica; las páginas de dirección solo guardan 7 días de hashrate diario redondeado a 3 cifras significativas, impidiendo reauditar ventanas anteriores.",
+  "poolF2PoolWarn": "F2Pool no publica páginas públicas de cuentas, lista de bloques ni desglose de liquidación; esta cifra proviene del resumen diario de una única cuenta de solo lectura y supera en 0,5–0,7 puntos porcentuales al precio de su portada por motivos no divulgados."
 }

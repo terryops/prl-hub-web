@@ -148,7 +148,7 @@
   "comparisonExplanation": "PRL pro PH·Tag: beobachtete Blöcke × Belohnung ÷ Hashrate, normalisiert auf einen Tag, abzüglich der Poolgebühr.",
   "poolWeekLuckExplanation": "Geschätzter Ertrag = heutiger theoretischer Ertrag × Blockglück des Pools der letzten 7 Tage (gefundene Blöcke ÷ Blöcke, die seine Hashrate hätte finden sollen; alle 5 Minuten erfasst) × (1 − Poolgebühr); PRL/PH·Tag; grün = höchster Wert.",
   "poolWeekLuckFallback": "Pools ohne „7 Tage“ haben weniger als eine Woche an Messwerten: gefundene Blöcke × Blockbelohnung ÷ Hashrate.",
-  "ppsExplanation": "PPS verwendet den erwarteten Netzwerkertrag abzüglich der realen Kosten des Pools (bis sie gemessen sind, der Poolgebühr). SOLO ist eine Lotterie. Keines von beiden wird als bester gemessener Ertrag gewertet.",
+  "ppsExplanation": "PPS verwendet den erwarteten Netzwerkertrag abzüglich der realen Kosten des Pools (bei fehlender Messung oder negativem Wert der angegebenen Gebühr). SOLO ist eine Lotterie. Keines von beiden wird als bester gemessener Ertrag gewertet.",
   "sampleExplanation": "Kleine Stichproben enthalten weniger als 20 Blöcke und können stark schwanken. Das grüne Label „Top gemessen“ vergleicht Pools mit ausreichender Stichprobe aus derselben Quelle.",
   "heroExplanation": "Die HeroMiners-Softwaregebühr von 3 % ist ein Richtwert; passen Sie die Gesamtgebühr an Ihre Software an.",
   "mixedSources": "Primärdaten verwenden ein 24-Stunden-Fenster. Zeilen mit „Zusätzliche Quelle“ verwenden die letzten 1.000 Netzwerkblöcke von MiningPoolStats. „Pool-API“ bedeutet, dass Hashrate oder Gebühren über die eigene API des Pools ergänzt oder korrigiert wurden.",
@@ -393,7 +393,7 @@
   "poolRollingUnconfirmed": "Ein dauerhafter Ertragsverlust ist nicht nachgewiesen; der beobachtete Ertrag enthält weiterhin Blockglück.",
   "poolRollingBasis": "Grundlage ist die vom Pool erfasste Share-Arbeit. Gebühr {fee} und Verluste verwaister Blöcke werden je einmal berücksichtigt. Telemetrie- und Pool-Meldefehler sind nicht im Intervall enthalten.",
   "poolRollingPending": "Keine aktuelle gleitende Schätzung. Erforderlich sind mindestens fünf vollständige UTC-Tage und 100 Blöcke mit Arbeitsdaten der Runden.",
-  "poolRollingPeriodIntro": "HeroMiners nutzt bis zu 30 vollständige UTC-Tage, mindestens fünf Tage und 100 Blöcke; das Intervall enthält Blockglück. Andere PPLNS/PROP-Schätzungen benötigen fünf beobachtete Tage der letzten sieben, Block-Effort und mindestens 100 erwartete Blöcke.",
+  "poolRollingPeriodIntro": "HeroMiners und PearlHash nutzen bis zu 30 vollständige UTC-Tage, mindestens fünf Tage und 100 Blöcke; das Intervall enthält Blockglück. Andere PPLNS/PROP-Schätzungen benötigen fünf beobachtete Tage der letzten sieben, Block-Effort und mindestens 100 erwartete Blöcke.",
   "poolRealCostFrom": "Von",
   "poolRealCostTo": "Bis",
   "poolShareYieldShownHelp": "Die Website von {pool} zeigt die Hashrate etwa {loss} niedriger als die gutgeschriebenen Shares, und die gefundenen Blöcke folgen diesem niedrigeren Wert, nicht den Shares. {pool} zahlt nach den tatsächlich gefundenen Blöcken aus, die Erträge sind also etwa {loss} geringer; die Gebühr beträgt {fee}, die realen Kosten liegen bei etwa {cost}.",
@@ -588,5 +588,9 @@
   "trade": "Handel",
   "navTradeShort": "Handel",
   "tradeOnExchange": "Auf %@ handeln",
-  "tradeInApp": "In der App handeln"
+  "tradeInApp": "In der App handeln",
+  "poolNegativeCostWarn": "Öffentliche Stichproben stammen von großen Auszahlungsadressen auf der Chain und können private Rabatte oder Tagesabgrenzungen ohne öffentliche Einzelabrechnung enthalten; reguläre Adressen zahlen die angegebene Gebühr, die auch für den geschätzten Ertrag gilt.",
+  "poolClosedPoolWarn": "PearlHash lässt nur seine eigene Software mit geschlossenem Protokoll zu und veröffentlicht weder Blockliste noch Block-Effort oder Abrechnungsdetails; die gemeldete Share-Rate ist nicht unabhängig prüfbar.",
+  "poolPerynWarn": "Peryn gewährt großen Konten nichtöffentliche Rabattstufen (Adressen über 50 PH/s oder mit Sonder-Rabattkennzeichnung sind hier ausgeschlossen) und bietet keine Historien-API; Adressseiten speichern nur 7 Tage Tages-Hashrate auf 3 signifikante Stellen gerundet, sodass ältere Zeiträume nicht nachprüfbar sind.",
+  "poolF2PoolWarn": "F2Pool veröffentlicht weder öffentliche Kontoseiten noch Blockliste oder Abrechnungsdetails; dieser Wert stammt aus den Tagessummen eines einzelnen Lesekontos und liegt aus nicht offengelegten Gründen 0,5–0,7 Prozentpunkte über dem Startseitenpreis."
 }
