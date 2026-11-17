@@ -2267,7 +2267,7 @@ main.pool-page { max-width: 1800px; padding-inline: 24px; }
 .pool-merge-range { white-space: nowrap; }
 :root .pool-comparison .pool-merge-bonus:hover, :root .pool-comparison .pool-merge-bonus[aria-expanded="true"] { background: transparent; }
 .pool-comparison .pool-merge-bonus:hover small, .pool-comparison .pool-merge-bonus[aria-expanded="true"] small { color: var(--blue-text); }
-/* PearlHash's WildRig line under its Real Cost: quiet like the NOCK line, the ⓘ says it opens a bubble. */
+/* A miner app's line under a Real Cost: quiet like the NOCK line, the ⓘ says it opens a bubble. */
 .pool-comparison .pool-miner-cost { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; max-width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: help; }
 .pool-comparison .pool-miner-cost small { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pool-comparison .pool-miner-cost .icon { width: 14px; height: 14px; flex: none; }
@@ -3006,11 +3006,11 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
 
 /* The pool's logo on a rounded plate, a hairline round it as in the app. */
 .pool-icon { display: inline-block; flex-shrink: 0; width: 26px; height: 26px; border-radius: 27%; background: #fff center / cover no-repeat; box-shadow: inset 0 0 0 .5px color-mix(in srgb, var(--text) 12%, transparent); }
+.pool-icon-gone { visibility: hidden; }
 .pool-icon-alphapool { background-image: url(/pools/alphapool.png); }
 .pool-icon-luckypool { background-image: url(/pools/luckypool.png); }
 .pool-icon-herominers { background-image: url(/pools/herominers.png); }
 .pool-icon-pearlfortune { background-image: url(/pools/pearlfortune.png); }
-.pool-icon-pearlhash { background-image: url(/pools/pearlhash.png); }
 .pool-icon-kryptex { background-image: url(/pools/kryptex.png); }
 .pool-icon-jetski { background-image: url(/pools/jetski.png); }
 .pool-icon-peryn { background-image: url(/pools/peryn.png); }
@@ -3020,7 +3020,6 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
 :root[data-theme="dark"] .pool-icon-alphapool { background-image: url(/pools/alphapool-dark.png); }
 :root[data-theme="dark"] .pool-icon-herominers { background-image: url(/pools/herominers-dark.png); }
 :root[data-theme="dark"] .pool-icon-pearlfortune { background-image: url(/pools/pearlfortune-dark.png); }
-:root[data-theme="dark"] .pool-icon-pearlhash { background-image: url(/pools/pearlhash-dark.png); }
 :root[data-theme="dark"] .pool-icon-kryptex { background-image: url(/pools/kryptex-dark.png); }
 :root[data-theme="dark"] .pool-icon-f2pool { background-image: url(/pools/f2pool-dark.png); }
 
@@ -3325,17 +3324,27 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
 .fleet-value-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
 .fleet-value-row > span:last-child { color: var(--muted); }
 /* The Real Cost statement: a warning card (orange bar, tint, title), not news. Light mode's text orange is darker for contrast. */
-.pool-news { --notice-ink: #b45309; position: relative; display: grid; gap: 10px; margin-bottom: 16px; padding: 16px 56px 16px 18px; border: 1px solid color-mix(in srgb, var(--orange-warn) 45%, transparent); border-left: 4px solid var(--orange-warn); background: color-mix(in srgb, var(--orange-warn) 8%, var(--surface)); }
-:root[data-theme="dark"] .pool-news { --notice-ink: var(--orange-warn); background: color-mix(in srgb, var(--orange-warn) 12%, var(--surface)); }
-.pool-news h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--font-16); line-height: 1.35; color: var(--notice-ink); }
-.pool-news h2 .warn-mark { width: 20px; height: 20px; }
-.pool-news ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.pool-news li { font-size: var(--font-14); line-height: 1.6; color: var(--text); }
-.pool-news li strong { font-weight: 650; color: var(--notice-ink); }
+/* The Real Cost statement: a quiet card above the table — one line (title, the four promises' names, a chevron) that
+   opens to their full text, and the latest delisting under it. */
+.pool-news { position: relative; display: grid; gap: 4px; margin-bottom: 12px; padding: 10px 48px 10px 14px; border-radius: 12px; }
+.pool-news details > summary { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; row-gap: 2px; list-style: none; cursor: pointer; }
+.pool-news details > summary::-webkit-details-marker { display: none; }
+.pool-news details > summary::marker { content: ""; }
+.pool-news h2 { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: var(--font-14); font-weight: 600; line-height: 1.5; color: var(--text); }
+.pool-news h2::after { content: ""; width: 6px; height: 6px; margin: -3px 2px 0; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform .15s; }
+.pool-news details[open] h2::after { margin-top: 3px; transform: rotate(225deg); }
+.pool-news-points { display: inline-flex; flex-wrap: wrap; font-size: var(--font-13); line-height: 1.5; color: var(--muted); }
+.pool-news-points > span:not(:last-child)::after { content: "·"; margin: 0 6px; }
+.pool-news details[open] .pool-news-points { display: none; }
+.pool-news ul { display: grid; gap: 6px; margin: 8px 0 4px; padding: 0; list-style: none; }
+.pool-news li { font-size: var(--font-13); line-height: 1.55; color: var(--muted); }
+.pool-news li strong { font-weight: 600; color: var(--text); }
 .pool-news a { color: var(--blue-text); font-weight: 500; overflow-wrap: anywhere; }
 :root[data-theme="dark"] .pool-news a { color: var(--blue); }
-.pool-news .market-banner-close { top: 10px; transform: none; }
-@media (max-width: 640px) { .pool-news { padding: 14px 44px 14px 14px; } .pool-news .market-banner-close { top: 8px; right: 8px; } }
+.pool-news-update { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: var(--font-13); line-height: 1.5; color: var(--text); }
+.pool-news-update::before { content: ""; flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--orange-warn); transform: translateY(-1px); }
+.pool-news .market-banner-close { top: 6px; transform: none; }
+@media (max-width: 640px) { .pool-news { padding: 10px 40px 10px 12px; } .pool-news .market-banner-close { top: 4px; right: 4px; } }
 
 /* K-line exchange toggle + Global 24h Trading Volume Share & Pools */
 .kline-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -3381,20 +3390,6 @@ input.switch::after, input.switch:checked::after { background: #fff; box-shadow:
   .volume-donut-layout { grid-template-columns: 1fr; justify-items: center; gap: 14px; }
   .volume-donut-layout .donut-legend { width: 100%; }
 }
-
-.pool-cost-tooltip.pool-cost-split { width: 430px; }
-.pool-comparison .pool-realFee .pool-payout-sub strong { color: var(--muted); font-size: 13px; font-weight: 550; }
-.pool-multiple .pool-payout small { white-space: nowrap; }
-.pool-cost-split-table { width: 100%; border-collapse: collapse; margin: 10px 0 6px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.pool-cost-split-table th, .pool-cost-split-table td { text-align: right; padding: 2.5px 0; white-space: nowrap; }
-.pool-cost-split-table th:first-child, .pool-cost-split-table td:first-child { text-align: left; color: var(--muted); font-weight: 400; padding-inline-end: 8px; }
-.pool-cost-split-table th + th, .pool-cost-split-table td + td { padding-inline-start: 12px; }
-.pool-cost-split-table thead tr:first-child th { font-size: 12.5px; font-weight: 650; color: var(--muted); padding-bottom: 1px; }
-.pool-cost-split-table thead tr:first-child th.shown { color: var(--text); }
-.pool-cost-split-table thead tr.dates th { font-size: 11px; font-weight: 400; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
-.pool-cost-split-table tbody tr:first-child td { padding-top: 6px; }
-.pool-cost-split-table td { color: var(--muted); }
-.pool-cost-split-table td.shown { color: var(--text); }
-.pool-cost-split-table tr.total td { border-top: 1px solid var(--line); padding-top: 6px; font-weight: 650; }
-.pool-cost-split-table tr.total td.shown { color: var(--text); }
-.pool-cost-split-table tr.range td { font-size: 11.5px; color: var(--muted); padding-top: 3px; }
+/* A delisted pool's monitor: its one status line, at its own height beside full cards. */
+.monitor-card-delisted { align-self: start; }
+.monitor-delisted { margin: 12px 0 0; }

@@ -301,15 +301,14 @@ test("Real Cost too few blocks: a PPLNS / PROP dash whose week is worth under 10
     [row(47.8, { solo: true }), pay("PPLNS")], [row(47.8), pay(null)]] as const)
     assert.equal(realCostFewBlocks(r, p), null, JSON.stringify([r, p]));
 });
-test("Real Cost warning mark: negative figures, PearlHash, Peryn and F2Pool carry orange warnings; open verifiable pools and SOLO do not", () => {
+test("Real Cost warning mark: negative figures, Peryn and F2Pool carry orange warnings; open verifiable pools and SOLO do not", () => {
   const pool = (id: string, name: string, solo = false) => ({ id, name, solo });
   assert.equal(realCostWarn(pool("https://peryn.ai/", "Peryn"), payout("PPS+", 1, 100, -0.85)), "negative");
   assert.equal(realCostWarn(pool("https://peryn.ai/", "Peryn"), payout("PPS+", 1, 100, 1.04)), "peryn");
   assert.equal(realCostWarn(pool("https://www.f2pool.com/", "F2Pool"), payout("PPS", 1, 100, 4.37)), "f2pool");
-  assert.equal(realCostWarn(pool("https://pearlhash.xyz/", "PearlHash"), payout("PROP", 1, 80, 5.95)), "closed");
-  assert.equal(realCostWarn(pool("https://pearlhash.xyz/", "PearlHash"), payout("PROP", 1, 80, -0.2)), "negative");
+  assert.equal(realCostWarn(pool("https://pearl.herominers.com/", "HeroMiners"), payout("PROP", 0, 80, -0.2)), "negative");
+  assert.equal(realCostWarn(pool("https://pearl.herominers.com/", "HeroMiners"), payout("PROP", 0, 80, 4.28)), null);
   assert.equal(realCostWarn(pool("https://pearlfortune.org/", "Pearl Fortune"), payout("PPLNS", 2, 80, 2.4)), null);
   assert.equal(realCostWarn(pool("https://peryn.ai/", "Peryn"), payout("PPLNS", 1, 80, null)), null);
-  assert.equal(realCostWarn(pool("https://pearlhash.xyz/", "PearlHash"), payout("PROP", 1, 80, null)), null);
-  assert.equal(realCostWarn(pool("https://pearlhash.xyz/solo", "PearlHash SOLO", true), payout("SOLO", 1, 80, 5.95, true)), null);
+  assert.equal(realCostWarn(pool("https://peryn.ai/solo", "Peryn SOLO", true), payout("SOLO", 1, 80, 5.95, true)), null);
 });

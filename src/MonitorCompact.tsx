@@ -3,6 +3,7 @@ import type { Lang, Monitor, Stats, WindowName } from "./types.ts";
 import type { TextKey } from "./i18n/index.ts";
 import { hashrate, prlNumber, rate as windowRate } from "./format.ts";
 import { nearestWindow } from "./monitors.ts";
+import { delistedPool } from "./delisted-pools.ts";
 import { Icon } from "./Icons.tsx";
 import { Money } from "./Money.tsx";
 
@@ -29,6 +30,8 @@ export type CompactMonitor = {
   found: boolean;
   /// The read failed and there is nothing older to show.
   failed: boolean;
+  /// Its pool is delisted: nothing is read for it.
+  delisted: boolean;
   /// Hashrate in the window the card shows for the shared window choice.
   rate: number;
   up: number;
@@ -37,6 +40,7 @@ export type CompactMonitor = {
 };
 
 export function compactMonitor(monitor: Monitor, snap: Snap, selected: WindowName): CompactMonitor {
+  if (delistedPool(monitor.pool)) return { monitor, loading: false, found: false, failed: false, delisted: true, rate: 0, up: 0, total: 0, tone: "idle" };
   const s = snap?.data, found = !!s && !s.missing;
   const rate = found ? windowRate(s, nearestWindow(selected, s.windows)) : 0;
   const up = found ? s.workers.filter((w) => w.online).length : 0, total = found ? s.workers.length : 0;
@@ -44,12 +48,13 @@ export function compactMonitor(monitor: Monitor, snap: Snap, selected: WindowNam
   // A pool that lists no rigs is judged on its hashrate alone.
   const tone: PillTone = loading ? "idle" : !found ? failed ? "down" : "idle"
     : total === 0 ? rate > 0 ? "ok" : "idle" : up === total ? "ok" : up === 0 ? "down" : "partial";
-  return { monitor, loading, found, failed, rate, up, total, tone };
+  return { monitor, loading, found, failed, delisted: false, rate, up, total, tone };
 }
 
 /// What a tile's pill says: rigs online of rigs listed, else a word for the state.
 export function badgeText(m: CompactMonitor, t: T) {
   if (m.loading) return "";
+  if (m.delisted) return t("monitorDelisted");
   if (m.found) return m.total > 0 ? `${m.up}/${m.total}` : t(m.rate > 0 ? "online" : "offline");
   return t(m.failed ? "failedShort" : "offline");
 }
@@ -57,6 +62,7 @@ export function badgeText(m: CompactMonitor, t: T) {
 /// What a tile is read out as: rigs online, or why there is nothing to show.
 export function detailText(m: CompactMonitor, t: T) {
   if (m.loading) return t("loading");
+  if (m.delisted) return t("monitorDelisted");
   if (m.found) return m.total > 0 ? t("onlineOf").replace("%@", `${m.up}/${m.total}`) : t(m.rate > 0 ? "online" : "offline");
   return t(m.failed ? "failedShort" : "missing");
 }
@@ -90,7 +96,8 @@ export function compactIncome(monitors: Monitor[], h24: (addr: string) => number
 /// The pool's own logo (public/pools, from the app's asset catalog), with a dark-mode plate where the app has one.
 export const poolSlug = (pool: string) => pool.toLowerCase().replace(/[^a-z0-9]/g, "");
 export function PoolIcon({ pool }: { pool: string }) {
-  return <span className={`pool-icon pool-icon-${poolSlug(pool)}`} aria-hidden="true" />;
+  // A delisted pool's logo is gone with it; the space stays so the tile keeps its shape.
+  return <span className={`pool-icon pool-icon-${poolSlug(pool)}${delistedPool(pool) ? " pool-icon-gone" : ""}`} aria-hidden="true" />;
 }
 
 /// The 卡片 / 一览 switch in 我的监控's toolbar.
@@ -143,7 +150,7 @@ export function MonitorCompactList({ monitors, snapshot, selected, h24, usd, mon
   const row = { menu, setMenu, draggable: finePointer, monitors, t, ...actions };
   return <div className="compact-monitors">
     {/* With one monitor the total would only repeat its tile. */}
-    {items.length > 1 && <Total items={items} monitors={running} h24={h24} usd={usd} money={money} lang={lang} t={t} />}
+    {items.filter((m) => !m.delisted).length > 1 && <Total items={items.filter((m) => !m.delisted)} monitors={running.filter((m) => !delistedPool(m.pool))} h24={h24} usd={usd} money={money} lang={lang} t={t} />}
     {items.length > 0 && <div className="monitor-tiles">
       {items.map((m) => <Entry key={m.monitor.id} monitor={m.monitor} className="monitor-tile" label={`${m.monitor.label}, ${m.found && m.rate > 0 ? hashrate(m.rate, lang) : "—"}, ${detailText(m, t)}`} {...row}>
         <span className="tile-top">
@@ -277,8 +284,10 @@ function Entry({ monitor, className, label, children, menu, setMenu, draggable, 
       <span aria-hidden="true">⠿</span>
     </button>}
     {open && <div className="tile-menu" role="menu" aria-label={t("manage")} onKeyDown={menuKeys}>
-      <button type="button" role="menuitem" onClick={act(() => onPause(monitor, !monitor.paused))}><Icon name={monitor.paused ? "play" : "pause"} />{t(monitor.paused ? "resume" : "pause")}</button>
-      <button type="button" role="menuitem" onClick={act(() => onEdit(monitor))}><Icon name="edit" />{t("edit")}</button>
+      {!delistedPool(monitor.pool) && <>
+        <button type="button" role="menuitem" onClick={act(() => onPause(monitor, !monitor.paused))}><Icon name={monitor.paused ? "play" : "pause"} />{t(monitor.paused ? "resume" : "pause")}</button>
+        <button type="button" role="menuitem" onClick={act(() => onEdit(monitor))}><Icon name="edit" />{t("edit")}</button>
+      </>}
       <button type="button" role="menuitem" className="danger" onClick={act(() => onDelete(monitor))}><Icon name="delete" />{t("delete")}</button>
     </div>}
   </div>;

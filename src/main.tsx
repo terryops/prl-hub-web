@@ -16,7 +16,7 @@ import {
   normalizeConfig,
   mergeConfig,
   alive,
-  pools,
+  monitorPools,
   langs,
   fresh,
   deepLink,
@@ -26,6 +26,7 @@ import { dictionaries, languageNames, type TextKey } from "./i18n/index.ts";
 import { applyAppearance, browserLanguage } from "./preferences.ts";
 import { AppearanceMenu } from "./AppearanceMenu.tsx";
 import { hashrate, rate, f2ref } from "./format.ts";
+import { delistedPool, withoutDelisted } from "./delisted-pools.ts";
 import type {
   State,
   Price,
@@ -85,7 +86,7 @@ import { androidSecurity, androidSecurityCopy } from "./android-security.ts";
 import { parsePoolCostRoute, poolCostHref } from "./pool-cost-route.ts";
 
 // The Real Cost statement stays until each visitor closes it (a new key shows it again to everyone).
-const POOL_NEWS_KEY = "pearlhub.poolNews.20261117";
+const POOL_NEWS_KEY = "pearlhub.poolNews.20261117b";
 // The Google Play build may not sell Pro outside Play billing; it follows the iOS app's rule.
 const fromApp = appClient() || (ANDROID && androidStore() === "play");
 // Where Pro came from, as the store's name; a grant made by hand ("admin") or none names nothing.
@@ -423,7 +424,7 @@ function App() {
         .then((data) => setPrice({ data }))
         .catch(() => setPrice((prev) => ({ ...prev, failed: true }))),
       due(reads.pools, 15_000) && api<Overview>("/v1/pools?real_cost=rolling")
-        .then((data) => { reads.pools = Date.now(); setOverview({ data }); })
+        .then((data) => { reads.pools = Date.now(); setOverview({ data: withoutDelisted(data) }); })
         .catch(() => setOverview((prev) => ({ ...prev, failed: true }))),
       due(reads.history, 60_000) && api<{ source: string; points: number[][] }>("/v1/price/history")
         .then((data) => { reads.history = Date.now(); setHistory({ data }); })
@@ -1004,19 +1005,21 @@ function App() {
   const monitorCard = (m: Monitor) => {
     const snap = stats[m.id]?.target === targetKey(m) ? stats[m.id] : undefined,
       s = snap?.data,
-      w = nearestWindow(selected, s?.windows);
+      w = nearestWindow(selected, s?.windows),
+      // Its pool is delisted: nothing is read for it; the card says so and keeps rename, order and delete.
+      gone = delistedPool(m.pool);
     return (
-      <section className="card monitor-card" key={m.id} draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", m.id)} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); moveMonitor(e.dataTransfer.getData("text/plain"), activeMonitors.findIndex((x) => x.id === m.id)); }}>
+      <section className={`card monitor-card${gone ? " monitor-card-delisted" : ""}`} key={m.id} draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", m.id)} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); moveMonitor(e.dataTransfer.getData("text/plain"), activeMonitors.findIndex((x) => x.id === m.id)); }}>
         <div className="card-heading">
           <div className="card-name">
             <div className="monitor-title"><h2>{m.label}</h2><small>{m.pool}</small>{ANDROID && (m.pool === "F2Pool"
               // An F2Pool monitor is kept as its read-only page key, and that key lets anyone read the account: it never
               // goes on screen, where a screenshot would carry it (iOS PoolWatch.displayAddress: the account name, else F2Pool).
               ? <code className="monitor-addr">{m.acct || "F2Pool"}</code>
-              : <code className="monitor-addr" title={m.addr}>{m.addr.length > 20 ? `${m.addr.slice(0, 10)}…${m.addr.slice(-8)}` : m.addr}</code>)}{m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : "online-badge"}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
+              : <code className="monitor-addr" title={m.addr}>{m.addr.length > 20 ? `${m.addr.slice(0, 10)}…${m.addr.slice(-8)}` : m.addr}</code>)}{gone ? <span className="badge">{t("monitorDelisted")}</span> : m.paused ? <span className="badge">{t("paused")}</span> : s && !s.missing && <span className={`badge ${s.workers.some((x) => !x.online) ? "offline-badge" : "online-badge"}`}>{s.workers.some((x) => !x.online) ? t("offlineCount").replace("%@", String(s.workers.filter((x) => !x.online).length)) : t("online")}</span>}</div>
           </div>
           <div className="inline-controls"><div className="alert-controls">
-            {(pushReady || ANDROID) && !m.paused && (
+            {(pushReady || ANDROID) && !m.paused && !gone && (
               <>
                 <label
                   className="compact-check"
@@ -1060,8 +1063,10 @@ function App() {
               </>
             )}
             </div><details className="menu"><summary aria-label={t("manage")}><Icon name="more" /></summary><div>
-              <button onClick={(e) => { e.currentTarget.closest("details")?.removeAttribute("open"); setMonitorPaused(m, !m.paused); }}><Icon name={m.paused ? "play" : "pause"} />{t(m.paused ? "resume" : "pause")}</button>
-              <button onClick={() => editMonitor(m)}><Icon name="edit" />{t("edit")}</button>
+              {!gone && <>
+                <button onClick={(e) => { e.currentTarget.closest("details")?.removeAttribute("open"); setMonitorPaused(m, !m.paused); }}><Icon name={m.paused ? "play" : "pause"} />{t(m.paused ? "resume" : "pause")}</button>
+                <button onClick={() => editMonitor(m)}><Icon name="edit" />{t("edit")}</button>
+              </>}
               <button onClick={() => rename("monitors", m.id, m.label)}><Icon name="rename" />{t("rename")}</button>
               <button disabled={activeMonitors[0].id === m.id} onClick={() => moveMonitor(m.id, activeMonitors.findIndex((x) => x.id === m.id) - 1)}><Icon name="up" />{t("moveUp")}</button>
               <button disabled={activeMonitors.at(-1)!.id === m.id} onClick={() => moveMonitor(m.id, activeMonitors.findIndex((x) => x.id === m.id) + 1)}><Icon name="down" />{t("moveDown")}</button>
@@ -1069,9 +1074,9 @@ function App() {
             </div></details>
           </div>
         </div>
-        {!m.paused && stale(snap?.failed || (m.pool !== "F2Pool" && incomeStale(m.addr)))}
-        {!m.paused && m.alert && (pushState === "error" || !state.token) && <button className="status warn status-link" onClick={() => setPage("alerts")}><span>{t("pushNeedsConnection")}</span><Icon name="right" /></button>}
-        {m.paused ? <div className="monitor-paused"><button onClick={() => setMonitorPaused(m, false)}>{t("resume")}</button></div> : <>
+        {!m.paused && !gone && stale(snap?.failed || (m.pool !== "F2Pool" && incomeStale(m.addr)))}
+        {!m.paused && !gone && m.alert && (pushState === "error" || !state.token) && <button className="status warn status-link" onClick={() => setPage("alerts")}><span>{t("pushNeedsConnection")}</span><Icon name="right" /></button>}
+        {gone ? <p className="muted monitor-delisted">{t("poolDelisted").replace("{pool}", gone.name)}</p> : m.paused ? <div className="monitor-paused"><button onClick={() => setMonitorPaused(m, false)}>{t("resume")}</button></div> : <>
           {!s ? (
             snap?.failed ? <p className="muted">{t("error")}</p> : <Skeleton label={t("loading")} />
           ) : s.missing ? (
@@ -1917,7 +1922,8 @@ function TargetForm({
   onSave: (name: string, target: string, pool: string) => void;
   extras?: TargetExtras;
 }) {
-  const [pool, setPool] = useState(initialMonitor?.pool || pools[0]);
+  // A delisted pool's monitor, edited, has to move to a pool that is still read.
+  const [pool, setPool] = useState(initialMonitor && !delistedPool(initialMonitor.pool) ? initialMonitor.pool : monitorPools[0]);
   const [target, setTarget] = useState(initial);
   const refused = extras && target.trim() ? pool === "F2Pool" ? !f2ref(target.trim()) && extras.badF2Pool : !/^prl1[0-9a-z]{20,100}$/.test(cleanAddress(target)) && extras.badAddress : "";
   return (
@@ -1937,7 +1943,7 @@ function TargetForm({
       <label className="form-field">
         {t("pool")}
         <select value={pool} onChange={(e) => setPool(e.target.value)}>
-          {pools.map((p) => (
+          {monitorPools.map((p) => (
             <option key={p}>{p}</option>
           ))}
         </select>

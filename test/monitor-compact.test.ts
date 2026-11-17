@@ -10,7 +10,7 @@ const server = await createServer({ configFile: false, server: { middlewareMode:
 after(() => server.close());
 const { compactMonitor, badgeText, detailText, compactTotal, compactIncome, rigsTone, monitorLayout, poolSlug, MonitorCompactList, LayoutSwitch } = await server.ssrLoadModule("/src/MonitorCompact.tsx");
 const { dictionaries } = await server.ssrLoadModule("/src/i18n/index.ts");
-const { pools } = await server.ssrLoadModule("/src/store.ts");
+const { pools, monitorPools } = await server.ssrLoadModule("/src/store.ts");
 const en = (k: string) => dictionaries.en[k];
 
 const addr = (c: string) => "prl1" + c.repeat(38);
@@ -77,16 +77,29 @@ test("一览: the layout is this browser's choice — cards by default, kept loc
   assert.equal(readStore().monitorLayout, undefined);
 });
 
-test("一览: every pool has a logo in public/pools, light and, where the app has one, dark", async () => {
+test("一览: every pool has a logo in public/pools, light and, where the app has one, dark; a delisted pool's is gone", async () => {
   const { existsSync, readFileSync } = await import("node:fs");
   const css = readFileSync(new URL("../src/style.css", import.meta.url), "utf8");
-  for (const pool of pools) {
+  assert.deepEqual(pools.filter((p: string) => !monitorPools.includes(p)), ["PearlHash"]);
+  assert.ok(!existsSync(new URL("../public/pools/pearlhash.png", import.meta.url)) && !css.includes("pool-icon-pearlhash"));
+  for (const pool of monitorPools) {
     const slug = poolSlug(pool);
     assert.ok(existsSync(new URL(`../public/pools/${slug}.png`, import.meta.url)), pool);
     assert.ok(css.includes(`.pool-icon-${slug} { background-image: url(/pools/${slug}.png); }`), pool);
     const dark = new URL(`../public/pools/${slug}-dark.png`, import.meta.url);
     assert.equal(css.includes(`url(/pools/${slug}-dark.png)`), existsSync(dark), pool);
   }
+});
+
+test("一览: a delisted pool's monitor is a tile that says so, read by nothing and left out of the total", () => {
+  const gone = compactMonitor(monitor("PH", { pool: "PearlHash" }), { data: stats([worker(true)]) }, "day");
+  assert.equal(gone.delisted, true); assert.equal(gone.found, false); assert.equal(gone.loading, false); assert.equal(gone.tone, "idle");
+  assert.equal(badgeText(gone, en), "Delisted"); assert.equal(detailText(gone, en), "Delisted");
+  const ms = [monitor("One"), monitor("Two", { addr: addr("b"), pool: "Kryptex" }), monitor("PH", { pool: "PearlHash", addr: addr("c") })];
+  const html = renderToStaticMarkup(React.createElement(MonitorCompactList, { monitors: ms, snapshot: () => ({ data: stats([worker(true)]) }), selected: "day",
+    h24: () => 1, usd: 2, money: (v: number) => "$" + v, lang: "en", t: en, onOpen() {}, onPause() {}, onEdit() {}, onDelete() {}, onMove() {} }));
+  assert.ok(html.includes("2/2 online"), html);
+  assert.ok(html.includes(">Delisted<"));
 });
 
 test("一览: renders the total only for two or more running monitors, tiles in order and paused ones folded", () => {

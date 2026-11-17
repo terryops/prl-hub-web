@@ -1,5 +1,6 @@
 import type { PoolOverview, PoolPayout } from "./types.ts";
 import { costSchemes } from "./real-cost-content.ts";
+import { delistedSlug } from "./delisted-pools.ts";
 
 /** The pools with a Real Cost explainer (real-cost-content.ts), by the id the overview gives them. */
 export const costPools = [
@@ -8,7 +9,6 @@ export const costPools = [
   { slug: "kryptex", name: "Kryptex", id: "https://prl.kryptex.network/" },
   { slug: "f2pool", name: "F2Pool", id: "https://www.f2pool.com/" },
   { slug: "peryn", name: "Peryn", id: "https://peryn.ai/" },
-  { slug: "pearlhash", name: "PearlHash", id: "https://pearlhash.xyz/" },
   { slug: "herominers", name: "HeroMiners", id: "https://pearl.herominers.com/" },
 ] as const;
 
@@ -48,7 +48,8 @@ export function poolCostDetailHref(pool: Pick<PoolOverview, "id" | "scheme" | "s
 export function parsePoolCostRoute(hash: string): PoolCostRoute | null {
   const [path, query = ""] = hash.split("?", 2);
   const match = /^#pools\/real-cost\/([a-z0-9-]{1,100})$/.exec(path);
-  if (!match) return null;
+  // A delisted pool's page is gone; its old links land on the pool list.
+  if (!match || delistedSlug(match[1])) return null;
   const q = new URLSearchParams(query), tier = q.get("tier");
   return { slug: match[1], scheme: schemeValue(q.get("scheme")), tier: tier === "founding" || tier === "standard" ? tier : null };
 }

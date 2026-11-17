@@ -1,7 +1,9 @@
 import type { Monitor, Stats, WindowName } from "./types.ts";
+import { delistedPool } from "./delisted-pools.ts";
 export const targetKey = (m: Monitor) => JSON.stringify([m.pool, m.addr, m.acct || ""]);
 export const duplicateMonitor = (items: Monitor[], pool: string, addr: string, id?: string) => items.some((m) => !m.deleted && m.id !== id && m.pool === pool && m.addr.toLowerCase() === addr.toLowerCase());
-export const enabledMonitors = (items: Monitor[]) => items.filter((m) => !m.deleted && !m.paused);
+/// Running monitors: what is read, alerted on and summed. A delisted pool's monitor stays in the list, read by nothing.
+export const enabledMonitors = (items: Monitor[]) => items.filter((m) => !m.deleted && !m.paused && !delistedPool(m.pool));
 export const alertMonitors = (items: Monitor[]) => enabledMonitors(items).filter((m) => m.alert);
 /// 掉线提醒 (seconds): how long a worker is offline before the push, and the one reminder
 /// after that push if it is still offline (0 = none) — the worker's AFTER and AGAIN (alerts/src/watch.js).

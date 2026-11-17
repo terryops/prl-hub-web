@@ -163,7 +163,6 @@ export default function PoolCostDetail({ route, data, lang }: { route: PoolCostR
         <span>{c.realCost} · {scheme}{tiered ? ` · ${c[tier]}` : ""}</span>
         {value != null ? (() => {
           const warnText = value < 0 ? c.negativeWarn
-            : route.slug === "pearlhash" ? c.closedWarn
             : route.slug === "peryn" ? c.perynWarn
             : route.slug === "f2pool" ? c.f2poolWarn : null;
           return warnText
@@ -174,7 +173,6 @@ export default function PoolCostDetail({ route, data, lang }: { route: PoolCostR
           : value == null && <small>{c.noData}</small>}
         {value != null && feeNote && <small>{feeNote}</small>}
         {otherTier && otherTier.percent != null && <small className="cost-result-other">{c[otherTier.tier]} {approx}{pct(otherTier.percent)}</small>}
-        {(() => { const df = payout ? rollingRealCost(payout)?.displayFactor : null; return df && <small className="cost-result-other">{c.byDisplayRatio.replace("{factor}", num(df.factor, 4, 4))} ≈{pct(df.percent)}</small>; })()}
       </div>
       {rows.length > 0 && <dl className="cost-result-rows">{rows.map((r, i) => <div key={i} className={r.total ? "total" : undefined}><dt>{r.label}</dt><dd>{r.value}</dd></div>)}</dl>}
       {range && <p className="cost-result-range"><span>{c.range}</span><strong>{between(range[0], range[1])}</strong><HelpTip className="info-tip" bubbleClassName="pool-cost-tooltip info-tip-bubble" label={c.range} mark={<InfoMark />}>{c.rangeNote}</HelpTip></p>}

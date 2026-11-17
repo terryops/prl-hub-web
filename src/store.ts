@@ -14,8 +14,11 @@ import { fleetDefaults, normalizeFleet, normalizeDevice } from "./fleet.ts";
 import { browserLanguage, langs } from "./preferences.ts";
 import { localPurchase } from "./purchase-key.ts";
 import { ALERT_AFTER, ALERT_AGAIN } from "./monitors.ts";
+import { delistedPool } from "./delisted-pools.ts";
 export { langs } from "./preferences.ts";
 export const KEY = "prl.web.v1";
+/// Every pool a stored monitor may name — a delisted one too, so a config that still has one stays valid.
+/// New monitors pick from `monitorPools`.
 export const pools = [
   "AlphaPool",
   "Lucky Pool",
@@ -27,6 +30,7 @@ export const pools = [
   "Peryn",
   "F2Pool",
 ];
+export const monitorPools = pools.filter((p) => !delistedPool(p));
 export const alive = <T extends Item>(items: T[]) =>
   items.filter((x) => !x.deleted);
 let lastStamp = 0;

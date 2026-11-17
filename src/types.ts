@@ -165,7 +165,7 @@ export type PoolPayout = {
   founding?: { fee: number; afterFP8Months?: number; closes?: string } | null;
   /** The same terms once sign-ups have closed: addresses registered before keep them. */
   foundingClosed?: { fee: number; afterFP8Months?: number } | null;
-  /** A miner program that shows more hashrate than the pool receives (PearlHash: WildRig): the part of its figure the
+  /** A miner program that shows more hashrate than the pool receives (e.g. a pool-specific miner app): the part of its figure the
    *  pool credits, and Real Cost measured against that figure. */
   minerReport?: { miner: string; credited: number; realFeePercent?: number | null } | null;
   /** Real Cost held back while it is checked: the day (YYYY-MM-DD) it is published by. */
@@ -176,18 +176,7 @@ export type PoolPayout = {
   realFeeTier?: "founding" | "standard" | null;
   realFeeTiers?: { founding: number | null; standard: number | null } | null;
 };
-export type RollingSegment = {
-  start: number; end: number; poolBlocks: number; blocksSample: number; orphans: number; work: number;
-  factor: number; feePercent: number; foundYield: number; foundYield95: [number, number];
-  ratio: number; percent: number; cost95: [number, number];
-};
-export type DisplayFactorCost = {
-  since: number; factor: number; percent: number; feePercent: number;
-};
 export type RollingRealCost = {
-  displayFactor?: DisplayFactorCost | null;
-  prior?: RollingSegment | null;
-  since?: RollingSegment | null;
   id: string; pool: string; scheme: string; theoryBasis: "accepted_share_rounds" | "accepted_share_work";
   start: number; end: number; measuredAt: number; targetDays: number;
   poolBlocks: number; blocksSample: number; orphans: number; work: number; feePercent: number;

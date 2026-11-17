@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { costPools, parsePoolCostRoute, poolCostDetailHref, poolCostHref } from "../src/pool-cost-route.ts";
 import { auditTable, costCopy, costSchemes, costStory, type AuditColumn } from "../src/real-cost-content.ts";
+import { withoutDelisted } from "../src/delisted-pools.ts";
 
 const server = await createServer({ configFile: false, server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom" });
 after(() => server.close());
@@ -16,7 +17,8 @@ const period = { start, end };
 const hero = JSON.parse(readFileSync(new URL("./fixtures/herominers-rolling.json", import.meta.url), "utf8"));
 const phStart = end - 26 * DAY, phWork = 2466.3, phBlocks = 2343, phYield = phBlocks / phWork, phRatio = 0.99 * phYield, phCost = (1 - phRatio) * 100;
 const orphans = (o: number, blocks: number) => ({ start, end, blocks, orphans: o, source: "chain" });
-// What /v1/pools sends for each kind of figure (alerts/src/realfees.js).
+// What /v1/pools sends for each kind of figure (alerts/src/realfees.js) — PearlHash's row as a Worker sent it before the
+// pool was delisted.
 const data = { ok: true, ts: end + 3600, source: "test", network: null, partial: false, rows: [
   { id: "https://pearlhash.xyz/", name: "PearlHash", solo: false, orphans: orphans(4, 592),
     payouts: [{ scheme: "PROP", fee: 1, grossPerPH: 12, solo: false, estimated: true, realFeePercent: phCost,
@@ -43,7 +45,7 @@ const text = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/&#x27;/g, 
 
 test("every pool with a page has a plain explanation in both languages for each scheme it pays", () => {
   const methods: Record<string, string> = { "pearl-fortune:PPS": "pps", "pearl-fortune:PPLNS": "effort", "lucky:PROP": "effort",
-    "kryptex:PPS+": "pps", "f2pool:PPS": "pps", "peryn:PPS+": "pps", "pearlhash:PROP": "rolling", "herominers:PROP": "rolling" };
+    "kryptex:PPS+": "pps", "f2pool:PPS": "pps", "peryn:PPS+": "pps", "herominers:PROP": "rolling" };
   for (const pool of costPools) for (const scheme of costSchemes(pool.slug)) for (const lang of ["zh", "en"] as const) {
     const s = costStory(pool.slug, scheme, lang)!;
     assert.equal(s.method, methods[`${pool.slug}:${scheme}`], `${pool.slug}:${scheme}`);
@@ -64,7 +66,7 @@ test("every pool with a page has a plain explanation in both languages for each 
 test("audit record: one table of dated periods per pool but Peryn, the same figures for both languages", () => {
   const iso = /^2026-\d{2}-\d{2}$/;
   for (const [slug, scheme, n] of [["pearl-fortune", "PPS", 3], ["pearl-fortune", "PPLNS", 2], ["lucky", "PROP", 2], ["kryptex", "PPS+", 3],
-    ["f2pool", "PPS", 3], ["pearlhash", "PROP", 2], ["herominers", "PROP", 2]] as const) {
+    ["f2pool", "PPS", 3], ["herominers", "PROP", 2]] as const) {
     const t = auditTable(slug, scheme)!;
     assert.equal(t.rows.filter((r) => !r.total).length, n, `${slug}:${scheme}`);
     let last = "";
@@ -86,9 +88,6 @@ test("audit record: one table of dated periods per pool but Peryn, the same figu
 });
 
 test("audit table: headers, dates and figures as the page shows them", () => {
-  const ph = text(render("pearlhash"));
-  assert.match(ph, /核查记录 时期（UTC） 真实费用 95% 置信区间 主链出块 按 share 应出 按显示算力应出 换算系数 10-21 至 11-02 10\.18% 5\.1% ～ 15\.0% 1,289 1,420\.7 1,299\.9 0\.915 11-04 至 11-15 −0\.80% −7\.4% ～ 5\.4% 970 952\.6 935\.6 0\.982 合计 10-21 至 11-15 5\.95% 2\.1% ～ 9\.7% 2,343 2,466\.3 2,323\.3 — 每小时分账/);
-  assert.match(text(render("pearlhash", null, null, "en")), /Period \(UTC\) Real Cost 95% confidence interval Canonical blocks Expected from shares Expected from displayed hashrate Conversion factor Oct 21 – Nov 2 10\.18% 5\.1% – 15\.0% 1,289 1,420\.7 1,299\.9 0\.915 Nov 4 – Nov 15 −0\.80%/);
   assert.match(text(render("pearl-fortune", "PPLNS")), /10-26 至 11-01 2\.98% 2% 3 \/ 301 11-02 至 11-08 2\.29% 2% 1 \/ 340/);
   assert.match(text(render("herominers")), /10-27 至 11-09 3\.10% −8\.0% ～ 13\.3% 328 0 338\.5 合计 10-13 至 11-09 4\.28% −3\.2% ～ 11\.4% 675 4 705\.2/);
   const f2 = text(render("f2pool", null, null, "en"));
@@ -108,35 +107,31 @@ test("deep links round-trip pool, scheme and tier, including the plus sign", () 
 });
 
 test("the overview's arrow appears only for a pool with a page and a figure to explain", () => {
-  const [pf, lucky, , , , ph] = costPools;
+  const [pf, lucky, , , , hero] = costPools;
   const p = (scheme: string | null, realFeePercent: number | null, solo = false) => ({ scheme, realFeePercent, solo });
   assert.equal(poolCostDetailHref({ ...pf, scheme: "PPLNS", solo: false }, [p("PPS", 4), p("PPLNS", 2.4)]), poolCostHref("pearl-fortune", "PPLNS"));
   assert.equal(poolCostDetailHref({ ...pf, scheme: "PPLNS", solo: false }, [p("PPS", 4), p("PPLNS", null)]), poolCostHref("pearl-fortune", "PPS"));
   assert.equal(poolCostDetailHref({ ...lucky, scheme: "PROP", solo: false }, [p("PROP", null)]), null);
   assert.equal(poolCostDetailHref({ ...lucky, scheme: "PROP", solo: true }, [p("PROP", 9.9)]), null);
-  assert.equal(poolCostDetailHref({ ...ph, scheme: null, solo: false }, [p(null, 2.8)]), poolCostHref("pearlhash", "PROP"));
-  assert.equal(poolCostDetailHref({ ...ph, scheme: null, solo: false }, [p("SOLO", 2.8, true)]), null);
+  assert.equal(poolCostDetailHref({ ...hero, scheme: null, solo: false }, [p(null, 2.8)]), poolCostHref("herominers", "PROP"));
+  assert.equal(poolCostDetailHref({ ...hero, scheme: null, solo: false }, [p("SOLO", 2.8, true)]), null);
   assert.equal(poolCostDetailHref({ id: "https://alpha.example/", scheme: "PPLNS", solo: false }, [p("PPLNS", 3)]), null);
 });
 
-test("PearlHash: rolling block-count estimate against accepted share work, with 95% range and orange warning mark", () => {
-  const html = render("pearlhash"), t = text(html);
-  assert.match(t, /PearlHash 真实费用计算说明/);
-  assert.match(t, /≈5\.95%/);
-  assert.match(t, /主链区块 2,343 块/);
-  assert.match(t, /share 对应理论区块 2,466\.3 块/);
-  assert.match(t, /share 出块率 95\.00%（/);
-  assert.match(t, /95% 置信区间 2\.06% ～ 9\.72%/);
-  assert.match(t, /1 − \(1 − 1%\) × 2,343 ÷ 2,466\.3 = 5\.95%/);
-  assert.match(t, /高于公示费率 4\.95 个百分点/);
-  assert.match(t, /矿池数据/); assert.match(t, /孤块率（7 天） 0\.68% · 4 \/ 592 块 链上统计/); assert.match(t, /术语/);
-  assert.match(html, /cost-result-warn/);
-  // Addresses: linked without the sentence's punctuation; nothing to link inside a placeholder.
-  assert.match(html, /<a href="https:\/\/pearlhash\.xyz\/api\/stats"/);
-  assert.ok(!html.includes('href="https://pearlhash.xyz/api/stats，'));
-  const en = render("pearlhash", null, null, "en");
-  assert.match(text(en), /PearlHash: How Real Cost Is Calculated/); assert.match(text(en), /Share-to-block yield/);
-  assert.match(en, /cost-result-warn/);
+test("PearlHash is delisted: no page, no arrow, its old links land on the pool list and its row never reaches a page", () => {
+  assert.ok(!costPools.some((p) => p.slug === "pearlhash" || p.id === "https://pearlhash.xyz/"));
+  assert.deepEqual(costSchemes("pearlhash"), []);
+  assert.equal(auditTable("pearlhash", "PROP"), null);
+  for (const hash of ["#pools/real-cost/pearlhash", "#pools/real-cost/pearlhash?scheme=PROP", "#pools/real-cost/pearlhash-xyz"])
+    assert.equal(parsePoolCostRoute(hash), null, hash);
+  assert.equal(poolCostDetailHref({ id: "https://pearlhash.xyz/", scheme: "PROP", solo: false }, [{ scheme: "PROP", realFeePercent: 5.95, solo: false }]), null);
+  const shown = withoutDelisted(data as never);
+  assert.deepEqual(shown.rows.map((r) => r.name), ["Lucky Pool", "HeroMiners", "Pearl Fortune", "Peryn"]);
+  // By domain too, under whatever name a directory lists it; a list without it passes through untouched.
+  const renamed = { ...data, rows: [{ id: "https://pearlhash.xyz/solo", name: "pearlhash.xyz SOLO", solo: true, payouts: [] }, ...data.rows.slice(1)] };
+  assert.equal(withoutDelisted(renamed as never).rows.length, 4);
+  assert.equal(withoutDelisted(shown), shown);
+  assert.ok(!Object.values(costCopy.zh).join(" ").includes("PearlHash") && !Object.values(costCopy.en).join(" ").includes("PearlHash"));
 });
 
 test("PROP / PPLNS with effort: fee, orphans and the rest add up to the figure", () => {
@@ -179,9 +174,9 @@ test("PPS: paid out against theory; Peryn leads with other addresses, then found
 });
 
 test("no figure: a dash and one plain sentence, and the explanation still there", () => {
-  const t = text(render("pearlhash", null, null, "zh-Hans", { ...data, rows: [] }));
+  const t = text(render("herominers", null, null, "zh-Hans", { ...data, rows: [] }));
   assert.match(t, /— 该结算方式暂无真实费用数据。/);
   assert.match(t, /计算方法/);
-  const loading = renderToStaticMarkup(React.createElement(PoolCostDetail, { route: { slug: "pearlhash", scheme: null, tier: null }, data: undefined, lang: "zh-Hans" }));
+  const loading = renderToStaticMarkup(React.createElement(PoolCostDetail, { route: { slug: "herominers", scheme: null, tier: null }, data: undefined, lang: "zh-Hans" }));
   assert.match(text(loading), /— 该结算方式暂无/);
 });

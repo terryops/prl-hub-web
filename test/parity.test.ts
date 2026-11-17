@@ -40,6 +40,15 @@ test("掉线提醒: 10 min to 2 h, and the reminder after it, as the app and the
     assert.throws(() => normalizeConfig({ ...base, monitors: [{ ...monitor("a"), ...bad } as never] }), /invalid_config/, JSON.stringify(bad));
   }
 });
+test("a delisted pool's monitor keeps its config valid (synced from the app) but is read, alerted on and summed by nothing", () => {
+  const base = configOf(defaults());
+  const ph = { ...monitor("ph"), pool: "PearlHash", addr: "prl1" + "b".repeat(38) };
+  const c = normalizeConfig({ ...base, monitors: [monitor("a"), ph] });
+  assert.deepEqual(c.monitors.map((m) => m.pool), ["AlphaPool", "PearlHash"]);
+  assert.deepEqual(enabledMonitors(c.monitors).map((m) => m.id), ["a"]);
+  assert.deepEqual(alertMonitors(c.monitors).map((m) => m.id), ["a"]);
+  assert.deepEqual(ownAddresses(c.monitors), [addr]);
+});
 test("A2: pause, duplicates, smoothest hashrate and resumed-address daily average match Swift", () => {
   assert.equal(enabledMonitors([{ ...monitor("a"), paused: true }]).length, 0);
   assert.equal(duplicateMonitor([monitor("a")], "AlphaPool", addr), true);

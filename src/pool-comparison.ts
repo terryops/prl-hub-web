@@ -94,7 +94,7 @@ function utcDay(day: unknown): Date | null {
   const date = new Date(day + "T00:00:00Z");
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day ? null : date;
 }
-/** Real Cost against a miner program's own figure (PearlHash: WildRig shows more than the pool receives), when the
+/** Real Cost against a miner program's own figure (a pool's own app showing more than it receives), when the
  *  service sent a sane one and the payout has a Real Cost of its own. A second line only; sorting keeps the main figure. */
 export function minerReport(p: PoolPayout): { miner: string; credited: number; realFeePercent: number } | null {
   const m = p.minerReport;
@@ -111,15 +111,14 @@ export function shareYield(p: PoolPayout): number | null {
   if (typeof y !== "number" || !(y > 0 && y < 1)) return null;
   return typeof cost === "number" && Number.isFinite(cost) ? y : null;
 }
-/** HeroMiners' and PearlHash's Real Cost: canonical blocks against accepted share work over up to 30 days (iOS
+/** HeroMiners' Real Cost: canonical blocks against accepted share work over up to 30 days (iOS
  *  RollingPoolCost.validated), when the service sent a sane one that is the figure shown. Block luck stays in, as the 95%
  *  count interval. */
 export function rollingRealCost(p: PoolPayout) {
   const o = p.realFeeEstimate, percent = p.realFeePercent, period = p.realFeePeriod;
   const pair = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(finite) && v[0] <= v[1];
   const hero = o?.id === "https://pearl.herominers.com/" && o.pool === "HeroMiners" && o.theoryBasis === "accepted_share_rounds";
-  const pearlhash = o?.id === "https://pearlhash.xyz/" && o.pool === "PearlHash" && o.theoryBasis === "accepted_share_work" && o.orphans === 0;
-  if (!o || (!hero && !pearlhash) || p.solo || ppsScheme(p.scheme) || !finite(percent) || !period ||
+  if (!o || !hero || p.solo || ppsScheme(p.scheme) || !finite(percent) || !period ||
       o.sourceVersion !== 2 || o.confidenceMethod !== "poisson_count_only" || o.confidence !== .95 || o.targetDays !== 30 ||
       !Number.isSafeInteger(o.start) || o.start <= 0 || o.start % 86400 || !Number.isSafeInteger(o.end) || o.end % 86400 ||
       o.end - o.start < 5 * 86400 || o.end - o.start > 30 * 86400 || period.start !== o.start || period.end !== o.end ||
@@ -131,30 +130,15 @@ export function rollingRealCost(p: PoolPayout) {
       Math.abs(percent - (1 - o.ratio) * 100) > 1e-6 ||
       !pair(o.foundYield95) || o.foundYield95[0] < 0 || o.foundYield95[0] > o.foundYield || o.foundYield95[1] < o.foundYield ||
       !pair(o.cost95) || o.cost95[0] > percent || o.cost95[1] < percent) return null;
-  const df = o.displayFactor;
-  if (df != null && (!pearlhash || !Number.isSafeInteger(df.since) || df.since <= 0 || df.since % 86400 ||
-      df.since > o.end - 5 * 86400 || !finite(df.factor) || !(df.factor > 0 && df.factor <= 1) ||
-      df.feePercent !== o.feePercent || !finite(df.percent) ||
-      Math.abs(df.percent - (1 - (1 - o.feePercent / 100) * df.factor) * 100) > 1e-6)) return null;
-  const validSeg = (seg: typeof o.prior) => !!seg && Number.isSafeInteger(seg.start) && seg.start > 0 && !(seg.start % 86400) &&
-    Number.isSafeInteger(seg.end) && !(seg.end % 86400) && seg.end - seg.start >= 5 * 86400 && seg.end - seg.start <= 60 * 86400 &&
-    Number.isSafeInteger(seg.poolBlocks) && seg.poolBlocks >= 100 && seg.poolBlocks <= 10000 && seg.orphans === 0 &&
-    seg.blocksSample === seg.poolBlocks && finite(seg.work) && seg.work > 0 && finite(seg.factor) && seg.factor > 0 && seg.factor <= 1 &&
-    seg.feePercent === o.feePercent && finite(seg.foundYield) && Math.abs(seg.foundYield - seg.poolBlocks / seg.work) <= 1e-9 &&
-    finite(seg.ratio) && Math.abs(seg.ratio - (1 - o.feePercent / 100) * seg.blocksSample / seg.work) <= 1e-9 &&
-    finite(seg.percent) && Math.abs(seg.percent - (1 - seg.ratio) * 100) <= 1e-6 && pair(seg.foundYield95) && pair(seg.cost95);
-  if ((o.prior != null || o.since != null) && (!pearlhash || !df || !validSeg(o.prior) || !validSeg(o.since) ||
-      o.prior!.end !== o.since!.start || o.since!.end !== o.end)) return null;
   return { ...o, days: (o.end - o.start) / 86400, lossUnconfirmed: o.foundYield95[1] >= 1 };
 }
 
-export type RealCostWarn = "negative" | "closed" | "peryn" | "f2pool";
-/** Whether a Real Cost figure carries an orange warning mark: a negative figure (rebate/adjustment skew), PearlHash's
- *  closed client protocol, Peryn's private rebate tiers + 7-day 3-sig-fig pages, or F2Pool's closed accounts. */
+export type RealCostWarn = "negative" | "peryn" | "f2pool";
+/** Whether a Real Cost figure carries an orange warning mark: a negative figure (rebate/adjustment skew),
+ *  Peryn's private rebate tiers + 7-day 3-sig-fig pages, or F2Pool's closed accounts. */
 export function realCostWarn(pool: Pick<PoolOverview, "id" | "name" | "solo">, p: PoolPayout): RealCostWarn | null {
   if (pool.solo || p.solo || !finite(p.realFeePercent)) return null;
   if (p.realFeePercent < 0) return "negative";
-  if (pool.id === "https://pearlhash.xyz/" || pool.name === "PearlHash") return "closed";
   if (pool.id === "https://peryn.ai/" || pool.name === "Peryn") return "peryn";
   if (pool.id === "https://www.f2pool.com/" || pool.name === "F2Pool") return "f2pool";
   return null;

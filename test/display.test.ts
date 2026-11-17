@@ -365,7 +365,7 @@ test("calculator: 显卡对比 shows losses in grey, gains in green, and the ren
 test("cost pages: one heading, the figure, then how it is worked out, how to check it and what is open; none of the audit bundle", () => {
   const cases = [
     ["pearl-fortune", "PPLNS"], ["pearl-fortune", "PPS"], ["lucky", "PROP"],
-    ["kryptex", "PPS+"], ["f2pool", "PPS"], ["peryn", "PPS+"], ["pearlhash", "PROP"], ["herominers", "PROP"],
+    ["kryptex", "PPS+"], ["f2pool", "PPS"], ["peryn", "PPS+"], ["herominers", "PROP"],
   ];
   for (const lang of ["zh-Hans", "en"]) for (const [slug, scheme] of cases) {
     const html = renderToStaticMarkup(React.createElement(PoolCostDetail, { route: { slug, scheme, tier: null }, lang }));
